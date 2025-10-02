@@ -1,0 +1,17 @@
+# .gitignore
+
+# データベースとインデックス
+*.db
+*.faiss
+
+# メールと処理済みファイル
+mailbox/
+processed/
+
+# Pythonのキャッシュ
+__pycache__/
+*.pyc
+
+# 仮想環境フォルダ
+.venv/
+venv/

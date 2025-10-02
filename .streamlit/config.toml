@@ -1,0 +1,21 @@
+# Streamlit Theme Configuration
+
+[theme]
+
+# "light"テーマをベースにする
+base = "light"
+
+# アクセントカラー (Flatlyの緑)
+primaryColor = "#18bc9c"
+
+# メインの背景色 (純白)
+backgroundColor = "#ffffff"
+
+# サイドバーなどの背景色 (Flatlyのライトグレー)
+secondaryBackgroundColor = "#ecf0f1"
+
+# メインの文字色 (Flatlyの紺)
+textColor = "#2c3e50"
+
+# 使用するフォントファミリー
+font = "sans serif"

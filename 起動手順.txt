@@ -1,0 +1,9 @@
+# 1. まず、作業したいプロジェクトのフォルダに移動する
+cd Desktop/job-matching-ai
+
+# 2. 次に、そのプロジェクト専用の仮想環境を有効にする
+source venv/bin/activate
+
+# 3. (venv) と表示されたことを確認してから、やりたいコマンドを実行する
+# (例: Streamlitアプリを起動する)
+python -m streamlit run final_app.py
