@@ -47,8 +47,37 @@ def get_source_text(source_json_str):
 # ▼▼▼【ここからが新しい画面レイアウトです】▼▼▼
 # ==================================================================
 
+
+# --- 2. AI要約比較セクション ---
+st.header("🤖 AIによる案件、技術者の要約")
+col_job, col_eng = st.columns(2)
+
+def display_summary(title, document_text):
+    """AI要約情報を表示するための共通関数"""
+    doc_parts = document_text.split('\n---\n', 1)
+    meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", document_text)
+    
+    with st.container(border=True, height=350):
+        st.subheader(title)
+        # メタ情報はキャプションとして表示
+        if meta_info:
+            st.caption(meta_info.replace("][", " | ").strip("[]"))
+        st.markdown(main_doc)
+
+with col_job:
+    project_name = job_data['project_name'] or f"案件 (ID: {job_data['id']})"
+    display_summary(f"💼 {project_name}", job_data['document'])
+
+with col_eng:
+    engineer_name = engineer_data['name'] or f"技術者 (ID: {engineer_data['id']})"
+    display_summary(f"👤 {engineer_name}", engineer_data['document'])
+
+st.divider()
+
+
+
 # --- 1. 最重要サマリーセクション ---
-st.header("📊 マッチング評価サマリー")
+st.header("📊 AIマッチング評価")
 
 # AIによるマッチング根拠を先に取得
 summary_data = be.get_match_summary_with_llm(job_data['document'], engineer_data['document'])
@@ -75,31 +104,8 @@ with st.container(border=True):
         else:
             st.caption("特に懸念はありません。")
 
-# --- 2. AI要約比較セクション ---
-st.header("🤖 AIによる要約比較")
-col_job, col_eng = st.columns(2)
 
-def display_summary(title, document_text):
-    """AI要約情報を表示するための共通関数"""
-    doc_parts = document_text.split('\n---\n', 1)
-    meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", document_text)
-    
-    with st.container(border=True, height=350):
-        st.subheader(title)
-        # メタ情報はキャプションとして表示
-        if meta_info:
-            st.caption(meta_info.replace("][", " | ").strip("[]"))
-        st.markdown(main_doc)
 
-with col_job:
-    project_name = job_data['project_name'] or f"案件 (ID: {job_data['id']})"
-    display_summary(f"💼 {project_name}", job_data['document'])
-
-with col_eng:
-    engineer_name = engineer_data['name'] or f"技術者 (ID: {engineer_data['id']})"
-    display_summary(f"👤 {engineer_name}", engineer_data['document'])
-
-st.divider()
 
 # --- 3. 元情報（タブ）セクション ---
 st.header("📄 元の情報ソース")

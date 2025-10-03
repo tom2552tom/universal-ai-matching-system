@@ -104,9 +104,9 @@ else:
                 eng_doc = res['eng_doc'] if res['eng_doc'] else ""
                 display_doc = eng_doc.split('\n---\n', 1)[-1]
                 st.caption(display_doc.replace('\n', ' ').replace('\r', '')[:150] + "...")
-                if st.button("技術者詳細へ", key=f"detail_link_{res['res_id']}"):
-                    st.session_state['selected_engineer_id'] = res['engineer_id']
-                    st.switch_page("pages/5_技術者詳細.py")
+                #if st.button("技術者詳細へ", key=f"detail_link_{res['res_id']}"):
+                #    st.session_state['selected_engineer_id'] = res['engineer_id']
+                #    st.switch_page("pages/5_技術者詳細.py")
 
             # ▼▼▼【ここが修正箇所です】▼▼▼
             # ダッシュボード上でのAI評価表示ロジックは不要になったため削除
