@@ -1,0 +1,26 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Universal AI Agent - Concierge">
+  <defs>
+    <linearGradient id="uaiGradA" x1="80" y1="64" x2="432" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#22D3EE"/>
+      <stop offset="100%" stop-color="#8B5CF6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Head outline -->
+  <circle cx="256" cy="170" r="90" stroke="url(#uaiGradA)" stroke-width="14" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Neural network inside head -->
+  <line x1="226" y1="150" x2="286" y2="150" stroke="url(#uaiGradA)" stroke-width="8" stroke-linecap="round"/>
+  <line x1="286" y1="150" x2="256" y2="198" stroke="url(#uaiGradA)" stroke-width="8" stroke-linecap="round"/>
+  <line x1="256" y1="198" x2="226" y2="150" stroke="url(#uaiGradA)" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="226" cy="150" r="10" fill="#22D3EE"/>
+  <circle cx="286" cy="150" r="10" fill="#8B5CF6"/>
+  <circle cx="256" cy="198" r="10" fill="#22C55E"/>
+
+  <!-- Shoulders / suit -->
+  <path d="M128 316c0-52 56-94 128-94s128 42 128 94v48c0 10-8 18-18 18H146c-10 0-18-8-18-18v-48z"
+        stroke="url(#uaiGradA)" stroke-width="12" fill="url(#uaiGradA)" fill-opacity="0.12"/>
+
+  <!-- Tie -->
+  <polygon points="256,244 240,276 256,308 272,276" fill="#22C55E"/>
+</svg>

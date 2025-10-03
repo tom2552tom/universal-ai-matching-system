@@ -10,7 +10,11 @@ APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
 
 init_database(); load_embedding_model()
-st.title(APP_TITLE); st.divider()
+
+# --- タイトル部分を画像に差し替え ---
+# st.title(APP_TITLE) # 元のテキストタイトルをコメントアウト
+st.image("img/UniversalAI_logo.png",width=240) # ロゴ画像を表示
+st.divider()
 
 # --- サイドバー ---
 st.sidebar.header("フィルター")

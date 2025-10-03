@@ -21,6 +21,13 @@ st.set_page_config(page_title=f"{APP_TITLE} | メール処理", layout="wide")
 init_database()
 load_embedding_model()
 
+# --- タイトル部分を画像に差し替え ---
+# st.title(APP_TITLE) # 元のテキストタイトルをコメントアウト
+st.image("img/UniversalAI_logo.png",width=240) # ロゴ画像を表示
+st.divider()
+
+
+
 st.title("📧 メールサーバーからのデータ取込")
 
 st.markdown("""

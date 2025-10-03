@@ -7,8 +7,14 @@ st.set_page_config(page_title="マッチング詳細", layout="wide")
 
 # CSSの記述はすべて削除します
 
-st.title("🤝 マッチング詳細")
+# --- タイトル部分を画像に差し替え ---
+# st.title(APP_TITLE) # 元のテキストタイトルをコメントアウト
+st.image("img/UniversalAI_logo.png",width=240) # ロゴ画像を表示
 st.divider()
+
+
+#st.title("🤝 マッチング詳細")
+#st.divider()
 
 # --- データ取得（変更なし） ---
 selected_match_id = st.session_state.get('selected_match_id', None)
