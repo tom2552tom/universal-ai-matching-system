@@ -6,256 +6,301 @@ import numpy as np
 import os
 import google.generativeai as genai
 import json
-import shutil
 from datetime import datetime
+import imaplib
+import email
+from email.header import decode_header
+import io
+import contextlib
+import toml
+import fitz
+import docx
 
 # --- 1. 初期設定と定数 ---
-# ★★★ 必ずご自身の有効なGoogle AI APIキーに書き換えてください ★★★
-#API_KEY = "AIzaSyC46t0x01KwILNwK1a3U2DO5cm0blvztOU" 
-# StreamlitのSecrets機能からAPIキーを安全に読み込む
-API_KEY = st.secrets["GOOGLE_API_KEY"]
-
-# APIキーの有効性を確認
 try:
+    API_KEY = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=API_KEY)
-except Exception as e:
-    # st.errorはUIスレッドでしか呼べないため、ここでは例外を発生させるかログに出力
-    print(f"APIキー設定エラー: {e}")
+except (KeyError, Exception):
+    st.error("`secrets.toml` に `GOOGLE_API_KEY` が設定されていません。")
+    st.stop()
 
 DB_FILE = "backend_system.db"
 JOB_INDEX_FILE = "backend_job_index.faiss"
 ENGINEER_INDEX_FILE = "backend_engineer_index.faiss"
 MODEL_NAME = 'intfloat/multilingual-e5-large'
-MAILBOX_DIR = "mailbox"
-PROCESSED_DIR = "processed"
+TOP_K_CANDIDATES = 50
+MIN_SCORE_THRESHOLD = 60.0 # 推奨値に設定
 
-# --- 2. モデル読み込みとDB初期化/更新 ---
+@st.cache_data
+def load_app_config():
+    try:
+        with open("config.toml", "r", encoding="utf-8") as f: return toml.load(f)
+    except FileNotFoundError: return {"app": {"title": "Universal AI Agent"}}
+
 @st.cache_resource
 def load_embedding_model():
-    """埋め込みモデルをロードしてキャッシュする"""
-    try:
-        return SentenceTransformer(MODEL_NAME)
-    except Exception as e:
-        st.error(f"埋め込みモデルの読み込みに失敗しました: {e}")
-        return None
+    try: return SentenceTransformer(MODEL_NAME)
+    except Exception as e: st.error(f"埋め込みモデル '{MODEL_NAME}' の読み込みに失敗しました: {e}"); return None
 
+# ▼▼▼【修正箇所】テーブルに新しい列を追加 ▼▼▼
 def init_database():
-    """データベースとディレクトリを初期化し、必要に応じてテーブルを更新する"""
-    os.makedirs(MAILBOX_DIR, exist_ok=True)
-    os.makedirs(PROCESSED_DIR, exist_ok=True)
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, document TEXT NOT NULL, created_at TEXT)')
-    cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id INTEGER PRIMARY KEY AUTOINCREMENT, document TEXT NOT NULL, created_at TEXT)')
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS matching_results (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        job_id INTEGER,
-        engineer_id INTEGER,
-        score REAL,
-        created_at TEXT,
-        FOREIGN KEY (job_id) REFERENCES jobs (id),
-        FOREIGN KEY (engineer_id) REFERENCES engineers (id)
-    )''')
-
-    # is_hiddenカラムが存在しない場合、追加する (後方互換性のため)
-    cursor.execute("PRAGMA table_info(matching_results)")
-    columns = [info[1] for info in cursor.fetchall()]
-    if 'is_hidden' not in columns:
-        cursor.execute('ALTER TABLE matching_results ADD COLUMN is_hidden INTEGER DEFAULT 0')
-
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+        # jobsテーブルに project_name 列を追加
+        cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
+        # engineersテーブルに name 列を追加
+        cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS matching_results (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, engineer_id INTEGER, score REAL, created_at TEXT, is_hidden INTEGER DEFAULT 0, FOREIGN KEY (job_id) REFERENCES jobs (id), FOREIGN KEY (engineer_id) REFERENCES engineers (id))')
 
 def get_db_connection():
-    """データベース接続を取得する"""
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    return conn
+    conn = sqlite3.connect(DB_FILE); conn.row_factory = sqlite3.Row; return conn
 
-# --- 3. LLM関連の関数 ---
 def split_text_with_llm(text_content):
-    """LLMを使用してテキストを案件と技術者情報に分割する"""
-    genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel('models/gemini-2.5-pro')
-    prompt = f"""
-あなたは、IT業界の案件情報と技術者情報を整理する優秀なアシスタントです。
-以下のテキストから、「案件情報」と「技術者情報」をそれぞれ個別の単位で抽出し、JSON形式のリストで出力してください。
-# 制約条件
-- 案件情報には、ポジション、業務内容、スキルなどの情報を含めてください。
-- 技術者情報には、氏名、スキル、経験などの情報を含めてください。
-- 元のテキストに含まれない情報は創作しないでください。
-- それぞれ明確に分割し、他の案件や技術者の情報が混ざらないようにしてください。
-- 該当する情報がない場合は、空のリスト `[]` を返してください。
-# 対象テキスト
----
-{text_content}
----
-# 出力形式 (JSONのみを出力すること)
-{{
-  "jobs": [ {{ "document": "<抽出した案件1の情報>" }} ],
-  "engineers": [ {{ "document": "<抽出した技術者1の情報>" }} ]
-}}
-"""
-    generation_config = {"response_mime_type": "application/json"}
-    safety_settings = {
-        'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
-        'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE',
-    }
     try:
-        with st.spinner("LLMがテキストを解析・分割中..."):
+        with open('prompt.txt', 'r', encoding='utf-8') as f:
+            prompt_template = f.read()
+        prompt = prompt_template.replace('{text_content}', text_content)
+    except FileNotFoundError:
+        st.error("エラー: `prompt.txt` ファイルが見つかりません。`backend.py` と同じ場所に作成してください。")
+        return None
+    generation_config = {"response_mime_type": "application/json"}
+    safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
+    try:
+        with st.spinner("LLMがテキストを解析・構造化中..."):
             response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
-        return json.loads(response.text)
+        raw_text = response.text
+        start_index = raw_text.find('{')
+        end_index = raw_text.rfind('}')
+        if start_index != -1 and end_index != -1 and start_index < end_index:
+            json_str = raw_text[start_index : end_index + 1]
+            return json.loads(json_str)
+        else:
+            st.error("LLMの応答から有効なJSON形式を抽出できませんでした。"); st.error("LLMからの生レスポンス:"); st.code(raw_text, language='text'); return None
     except Exception as e:
-        st.error(f"LLMによる分割に失敗: {e}")
+        st.error(f"LLMによる構造化に失敗しました: {e}"); st.error("LLMからの生レスポンス:");
+        try: st.code(response.text, language='text')
+        except NameError: st.text("レスポンスの取得にも失敗しました。")
         return None
 
 def get_match_summary_with_llm(job_doc, engineer_doc):
-    """LLMを使用してマッチングの根拠を分析する"""
-    genai.configure(api_key=API_KEY)
     model = genai.GenerativeModel('models/gemini-2.5-pro')
     prompt = f"""
-あなたは優秀なIT採用担当者です。以下の【案件情報】と【技術者情報】を比較し、なぜこの二者がマッチするのか、あるいはしないのかを分析してください。
-結果は必ず指定のJSON形式で出力してください。
-# 分析のポイント
-- positive_points: 案件の必須スキルや業務内容と、技術者のスキルや経験が合致する点を具体的に挙げてください。
-- concern_points: 案件が要求しているが技術者の経歴からは読み取れないスキルや、経験年数のギャップなど、懸念される点を挙げてください。
-- summary: 上記を総合的に判断し、採用担当者向けの簡潔なサマリーを記述してください。
-# 【案件情報】
-{job_doc}
-# 【技術者情報】
-{engineer_doc}
-# 出力形式 (JSONのみ)
+あなたは、経験豊富なIT人材紹介のエージェントです。
+あなたの仕事は、提示された「案件情報」と「技術者情報」を比較し、客観的かつ具体的なマッチング評価を行うことです。
+# 絶対的なルール
+- `summary`は最も重要な項目です。絶対に省略せず、必ずS, A, B, C, Dのいずれかの文字列を返してください。
+- ポジティブな点や懸念点が一つもない場合でも、その旨を正直に記載するか、空のリスト `[]` を返してください。
+# 指示
+以下の2つの情報を分析し、ポジティブな点と懸念点をリストアップしてください。最終的に、総合評価（summary）をS, A, B, C, Dの5段階で判定してください。
+- S: 完璧なマッチ, A: 非常に良いマッチ, B: 良いマッチ, C: 検討の余地あり, D: ミスマッチ
+# JSON出力形式
 {{
-  "positive_points": ["<合致する点1>", "<合致する点2>"],
-  "concern_points": ["<懸念点1>", "<懸念点2>"],
-  "summary": "<総合評価サマリー>"
+  "summary": "S, A, B, C, Dのいずれか",
+  "positive_points": ["スキル面での合致点"],
+  "concern_points": ["スキル面での懸念点"]
 }}
+---
+# 案件情報
+{job_doc}
+---
+# 技術者情報
+{engineer_doc}
+---
 """
     generation_config = {"response_mime_type": "application/json"}
-    safety_settings = {
-        'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE',
-        'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE',
-    }
+    safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
     try:
         with st.spinner("AIがマッチング根拠を分析中..."):
             response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
-        return json.loads(response.text)
+        raw_text = response.text
+        start_index = raw_text.find('{')
+        end_index = raw_text.rfind('}')
+        if start_index != -1 and end_index != -1 and start_index < end_index:
+            json_str = raw_text[start_index : end_index + 1]
+            return json.loads(json_str)
+        else:
+            st.error("評価の分析中にLLMが有効なJSONを返しませんでした。"); st.code(raw_text); return None
     except Exception as e:
-        st.error(f"根拠の分析中にエラー: {e}")
-        return None
+        st.error(f"根拠の分析中にエラー: {e}"); return None
 
-# --- 4. インデックスと検索の関数 ---
-def update_index(index_path, new_items):
+def update_index(index_path, items):
     embedding_model = load_embedding_model()
-    if not embedding_model: return
+    if not embedding_model or not items: return
     dimension = embedding_model.get_sentence_embedding_dimension()
-    if os.path.exists(index_path):
-        index = faiss.read_index(index_path)
-    else:
-        index = faiss.IndexIDMap(faiss.IndexFlatL2(dimension))
-    ids = np.array([item['id'] for item in new_items], dtype=np.int64)
-    texts = [item['document'] for item in new_items]
-    embeddings = embedding_model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
-    index.add_with_ids(embeddings, ids)
-    faiss.write_index(index, index_path)
+    index_map = faiss.IndexIDMap(faiss.IndexFlatIP(dimension))
+    ids = np.array([item['id'] for item in items], dtype=np.int64)
+    bodies = [str(item['document']).split('\n---\n', 1)[-1] for item in items]
+    texts_with_prefix = ["passage: " + body for body in bodies]
+    embeddings = embedding_model.encode(texts_with_prefix, normalize_embeddings=True, show_progress_bar=False)
+    index_map.add_with_ids(embeddings, ids)
+    faiss.write_index(index_map, index_path)
 
 def search(query_text, index_path, top_k=5):
     embedding_model = load_embedding_model()
     if not embedding_model or not os.path.exists(index_path): return [], []
     index = faiss.read_index(index_path)
     if index.ntotal == 0: return [], []
-    query_vector = embedding_model.encode(query_text, normalize_embeddings=True).reshape(1, -1)
-    distances, ids = index.search(query_vector, min(top_k, index.ntotal))
-    return distances[0].tolist(), ids[0].tolist()
+    query_body = query_text.split('\n---\n', 1)[-1]
+    prefixed_query = "query: " + query_body
+    query_vector = embedding_model.encode([prefixed_query], normalize_embeddings=True).reshape(1, -1)
+    similarities, ids = index.search(query_vector, min(top_k, index.ntotal))
+    valid_ids = [int(i) for i in ids[0] if i != -1]
+    valid_similarities = [similarities[0][j] for j, i in enumerate(ids[0]) if i != -1]
+    return valid_similarities, valid_ids
 
-# --- 5. メインのバックエンド処理関数 ---
-def process_new_mails():
-    """新しいメールを処理し、DB登録とマッチングを行う"""
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+def get_records_by_ids(table_name, ids):
+    if not ids: return []
+    with get_db_connection() as conn:
+        placeholders = ','.join('?' for _ in ids)
+        query = f"SELECT * FROM {table_name} WHERE id IN ({placeholders})"
+        results = conn.execute(query, ids).fetchall()
+        results_map = {res['id']: res for res in results}
+        return [results_map[id] for id in ids if id in results_map]
 
-    existing_job_ids = {row['id'] for row in conn.execute('SELECT id FROM jobs').fetchall()}
-    existing_engineer_ids = {row['id'] for row in conn.execute('SELECT id FROM engineers').fetchall()}
+def run_matching_for_item(item_data, item_type, cursor, now_str):
+    if item_type == 'job': query_text, index_path = item_data['document'], ENGINEER_INDEX_FILE
+    else: query_text, index_path = item_data['document'], JOB_INDEX_FILE
+    similarities, ids = search(query_text, index_path, top_k=TOP_K_CANDIDATES)
+    st.write(f"▶ ID:{item_data['id']} ({item_type}) の類似候補 {len(ids)}件を評価します。")
+    for sim, candidate_id in zip(similarities, ids):
+        score = float(sim) * 100
+        if score >= MIN_SCORE_THRESHOLD:
+            db_ids = {'job_id': item_data['id'] if item_type == 'job' else candidate_id, 'engineer_id': candidate_id if item_type == 'job' else item_data['id']}
+            cursor.execute('INSERT INTO matching_results (job_id, engineer_id, score, created_at) VALUES (?, ?, ?, ?)', (db_ids['job_id'], db_ids['engineer_id'], score, now_str))
 
-    unread_mails = [f for f in os.listdir(MAILBOX_DIR) if f.endswith('.txt')]
-    if not unread_mails:
-        st.toast("新しいメールはありませんでした。")
-        return True
-
-    st.toast(f"{len(unread_mails)}件の新しいメールを処理します。")
-    all_new_jobs, all_new_engineers = [], []
-    with st.spinner("メールを1件ずつ処理しています..."):
-        for mail_file in unread_mails:
-            mail_path = os.path.join(MAILBOX_DIR, mail_file)
-            with open(mail_path, 'r', encoding='utf-8') as f: content = f.read()
-            parsed_data = split_text_with_llm(content)
-            if not parsed_data:
-                st.warning(f"ファイル '{mail_file}' の処理中にエラーが発生したため、中断しました。")
-                return False
-
-            new_jobs = parsed_data.get("jobs", [])
-            new_engineers = parsed_data.get("engineers", [])
-
-            if new_jobs:
-                for job in new_jobs:
-                    doc_content = job.get('document')
-                    doc_str = "\n".join([f"{k}：{v}" for k, v in doc_content.items()]) if isinstance(doc_content, dict) else str(doc_content)
-                    cursor.execute('INSERT INTO jobs (document, created_at) VALUES (?, ?)', (doc_str, now_str))
-                    job['id'] = cursor.lastrowid
-                    job['document'] = doc_str
-                    all_new_jobs.append(job)
-
-            if new_engineers:
-                for engineer in new_engineers:
-                    doc_content = engineer.get('document')
-                    doc_str = "\n".join([f"{k}：{v}" for k, v in doc_content.items()]) if isinstance(doc_content, dict) else str(doc_content)
-                    cursor.execute('INSERT INTO engineers (document, created_at) VALUES (?, ?)', (doc_str, now_str))
-                    engineer['id'] = cursor.lastrowid
-                    engineer['document'] = doc_str
-                    all_new_engineers.append(engineer)
-            
-            conn.commit()
-            shutil.move(mail_path, os.path.join(PROCESSED_DIR, mail_file))
-
-    with st.spinner("インデックスを更新し、マッチングを実行中..."):
-        if all_new_jobs: update_index(JOB_INDEX_FILE, all_new_jobs)
-        if all_new_engineers: update_index(ENGINEER_INDEX_FILE, all_new_engineers)
-
-        if all_new_jobs and existing_engineer_ids:
-            for job in all_new_jobs:
-                distances, ids = search(job['document'], ENGINEER_INDEX_FILE, top_k=len(existing_engineer_ids))
-                for dist, eng_id in zip(distances, ids):
-                    if eng_id != -1 and eng_id in existing_engineer_ids:
-                        score = (1 - dist) * 100
-                        cursor.execute('INSERT INTO matching_results (job_id, engineer_id, score, created_at) VALUES (?, ?, ?, ?)',(job['id'], int(eng_id), score, now_str))
+# ▼▼▼【修正箇所】新しい列にデータを保存するよう変更 ▼▼▼
+def process_single_content(source_data: dict):
+    if not source_data: st.warning("処理するデータが空です。"); return False
+    valid_attachments_content = []
+    for att in source_data.get('attachments', []):
+        content = att.get('content', '')
+        if content and not content.startswith("[") and not content.endswith("]"):
+             valid_attachments_content.append(f"\n\n--- 添付ファイル: {att['filename']} ---\n{content}")
+        else:
+            st.write(f"⚠️ 添付ファイル '{att['filename']}' は内容を抽出できなかったため、解析から除外します。")
+    full_text_for_llm = source_data.get('body', '') + "".join(valid_attachments_content)
+    if not full_text_for_llm.strip(): st.warning("解析対象のテキストがありません。"); return False
+    parsed_data = split_text_with_llm(full_text_for_llm)
+    if not parsed_data: return False
+    new_jobs_data = parsed_data.get("jobs", []); new_engineers_data = parsed_data.get("engineers", [])
+    if not new_jobs_data and not new_engineers_data: st.warning("LLMはテキストから案件情報または技術者情報を抽出できませんでした。"); return False
+    with get_db_connection() as conn:
+        cursor = conn.cursor(); now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        source_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
+        newly_added_jobs, newly_added_engineers = [], []
         
-        if all_new_engineers:
-            k_value = len(existing_job_ids) if existing_job_ids else 1
-            for engineer in all_new_engineers:
-                distances, ids = search(engineer['document'], JOB_INDEX_FILE, top_k=k_value)
-                for dist, job_id in zip(distances, ids):
-                    if job_id != -1:
-                        score = (1 - dist) * 100
-                        cursor.execute('INSERT INTO matching_results (job_id, engineer_id, score, created_at) VALUES (?, ?, ?, ?)', (int(job_id), engineer['id'], score, now_str))
+        for item_data in new_jobs_data:
+            doc = item_data.get("document")
+            project_name = item_data.get("project_name", "名称未定の案件") # 名前を取得
+            if not (doc and str(doc).strip() and str(doc).lower() != 'none'): doc = full_text_for_llm
+            meta_info = f"[国籍要件: {item_data.get('nationality_requirement', '不明')}] [開始時期: {item_data.get('start_date', '不明')}]\n---\n"; full_document = meta_info + doc
+            cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at) VALUES (?, ?, ?, ?)', (project_name, full_document, source_json_str, now_str));
+            item_data['id'] = cursor.lastrowid; item_data['document'] = full_document; newly_added_jobs.append(item_data)
+        
+        for item_data in new_engineers_data:
+            doc = item_data.get("document")
+            engineer_name = item_data.get("name", "名称不明の技術者") # 名前を取得
+            if not (doc and str(doc).strip() and str(doc).lower() != 'none'): doc = full_text_for_llm
+            meta_info = f"[国籍: {item_data.get('nationality', '不明')}] [稼働可能日: {item_data.get('start_date', '不明')}]\n---\n"; full_document = meta_info + doc
+            cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at) VALUES (?, ?, ?, ?)', (engineer_name, full_document, source_json_str, now_str));
+            item_data['id'] = cursor.lastrowid; item_data['document'] = full_document; newly_added_engineers.append(item_data)
 
-    conn.commit()
-    conn.close()
-    st.success("メール処理とマッチングが完了しました。")
+        st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
+        all_jobs = conn.execute('SELECT id, document FROM jobs').fetchall()
+        all_engineers = conn.execute('SELECT id, document FROM engineers').fetchall()
+        if all_jobs: update_index(JOB_INDEX_FILE, all_jobs)
+        if all_engineers: update_index(ENGINEER_INDEX_FILE, all_engineers)
+        for new_job in newly_added_jobs: run_matching_for_item(new_job, 'job', cursor, now_str)
+        for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', cursor, now_str)
     return True
 
-# --- 6. 個別のアクション関数 ---
-def hide_match(result_id):
-    """指定されたIDのマッチング結果を非表示にする"""
-    conn = get_db_connection()
+def extract_text_from_pdf(file_bytes):
     try:
-        cursor = conn.cursor()
-        cursor.execute("UPDATE matching_results SET is_hidden = 1 WHERE id = ?", (result_id,))
-        conn.commit()
-        return True
+        with fitz.open(stream=file_bytes, filetype="pdf") as doc: text = "".join(page.get_text() for page in doc)
+        return text if text.strip() else "[PDFテキスト抽出失敗: 内容が空または画像PDF]"
+    except Exception as e: return f"[PDFテキスト抽出エラー: {e}]"
+
+def extract_text_from_docx(file_bytes):
+    try:
+        doc = docx.Document(io.BytesIO(file_bytes)); text = "\n".join([para.text for para in doc.paragraphs])
+        return text if text.strip() else "[DOCXテキスト抽出失敗: 内容が空]"
+    except Exception as e: return f"[DOCXテキスト抽出エラー: {e}]"
+
+def get_email_contents(msg) -> dict:
+    body_text = ""; attachments = []
+    if msg.is_multipart():
+        for part in msg.walk():
+            content_type = part.get_content_type(); content_disposition = str(part.get("Content-Disposition"))
+            if 'text/plain' in content_type and 'attachment' not in content_disposition:
+                charset = part.get_content_charset()
+                try: body_text += part.get_payload(decode=True).decode(charset if charset else 'utf-8', errors='ignore')
+                except Exception: body_text += part.get_payload(decode=True).decode('utf-8', errors='ignore')
+            if 'attachment' in content_disposition:
+                raw_filename = part.get_filename()
+                if raw_filename:
+                    decoded_header = decode_header(raw_filename)
+                    filename = "".join([s.decode(c or 'utf-8', 'ignore') if isinstance(s, bytes) else s for s, c in decoded_header])
+                    st.write(f"📄 添付ファイル '{filename}' を発見しました。")
+                    file_bytes = part.get_payload(decode=True)
+                    lower_filename = filename.lower()
+                    if lower_filename.endswith(".pdf"): attachments.append({"filename": filename, "content": extract_text_from_pdf(file_bytes)})
+                    elif lower_filename.endswith(".docx"): attachments.append({"filename": filename, "content": extract_text_from_docx(file_bytes)})
+                    elif lower_filename.endswith(".txt"): attachments.append({"filename": filename, "content": file_bytes.decode('utf-8', errors='ignore')})
+                    else: st.write(f"ℹ️ 添付ファイル '{filename}' は未対応の形式のため、テキスト抽出をスキップします。")
+    else:
+        charset = msg.get_content_charset()
+        try: body_text = msg.get_payload(decode=True).decode(charset if charset else 'utf-8', errors='ignore')
+        except Exception: body_text = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
+    return {"body": body_text.strip(), "attachments": attachments}
+
+def fetch_and_process_emails():
+    log_stream = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(log_stream):
+            try: SERVER, USER, PASSWORD = st.secrets["EMAIL_SERVER"], st.secrets["EMAIL_USER"], st.secrets["EMAIL_PASSWORD"]
+            except KeyError as e: st.error(f"メールサーバーの接続情報がSecretsに設定されていません: {e}"); return False, log_stream.getvalue()
+            try: mail = imaplib.IMAP4_SSL(SERVER); mail.login(USER, PASSWORD); mail.select('inbox')
+            except Exception as e: st.error(f"メールサーバーへの接続またはログインに失敗しました: {e}"); return False, log_stream.getvalue()
+            total_processed_count = 0; checked_count = 0
+            try:
+                with st.status("最新の未読メールを取得・処理中...", expanded=True) as status:
+                    _, messages = mail.search(None, 'UNSEEN')
+                    email_ids = messages[0].split()
+                    if not email_ids: st.write("処理対象の未読メールは見つかりませんでした。")
+                    else:
+                        latest_ids = email_ids[::-1][:10]; checked_count = len(latest_ids)
+                        st.write(f"最新の未読メール {checked_count}件をチェックします。")
+                        for i, email_id in enumerate(latest_ids):
+                            _, msg_data = mail.fetch(email_id, '(RFC822)')
+                            for response_part in msg_data:
+                                if isinstance(response_part, tuple):
+                                    msg = email.message_from_bytes(response_part[1])
+                                    source_data = get_email_contents(msg)
+                                    if source_data['body'] or source_data['attachments']:
+                                        st.write(f"✅ メールID {email_id.decode()} は処理対象です。解析を開始します...")
+                                        if process_single_content(source_data):
+                                            total_processed_count += 1; mail.store(email_id, '+FLAGS', '\\Seen')
+                                    else: st.write(f"✖️ メールID {email_id.decode()} は本文も添付ファイルも無いため、スキップします。")
+                            st.write(f"({i+1}/{checked_count}) チェック完了")
+                    status.update(label="メールチェック完了", state="complete")
+            finally: mail.close(); mail.logout()
+        if checked_count > 0:
+            if total_processed_count > 0: st.success(f"チェックした {checked_count} 件のメールのうち、{total_processed_count} 件からデータを抽出し、保存しました。"); st.balloons()
+            else: st.warning(f"メールを {checked_count} 件チェックしましたが、データベースに保存できる情報は見つかりませんでした。")
+        else: st.info("処理対象となる新しい未読メールはありませんでした。")
+        return True, log_stream.getvalue()
     except Exception as e:
-        st.error(f"非表示処理中にエラーが発生しました: {e}")
-        return False
-    finally:
-        conn.close()
+        st.error(f"予期せぬエラーが発生しました: {e}"); return False, log_stream.getvalue()
+
+def hide_match(result_id):
+    if not result_id: st.warning("非表示にするマッチング結果のIDが指定されていません。"); return False
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE matching_results SET is_hidden = 1 WHERE id = ?', (result_id,))
+            conn.commit()
+            if cursor.rowcount > 0: st.toast(f"マッチング結果 (ID: {result_id}) を非表示にしました。"); return True
+            else: st.warning(f"マッチング結果 (ID: {result_id}) が見つかりませんでした。"); return False
+    except sqlite3.Error as e: st.error(f"データベースの更新中にエラーが発生しました: {e}"); return False
+    except Exception as e: st.error(f"hide_match関数で予期せぬエラーが発生しました: {e}"); return False

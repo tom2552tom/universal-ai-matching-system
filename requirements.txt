@@ -1,8 +1,11 @@
 # requirements.txt
 
-streamlit
 faiss-cpu
 sentence-transformers
 numpy
 google-generativeai
 pandas
+toml
+PyMuPDF
+python-docx
+streamlit==1.50.0
