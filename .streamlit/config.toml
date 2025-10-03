@@ -3,7 +3,7 @@
 [theme]
 
 # "light"テーマをベースにする
-base = "light"
+base = "dark"
 
 # アクセントカラー (Flatlyの緑)
 primaryColor = "#18bc9c"
@@ -25,3 +25,4 @@ title = "Universal Matching AI"
 
 [llm]
 model_name = "models/gemini-2.5-pro"
+

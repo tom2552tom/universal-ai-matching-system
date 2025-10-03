@@ -7,3 +7,29 @@ source venv/bin/activate
 # 3. (venv) と表示されたことを確認してから、やりたいコマンドを実行する
 # (例: Streamlitアプリを起動する)
 python -m streamlit run final_app.py
+
+
+修正ポイント
+・表示するマッチ度の閾値はなくす
+・案件、技術者の欄をクリップすると内容が拡大表示される
+
+
+API_KEY = "AIzaSyA4Vv_MWpMZ-2y8xGslYQJ9yvcBY9Pc-VA" # ★★★ あなたのGoogle AI APIキー ★★★
+
+
+
+
+Github push
+
+
+# 変更されたファイルを確認
+git status
+
+# すべての変更をステージング
+git add .
+
+# 変更内容を記録（メッセージは分かりやすいものに）
+git commit -m "UI改善と機能の最終調整"
+
+# GitHubにアップロード
+git push origin main
