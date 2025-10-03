@@ -81,9 +81,9 @@ else:
             with header_col2:
                 if is_hidden: st.markdown('<p style="text-align: right; opacity: 0.7;">非表示</p>', unsafe_allow_html=True)
                 elif score > 75: st.markdown('<p style="text-align: right; color: #28a745; font-weight: bold;">高マッチ</p>', unsafe_allow_html=True)
-            with header_col3:
-                if not is_hidden and st.button("❌", key=f"hide_btn_{res['res_id']}", help="このマッチングを非表示にします"):
-                    hide_match(res['res_id']); st.rerun()
+            #with header_col3:
+                #if not is_hidden and st.button("❌", key=f"hide_btn_{res['res_id']}", help="このマッチングを非表示にします"):
+                #    hide_match(res['res_id']); st.rerun()
 
             col1, col2, col3 = st.columns([5, 2, 5])
             
