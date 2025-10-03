@@ -33,3 +33,26 @@ git commit -m "UI改善と機能の最終調整"
 
 # GitHubにアップロード
 git push origin main
+
+
+
+
+cd ~/Desktop/job-matching-ai && \
+source venv/bin/activate && \
+echo "--- 現在の場所 ---" && \
+pwd && \
+echo "\n--- ファイルとフォルダの権限 ---" && \
+ls -l && \
+echo "\n--- pagesフォルダ内の権限 ---" && \
+ls -l pages/ && \
+echo "\n--- 使用中のPython ---" && \
+which python && \
+echo "\n--- Streamlitのバージョン ---" && \
+pip show streamlit && \
+echo "\n--- アプリを起動します ---" && \
+streamlit run app.py
+
+
+
+streamlit run 1_ダッシュボード.py
+
