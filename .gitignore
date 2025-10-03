@@ -15,3 +15,6 @@ __pycache__/
 # 仮想環境フォルダ
 .venv/
 venv/
+
+# Streamlit secrets file
+.streamlit/
