@@ -29,7 +29,7 @@ JOB_INDEX_FILE = "backend_job_index.faiss"
 ENGINEER_INDEX_FILE = "backend_engineer_index.faiss"
 MODEL_NAME = 'intfloat/multilingual-e5-large'
 TOP_K_CANDIDATES = 50
-MIN_SCORE_THRESHOLD = 60.0 # 推奨値に設定
+MIN_SCORE_THRESHOLD = 90.0 # 推奨値に設定
 
 @st.cache_data
 def load_app_config():
@@ -51,9 +51,114 @@ def init_database():
         # engineersテーブルに name 列を追加
         cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
         cursor.execute('CREATE TABLE IF NOT EXISTS matching_results (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, engineer_id INTEGER, score REAL, created_at TEXT, is_hidden INTEGER DEFAULT 0, FOREIGN KEY (job_id) REFERENCES jobs (id), FOREIGN KEY (engineer_id) REFERENCES engineers (id))')
+        cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL UNIQUE,
+                        email TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+        
+        cursor.execute("SELECT COUNT(*) FROM users")
+
+        user_count = cursor.fetchone()[0]
+        if user_count == 0:
+            print("初回起動のため、テストユーザーを追加します...")
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('熊崎', 'yamada@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩本', 'suzuki@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('小関', 'sato@example.com'))
+            print(" -> 3名のテストユーザーを追加しました。")
+
+
+    # --- 2. jobs テーブルに assigned_user_id カラムを追加 ---
+    try:
+        # jobs テーブルのカラム情報を取得
+        cursor.execute("PRAGMA table_info(jobs)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        # カラムが存在しない場合のみ追加
+        if 'assigned_user_id' not in columns:
+            print("`jobs` テーブルに `assigned_user_id` カラムが見つかりません。追加します...")
+            cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
+            print("✅ `assigned_user_id` カラムを追加しました。")
+        else:
+            print("✅ `assigned_user_id` カラムは既に存在します。")
+            
+    except sqlite3.Error as e:
+        print(f"❌ `jobs` テーブルへのカラム追加中にエラーが発生しました: {e}")
+
+
+  # --- 4. jobs テーブルに is_hidden カラムを追加 ---
+    try:
+        cursor.execute("PRAGMA table_info(jobs)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        # 'is_hidden' カラムが存在しない場合のみ追加
+        # 0 = 表示, 1 = 非表示。デフォルトは 0 (表示)
+        if 'is_hidden' not in columns:
+            print("`jobs` テーブルに `is_hidden` カラムが見つかりません。追加します...")
+            cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
+            print("✅ `is_hidden` カラムを追加し、デフォルト値を 0 (表示) に設定しました。")
+        else:
+            print("✅ `is_hidden` カラムは既に存在します。")
+            
+    except sqlite3.Error as e:
+        print(f"❌ `jobs` テーブルへの is_hidden カラム追加中にエラーが発生しました: {e}")
+
+ # 【ここから追加】 --- engineers テーブルのカラム追加 ---
+    try:
+        cursor.execute("PRAGMA table_info(engineers)")
+        columns = [row[1] for row in cursor.fetchall()]
+        
+        # assigned_user_id カラム (技術者の担当者)
+        if 'assigned_user_id' not in columns:
+            print("`engineers` テーブルに `assigned_user_id` カラムを追加します...")
+            cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
+            print("✅ `assigned_user_id` カラムを追加しました。")
+        
+        # is_hidden カラム (技術者の表示/非表示)
+        if 'is_hidden' not in columns:
+            print("`engineers` テーブルに `is_hidden` カラムを追加します...")
+            cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
+            print("✅ `is_hidden` カラムを追加し、デフォルト値を 0 (表示) に設定しました。")
+            
+    except sqlite3.Error as e:
+        print(f"❌ `engineers` テーブルへのカラム追加中にエラーが発生しました: {e}")
+
+
 
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE); conn.row_factory = sqlite3.Row; return conn
+
+
+
+def update_job_source_json(job_id, new_json_str):
+    """
+    指定された案件IDのsource_data_jsonを更新する。
+    
+    Args:
+        job_id (int): 更新対象の案件ID。
+        new_json_str (str): 更新後の新しいJSON文字列。
+        
+    Returns:
+        bool: 更新が成功した場合はTrue、失敗した場合はFalse。
+    """
+    conn = get_db_connection()
+    try:
+        sql = "UPDATE jobs SET source_data_json = ? WHERE id = ?"
+        cur = conn.cursor()
+        cur.execute(sql, (new_json_str, job_id))
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"データベース更新エラー: {e}")
+        conn.rollback() # エラーが発生した場合は変更を元に戻す
+        return False
+    finally:
+        if conn:
+            conn.close()
+
 
 def split_text_with_llm(text_content):
     model = genai.GenerativeModel('models/gemini-2.5-pro')
@@ -304,3 +409,110 @@ def hide_match(result_id):
             else: st.warning(f"マッチング結果 (ID: {result_id}) が見つかりませんでした。"); return False
     except sqlite3.Error as e: st.error(f"データベースの更新中にエラーが発生しました: {e}"); return False
     except Exception as e: st.error(f"hide_match関数で予期せぬエラーが発生しました: {e}"); return False
+
+def get_all_users():
+    """
+    全てのユーザー情報を取得する。
+    
+    Returns:
+        list: ユーザー情報の辞書を要素とするリスト。
+    """
+    conn = get_db_connection()
+    # conn.row_factory = sqlite3.Row が get_db_connection で設定されている前提
+    users = conn.execute("SELECT id, username FROM users ORDER BY id").fetchall()
+    conn.close()
+    return users
+
+def assign_user_to_job(job_id, user_id):
+    """
+    案件に担当者を割り当てる。
+    
+    Args:
+        job_id (int): 対象の案件ID。
+        user_id (int or None): 割り当てるユーザーのID。Noneの場合は割り当て解除。
+        
+    Returns:
+        bool: 更新が成功した場合はTrue、失敗した場合はFalse。
+    """
+    conn = get_db_connection()
+    try:
+        sql = "UPDATE jobs SET assigned_user_id = ? WHERE id = ?"
+        cur = conn.cursor()
+        cur.execute(sql, (user_id, job_id))
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"担当者割り当てエラー: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def set_job_visibility(job_id, is_hidden):
+    """
+    案件の表示/非表示状態を更新する。
+    
+    Args:
+        job_id (int): 対象の案件ID。
+        is_hidden (int): 0なら表示、1なら非表示。
+        
+    Returns:
+        bool: 更新が成功した場合はTrue、失敗した場合はFalse。
+    """
+    conn = get_db_connection()
+    try:
+        sql = "UPDATE jobs SET is_hidden = ? WHERE id = ?"
+        cur = conn.cursor()
+        cur.execute(sql, (is_hidden, job_id))
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"表示状態の更新エラー: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+# 【ここから追加】 --- 技術者向けのバックエンド関数 ---
+
+def assign_user_to_engineer(engineer_id, user_id):
+    """技術者に担当者を割り当てる。"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE engineers SET assigned_user_id = ? WHERE id = ?", (user_id, engineer_id))
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"技術者への担当者割り当てエラー: {e}"); conn.rollback(); return False
+    finally:
+        conn.close()
+
+def set_engineer_visibility(engineer_id, is_hidden):
+    """技術者の表示/非表示状態を更新する (0:表示, 1:非表示)。"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE engineers SET is_hidden = ? WHERE id = ?", (is_hidden, engineer_id))
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"技術者の表示状態の更新エラー: {e}"); conn.rollback(); return False
+    finally:
+        conn.close()
+
+def update_engineer_source_json(engineer_id, new_json_str):
+    """技術者のsource_data_jsonを更新する。"""
+    conn = get_db_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute("UPDATE engineers SET source_data_json = ? WHERE id = ?", (new_json_str, engineer_id))
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"技術者のJSONデータ更新エラー: {e}"); conn.rollback(); return False
+    finally:
+        conn.close()

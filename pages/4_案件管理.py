@@ -3,41 +3,66 @@ from backend import init_database, get_db_connection
 
 st.set_page_config(page_title="案件管理", layout="wide")
 
+# アプリケーション起動時にDBをチェック・初期化
 init_database()
-
-# --- ポップアップ関数は不要になったため削除 ---
 
 st.title("💼 案件管理")
 st.markdown("登録されている案件の一覧表示と検索ができます。")
-st.divider()
 
-# --- 検索機能 ---
-search_keyword = st.text_input(
-    "🔍 キーワードで検索",
-    placeholder="プロジェクト名、開発言語（例: Java, Python）、業務内容などで絞り込み"
-)
+# --- 検索と表示オプション ---
+col1, col2 = st.columns([3, 1])
+with col1:
+    search_keyword = st.text_input(
+        "🔍 キーワードで検索",
+        placeholder="プロジェクト名、担当者名、業務内容などで絞り込み"
+    )
+with col2:
+    st.write("") 
+    st.write("") 
+    show_hidden = st.checkbox("非表示の案件も表示する", value=False)
+
+st.divider()
 
 # --- DBから案件データを取得 ---
 conn = get_db_connection()
-query = "SELECT id, project_name, document, created_at FROM jobs"
+query = """
+SELECT 
+    j.id, j.project_name, j.document, j.created_at, j.is_hidden,
+    u.username as assigned_username
+FROM jobs j
+LEFT JOIN users u ON j.assigned_user_id = u.id
+"""
 params = []
+where_clauses = []
+
+if not show_hidden:
+    where_clauses.append("j.is_hidden = 0")
+
 if search_keyword:
-    query += " WHERE project_name LIKE ? OR document LIKE ?"
-    params.extend([f'%{search_keyword}%', f'%{search_keyword}%'])
-query += " ORDER BY created_at DESC"
+    where_clauses.append("(j.project_name LIKE ? OR j.document LIKE ? OR u.username LIKE ?)")
+    params.extend([f'%{search_keyword}%', f'%{search_keyword}%', f'%{search_keyword}%'])
+
+if where_clauses:
+    query += " WHERE " + " AND ".join(where_clauses)
+
+query += " ORDER BY j.created_at DESC"
 jobs = conn.execute(query, tuple(params)).fetchall()
 conn.close()
 
 # --- 一覧表示 ---
-st.header(f"登録済み案件一覧 ({len(jobs)} 件)")
+st.header(f"案件一覧 ({len(jobs)} 件)")
 
 if not jobs:
-    st.info("現在、登録されている案件はありません。または検索条件に一致する案件が見つかりませんでした。")
+    st.info("表示対象の案件はありません。検索条件を変更するか、「非表示の案件も表示する」を試してください。")
 else:
     for job in jobs:
         with st.container(border=True):
             project_name = job['project_name'] if job['project_name'] else f"案件 (ID: {job['id']})"
-            st.markdown(f"#### {project_name}")
+            
+            title_display = f"#### {project_name}"
+            if job['is_hidden']:
+                title_display += " <span style='color: #888; font-size: 0.8em; vertical-align: middle;'>(非表示)</span>"
+            st.markdown(title_display, unsafe_allow_html=True)
             
             col1, col2 = st.columns([4, 1])
 
@@ -48,12 +73,13 @@ else:
                 st.caption(preview_text[:250] + "..." if len(preview_text) > 250 else preview_text)
 
             with col2:
-                st.markdown(f"**ID: {job['id']}**")
+                if job['assigned_username']:
+                    st.markdown(f"👤 **担当:** {job['assigned_username']}")
+                
+                st.markdown(f"**ID:** {job['id']}")
                 created_date = job['created_at'].split(' ')[0]
-                st.caption(f"登録日: {created_date}")
+                st.caption(f"登録: {created_date}")
 
-                # ▼▼▼【ここが修正箇所です】▼▼▼
-                # ポップアップの代わりに、session_stateにIDを保存して画面遷移する
                 if st.button("詳細を見る", key=f"detail_job_{job['id']}", use_container_width=True):
                     st.session_state['selected_job_id'] = job['id']
                     st.switch_page("pages/6_案件詳細.py")
