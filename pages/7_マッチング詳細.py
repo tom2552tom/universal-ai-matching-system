@@ -49,7 +49,7 @@ def get_source_text(source_json_str):
 st.header("🤖 AIによる案件・技術者の要約")
 col_job, col_eng = st.columns(2)
 
-def display_summary(title, document_text, assignee, item_id, page_link, session_key):
+def display_summary(title, document_text, assignee, item_id, item_type, page_link, session_key):
     doc_parts = document_text.split('\n---\n', 1)
     meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", document_text)
     
@@ -60,7 +60,8 @@ def display_summary(title, document_text, assignee, item_id, page_link, session_
         st.markdown(main_doc)
         
         # 【変更点 4】詳細ページへのボタンを追加
-        if st.button("詳細を見る", key=f"nav_{item_id}", use_container_width=True):
+        #if st.button("詳細を見る", key=f"nav_{item_id}", use_container_width=True):
+        if st.button("詳細を見る", key=f"nav_{item_type}_{item_id}", use_container_width=True):
             st.session_state[session_key] = item_id
             st.switch_page(page_link)
 
@@ -71,6 +72,7 @@ with col_job:
         document_text=job_data['document'],
         assignee=job_data['assignee_name'],
         item_id=job_data['id'],
+        item_type='job',  # 案件であることを示す
         page_link="pages/6_案件詳細.py",
         session_key='selected_job_id'
     )
@@ -82,6 +84,7 @@ with col_eng:
         document_text=engineer_data['document'],
         assignee=engineer_data['assignee_name'],
         item_id=engineer_data['id'],
+        item_type='engineer',  # 技術者であることを示す
         page_link="pages/5_技術者詳細.py",
         session_key='selected_engineer_id'
     )
