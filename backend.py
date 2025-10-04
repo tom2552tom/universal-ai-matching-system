@@ -29,7 +29,7 @@ JOB_INDEX_FILE = "backend_job_index.faiss"
 ENGINEER_INDEX_FILE = "backend_engineer_index.faiss"
 MODEL_NAME = 'intfloat/multilingual-e5-large'
 TOP_K_CANDIDATES = 50
-MIN_SCORE_THRESHOLD = 90.0 # 推奨値に設定
+MIN_SCORE_THRESHOLD = 70.0 # 推奨値に設定
 
 @st.cache_data
 def load_app_config():
