@@ -5,8 +5,7 @@ import html
 
 st.set_page_config(page_title="マッチング詳細", layout="wide")
 
-st.image("img/UniversalAI_logo.png", width=240)
-st.divider()
+
 
 # --- データ取得 ---
 selected_match_id = st.session_state.get('selected_match_id', None)

@@ -51,6 +51,10 @@ def init_database():
         # engineersテーブルに name 列を追加
         cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
         cursor.execute('CREATE TABLE IF NOT EXISTS matching_results (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, engineer_id INTEGER, score REAL, created_at TEXT, is_hidden INTEGER DEFAULT 0, FOREIGN KEY (job_id) REFERENCES jobs (id), FOREIGN KEY (engineer_id) REFERENCES engineers (id))')
+        
+        
+        
+        
         cursor.execute("""
                     CREATE TABLE IF NOT EXISTS users (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,7 +63,8 @@ def init_database():
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                 """)
-        
+
+
         cursor.execute("SELECT COUNT(*) FROM users")
 
         user_count = cursor.fetchone()[0]
@@ -128,6 +133,8 @@ def init_database():
 
 
 
+
+
 def get_db_connection():
     conn = sqlite3.connect(DB_FILE); conn.row_factory = sqlite3.Row; return conn
 
@@ -188,6 +195,7 @@ def split_text_with_llm(text_content):
         except NameError: st.text("レスポンスの取得にも失敗しました。")
         return None
 
+@st.cache_data # 【この一行を追加するだけ】
 def get_match_summary_with_llm(job_doc, engineer_doc):
     model = genai.GenerativeModel('models/gemini-2.5-pro')
     prompt = f"""
@@ -516,3 +524,5 @@ def update_engineer_source_json(engineer_id, new_json_str):
         print(f"技術者のJSONデータ更新エラー: {e}"); conn.rollback(); return False
     finally:
         conn.close()
+
+    
