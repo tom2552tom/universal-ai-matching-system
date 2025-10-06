@@ -3,6 +3,47 @@ import backend as be
 import json
 import html
 
+def get_evaluation_html(grade):
+    """
+    評価（A-E）に基づいて色とスタイルが適用されたHTMLを生成します。
+    """
+    if not grade:
+        return ""
+
+    # 評価と色のマッピング
+    color_map = {
+        'A': '#28a745',  # Green (Success)
+        'B': '#17a2b8',  # Cyan (Info)
+        'C': '#ffc107',  # Yellow (Warning)
+        'D': '#fd7e14',  # Orange
+        'E': '#dc3545',  # Red (Danger)
+    }
+    # マップにない評価の場合はグレーにする
+    color = color_map.get(grade.upper(), '#6c757d') 
+    
+    # スタイルを定義（フォントサイズや太字など）
+    # font-size は '3em' や '48px' などお好みの大きさに調整してください
+    style = f"""
+        color: {color};
+        font-size: 3em;
+        font-weight: bold;
+        text-align: center;
+        line-height: 1.1;
+        margin-bottom: -10px; 
+    """
+    
+    # 表示するHTMLを組み立てる
+    # 評価（Aなど）を大きく表示し、その下に「判定」というラベルを配置
+    html_code = f"""
+    <div style='{style}'>
+        {grade.upper()}
+    </div>
+    <div style='text-align: center; font-weight: bold; color: #888;'>
+        判定
+    </div>
+    """
+    return html_code
+
 st.set_page_config(page_title="マッチング詳細", layout="wide")
 
 
@@ -94,9 +135,30 @@ summary_data = be.get_match_summary_with_llm(job_data['document'], engineer_data
 with st.container(border=True):
     col1, col2, col3 = st.columns([1.5, 3, 3])
     with col1:
-        st.metric("マッチ度", f"{float(match_data['score']):.1f}%")
+        
         if summary_data and summary_data.get('summary'):
-            st.markdown(f"**総合評価: {summary_data.get('summary')}**")
+            grade = summary_data.get('summary')
+            grade_to_save = summary_data.get('summary')
+
+
+
+            if match_data['grade'] != grade_to_save:
+                be.save_match_grade(selected_match_id, grade_to_save)
+                
+                match_data = dict(match_data) # sqlite3.Rowを辞書に変換
+                match_data['grade'] = grade_to_save
+
+
+
+            # 上で定義したヘルパー関数を使って、スタイル付きのHTMLを生成
+            evaluation_html = get_evaluation_html(grade)
+            st.markdown(evaluation_html, unsafe_allow_html=True)
+        
+        # マッチ度はその下に表示
+        #st.metric("マッチ度", f"{float(match_data['score']):.1f}%", label_visibility="collapsed")
+
+
+            
     with col2:
         st.markdown("###### ✅ ポジティブな点")
         if summary_data and summary_data.get('positive_points'):

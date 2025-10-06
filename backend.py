@@ -42,101 +42,91 @@ def load_embedding_model():
     try: return SentenceTransformer(MODEL_NAME)
     except Exception as e: st.error(f"埋め込みモデル '{MODEL_NAME}' の読み込みに失敗しました: {e}"); return None
 
-# ▼▼▼【修正箇所】テーブルに新しい列を追加 ▼▼▼
+
+# backend.py
+
+# ▼▼▼【この関数全体を置き換えてください】▼▼▼
 def init_database():
-    with sqlite3.connect(DB_FILE) as conn:
-        cursor = conn.cursor()
-        # jobsテーブルに project_name 列を追加
+    """
+    データベースとテーブルを初期化する。
+    既存のテーブルのカラムをチェックし、不足しているカラムがあれば追加する。
+    """
+    conn = get_db_connection() # ★★★ 修正点: 独自の接続ではなく、共通関数を使用
+    cursor = conn.cursor()
+
+    try:
+        # --- 基本テーブルの作成 ---
         cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
-        # engineersテーブルに name 列を追加
         cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
         cursor.execute('CREATE TABLE IF NOT EXISTS matching_results (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, engineer_id INTEGER, score REAL, created_at TEXT, is_hidden INTEGER DEFAULT 0, FOREIGN KEY (job_id) REFERENCES jobs (id), FOREIGN KEY (engineer_id) REFERENCES engineers (id))')
-        
-        
-        
-        
         cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        username TEXT NOT NULL UNIQUE,
-                        email TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    );
-                """)
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                email TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
 
-
+        # --- 初回起動時のテストユーザー追加 ---
         cursor.execute("SELECT COUNT(*) FROM users")
-
-        user_count = cursor.fetchone()[0]
-        if user_count == 0:
+        if cursor.fetchone()['COUNT(*)'] == 0:
             print("初回起動のため、テストユーザーを追加します...")
             cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('熊崎', 'yamada@example.com'))
             cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩本', 'suzuki@example.com'))
             cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('小関', 'sato@example.com'))
             print(" -> 3名のテストユーザーを追加しました。")
 
-
-    # --- 2. jobs テーブルに assigned_user_id カラムを追加 ---
-    try:
-        # jobs テーブルのカラム情報を取得
+        # --- カラムの自動追加処理 ---
+        # (jobsテーブル)
         cursor.execute("PRAGMA table_info(jobs)")
-        columns = [row[1] for row in cursor.fetchall()]
-        
-        # カラムが存在しない場合のみ追加
-        if 'assigned_user_id' not in columns:
-            print("`jobs` テーブルに `assigned_user_id` カラムが見つかりません。追加します...")
+        job_columns = [row['name'] for row in cursor.fetchall()] # ★★★ 修正点: インデックスではなく名前でアクセス
+        if 'assigned_user_id' not in job_columns:
             cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-            print("✅ `assigned_user_id` カラムを追加しました。")
-        else:
-            print("✅ `assigned_user_id` カラムは既に存在します。")
-            
-    except sqlite3.Error as e:
-        print(f"❌ `jobs` テーブルへのカラム追加中にエラーが発生しました: {e}")
-
-
-  # --- 4. jobs テーブルに is_hidden カラムを追加 ---
-    try:
-        cursor.execute("PRAGMA table_info(jobs)")
-        columns = [row[1] for row in cursor.fetchall()]
-        
-        # 'is_hidden' カラムが存在しない場合のみ追加
-        # 0 = 表示, 1 = 非表示。デフォルトは 0 (表示)
-        if 'is_hidden' not in columns:
-            print("`jobs` テーブルに `is_hidden` カラムが見つかりません。追加します...")
+        if 'is_hidden' not in job_columns:
             cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
-            print("✅ `is_hidden` カラムを追加し、デフォルト値を 0 (表示) に設定しました。")
-        else:
-            print("✅ `is_hidden` カラムは既に存在します。")
-            
-    except sqlite3.Error as e:
-        print(f"❌ `jobs` テーブルへの is_hidden カラム追加中にエラーが発生しました: {e}")
 
- # 【ここから追加】 --- engineers テーブルのカラム追加 ---
-    try:
+        # (engineersテーブル)
         cursor.execute("PRAGMA table_info(engineers)")
-        columns = [row[1] for row in cursor.fetchall()]
-        
-        # assigned_user_id カラム (技術者の担当者)
-        if 'assigned_user_id' not in columns:
-            print("`engineers` テーブルに `assigned_user_id` カラムを追加します...")
+        engineer_columns = [row['name'] for row in cursor.fetchall()] # ★★★ 修正点: インデックスではなく名前でアクセス
+        if 'assigned_user_id' not in engineer_columns:
             cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-            print("✅ `assigned_user_id` カラムを追加しました。")
-        
-        # is_hidden カラム (技術者の表示/非表示)
-        if 'is_hidden' not in columns:
-            print("`engineers` テーブルに `is_hidden` カラムを追加します...")
+        if 'is_hidden' not in engineer_columns:
             cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
-            print("✅ `is_hidden` カラムを追加し、デフォルト値を 0 (表示) に設定しました。")
             
+        # (matching_resultsテーブル)
+        cursor.execute("PRAGMA table_info(matching_results)")
+        match_columns = [row['name'] for row in cursor.fetchall()] # ★★★ 修正点: エラー箇所を修正
+        if 'proposal_text' not in match_columns:
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN proposal_text TEXT")
+        if 'grade' not in match_columns:
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN grade TEXT")
+
+        conn.commit()
+        print("Database initialized and schema verified successfully.")
+
     except sqlite3.Error as e:
-        print(f"❌ `engineers` テーブルへのカラム追加中にエラーが発生しました: {e}")
-
-
+        print(f"❌ データベース初期化中にエラーが発生しました: {e}")
+        conn.rollback() # エラー発生時は変更を元に戻す
+    finally:
+        conn.close() # ★★★ 修正点: 最後に接続を閉じる
 
 
 
 def get_db_connection():
-    conn = sqlite3.connect(DB_FILE); conn.row_factory = sqlite3.Row; return conn
+    """
+    データベース接続を取得します。
+    row_factoryを設定し、カラム名でアクセスできるようにします。
+    """
+    conn = sqlite3.connect(DB_FILE)
+    # ▼▼▼【この一行を追加・修正します】▼▼▼
+    conn.row_factory = sqlite3.Row
+    # ▲▲▲【この一行を追加・修正します】▲▲▲
+    return conn
+
+
+#def get_db_connection():
+#    conn = sqlite3.connect(DB_FILE); conn.row_factory = sqlite3.Row; return conn
 
 
 
@@ -590,3 +580,36 @@ def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_nam
         print(f"Error generating proposal reply with LLM: {e}")
         return f"提案メールの生成中にエラーが発生しました: {e}"
 
+
+
+def save_match_grade(match_id, grade):
+    """
+    指定されたマッチングIDに対して、AI評価の等級を保存します。
+
+    Args:
+        match_id (int): matching_resultsテーブルのID。
+        grade (str): 保存する評価（'A', 'B'など）。
+
+    Returns:
+        bool: 保存が成功した場合はTrue、失敗した場合はFalse。
+    """
+    if not grade:  # gradeが空の場合は何もしない
+        return False
+        
+    conn = None
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            "UPDATE matching_results SET grade = ? WHERE id = ?",
+            (grade, match_id)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error saving match grade for match_id {match_id}: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
