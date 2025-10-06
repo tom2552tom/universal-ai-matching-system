@@ -40,12 +40,11 @@ def get_source_text(source_json_str):
     except: return "エラー: 元のデータの解析に失敗しました。"
 
 # ==================================================================
-# ▼▼▼【ここからが新しい画面レイアウトです】▼▼▼
+# ▼▼▼【画面レイアウト】▼▼▼
 # ==================================================================
 
 
-
-# 【変更点 3】AI要約比較セクション
+# --- AI要約比較セクション ---
 st.header("🤖 AIによる案件・技術者の要約")
 col_job, col_eng = st.columns(2)
 
@@ -59,8 +58,6 @@ def display_summary(title, document_text, assignee, item_id, item_type, page_lin
         if meta_info: st.caption(meta_info.replace("][", " | ").strip("[]"))
         st.markdown(main_doc)
         
-        # 【変更点 4】詳細ページへのボタンを追加
-        #if st.button("詳細を見る", key=f"nav_{item_id}", use_container_width=True):
         if st.button("詳細を見る", key=f"nav_{item_type}_{item_id}", use_container_width=True):
             st.session_state[session_key] = item_id
             st.switch_page(page_link)
@@ -72,7 +69,7 @@ with col_job:
         document_text=job_data['document'],
         assignee=job_data['assignee_name'],
         item_id=job_data['id'],
-        item_type='job',  # 案件であることを示す
+        item_type='job',
         page_link="pages/6_案件詳細.py",
         session_key='selected_job_id'
     )
@@ -84,21 +81,20 @@ with col_eng:
         document_text=engineer_data['document'],
         assignee=engineer_data['assignee_name'],
         item_id=engineer_data['id'],
-        item_type='engineer',  # 技術者であることを示す
+        item_type='engineer',
         page_link="pages/5_技術者詳細.py",
         session_key='selected_engineer_id'
     )
 st.divider()
 
 
-# 【変更点 1】AIマッチング評価セクションを一番上に移動
+# --- AIマッチング評価セクション ---
 st.header("📊 AIマッチング評価")
 summary_data = be.get_match_summary_with_llm(job_data['document'], engineer_data['document'])
 with st.container(border=True):
     col1, col2, col3 = st.columns([1.5, 3, 3])
     with col1:
         st.metric("マッチ度", f"{float(match_data['score']):.1f}%")
-        # AIによる総合評価も表示
         if summary_data and summary_data.get('summary'):
             st.markdown(f"**総合評価: {summary_data.get('summary')}**")
     with col2:
@@ -114,6 +110,45 @@ with st.container(border=True):
 st.divider()
 
 
+# ▼▼▼【ここからが新しい機能】▼▼▼
+# --- AIによる提案メール案生成セクション ---
+st.header("✉️ AIによる提案メール案")
+with st.spinner("AIが技術者のセールスポイントを盛り込んだ提案メールを作成中です..."):
+    # backend.pyに追加した関数を呼び出す
+    # 案件名と技術者名も渡し、より精度の高い件名や本文を生成させる
+    project_name_for_prompt = job_data['project_name'] or f"ID:{job_data['id']}の案件"
+    engineer_name_for_prompt = engineer_data['name'] or f"ID:{engineer_data['id']}の技術者"
+
+    # backend.pyに関数を追加した前提で呼び出し
+    proposal_text = be.generate_proposal_reply_with_llm(
+        job_data['document'],
+        engineer_data['document'],
+        engineer_name_for_prompt,
+        project_name_for_prompt
+    )
+
+with st.container(border=True):
+    st.info("以下の文面はAIによって生成されたものです。提案前に必ず内容を確認・修正してください。")
+    # 生成されたテキストエリアで表示
+    st.text_area(
+        label="生成されたメール文面",
+        value=proposal_text,
+        height=500,
+        label_visibility="collapsed"
+    )
+    # ユーザーがコピーしやすいように、st.code を利用したコピー機能も追加
+    if st.button("文面をクリップボードにコピー", use_container_width=True):
+        st.toast("コピーしました！")
+        # Streamlitには直接クリップボードに書き込む機能がないため、
+        # このボタンは主にUI上のフィードバックとして機能します。
+        # 代わりに、ユーザーが手動でコピーしやすいようにst.codeを表示します。
+    st.code(proposal_text, language="text")
+    st.caption("▲ 上のボックス内をクリックすると全文をコピーできます。")
+
+st.divider()
+# ▲▲▲【ここまでが新しい機能】▲▲▲
+
+
 # --- 元情報（タブ）セクション ---
 st.header("📄 元の情報ソース")
 tab1, tab2 = st.tabs(["案件の元情報", "技術者の元情報"])
@@ -124,7 +159,7 @@ with tab2:
 
 st.divider()
 
-# 【変更点 2】操作メニューを追加
+# --- 操作メニュー ---
 with st.expander("マッチングの操作"):
     is_hidden = match_data['is_hidden'] == 1
     if not is_hidden:
@@ -141,3 +176,4 @@ st.divider()
 if st.button("ダッシュボードに戻る"):
     if 'selected_match_id' in st.session_state: del st.session_state['selected_match_id']
     st.switch_page("1_ダッシュボード.py")
+

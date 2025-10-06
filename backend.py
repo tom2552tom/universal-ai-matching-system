@@ -525,4 +525,66 @@ def update_engineer_source_json(engineer_id, new_json_str):
     finally:
         conn.close()
 
-    
+
+def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_name, project_name):
+    """
+    LLMを使用して、クライアントへの技術者提案メール文案を生成します。
+
+    Args:
+        job_summary (str): 案件の要約テキスト。
+        engineer_summary (str): 技術者の要約テキスト。
+        engineer_name (str): 技術者の名前。
+        project_name (str): 案件名。
+
+    Returns:
+        str: 生成されたメール文案、またはエラーメッセージ。
+    """
+    # 必要な情報が揃っているか確認
+    if not all([job_summary, engineer_summary, engineer_name, project_name]):
+        return "情報が不足しているため、提案メールを生成できませんでした。"
+
+    # AIへの指示（プロンプト）
+    prompt = f"""
+あなたは、クライアントに優秀な技術者を提案する、経験豊富なIT営業担当者です。
+以下の案件情報と技術者情報をもとに、クライアントの心に響く、丁寧で説得力のある提案メールの文面を作成してください。
+
+# 役割
+- 優秀なIT営業担当者
+
+# 指示
+- 最初に、提案する技術者名と案件名を記載した件名を作成してください (例: 件名: 【〇〇様のご提案】〇〇プロジェクトの件)。
+- 技術者のスキルや経験が、案件のどの要件に具体的にマッチしているかを明確に示してください。
+- ポジティブな点（適合スキル）を強調し、技術者の魅力を最大限に伝えてください。
+- 懸念点（スキルミスマッチや経験不足）がある場合は、正直に触れつつも、学習意欲や類似経験、ポテンシャルなどでどのようにカバーできるかを前向きに説明してください。
+- 全体として、プロフェッショナルかつ丁寧なビジネスメールのトーンを維持してください。
+- 最後に、ぜひ一度、オンラインでの面談の機会を設けていただけますようお願いする一文で締めくくってください。
+- 出力は、件名と本文を含んだメール形式のテキストのみとしてください。余計な解説は不要です。
+
+# 案件情報
+{job_summary}
+
+# 技術者情報
+{engineer_summary}
+
+# 提案する技術者の名前
+{engineer_name}
+
+# 案件名
+{project_name}
+
+---
+それでは、上記の指示に基づいて、最適な提案メールを作成してください。
+"""
+
+    try:
+        # st.secrets等でAPIキーを管理していることを想定
+        # genai.configure(api_key=st.secrets["google_api_key"])
+        #model = genai.GenerativeModel('gemini-2.5-pro')
+        model = genai.GenerativeModel('models/gemini-2.5-pro')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        # 本番環境では logging を使用することを推奨します
+        print(f"Error generating proposal reply with LLM: {e}")
+        return f"提案メールの生成中にエラーが発生しました: {e}"
+
