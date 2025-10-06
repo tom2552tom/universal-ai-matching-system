@@ -539,6 +539,12 @@ def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_nam
     Returns:
         str: 生成されたメール文案、またはエラーメッセージ。
     """
+
+     # ★★★ 追加: 関数冒頭でAPIキー設定をチェック ★★★
+    if not _configure_genai():
+        return "APIキーが設定されていないため、提案メールを生成できません。"
+
+
     # 必要な情報が揃っているか確認
     if not all([job_summary, engineer_summary, engineer_name, project_name]):
         return "情報が不足しているため、提案メールを生成できませんでした。"
