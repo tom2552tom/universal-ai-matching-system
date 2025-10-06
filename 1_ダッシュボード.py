@@ -5,41 +5,43 @@ from backend import (
     hide_match, load_app_config, get_all_users
 )
 
-# ▼▼▼ 変更点 1: AI評価表示用のヘルパー関数を追加 ▼▼▼
-def get_evaluation_html(grade, font_size='2.5em'):
-    """
-    評価（A-E）に基づいて色とスタイルが適用されたHTMLを生成します。
-    """
-    if not grade:
-        return "" # gradeがNoneや空の場合は何も表示しない
+# ▼▼▼【ここからが修正箇所です】▼▼▼
 
+# --- アプリケーションの初期化 ---
+# データベースとテーブルが確実に存在するように、全ての処理の最初に呼び出す
+init_database()
+load_embedding_model() # 埋め込みモデルもここで読み込む
+
+# --- ヘルパー関数と設定の読み込み ---
+def get_evaluation_html(grade, font_size='2.5em'):
+    # ... (この関数は変更なし) ...
+    if not grade: return ""
     color_map = {'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
     color = color_map.get(grade.upper(), '#6c757d') 
-    
     style = f"color: {color}; font-size: {font_size}; font-weight: bold; text-align: center; line-height: 1; padding-top: 10px;"
     html_code = f"<div style='{style}'>{grade.upper()}</div><div style='text-align: center; font-size: 0.8em; color: #888;'>判定</div>"
-    
     return html_code
-# ▲▲▲ 変更点 1 ここまで ▲▲▲
-
 
 config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
 
-# init_database(); load_embedding_model() # ページ読み込みのたびに実行するのは非効率な場合がある
-# Streamlitのキャッシュ機構に任せるか、アプリ起動時に一度だけ実行する設計を検討
 
 st.image("img/UniversalAI_logo.png", width=240)
 st.divider()
+
 
 # --- サイドバー ---
 st.sidebar.header("フィルター")
 
 # 担当者フィルター
+# init_database() が実行された後なので、安全に get_all_users() を呼び出せる
 all_users = get_all_users()
 user_names = [user['username'] for user in all_users]
 assignee_options = ["すべて"] + user_names 
+# ▲▲▲【ここまでが修正箇所です】▲▲▲
+
+
 
 job_assignee_filter = st.sidebar.selectbox(
     "案件担当者", options=assignee_options, key="job_assignee_filter"
