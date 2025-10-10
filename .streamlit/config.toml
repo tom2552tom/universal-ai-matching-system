@@ -39,3 +39,5 @@ sales_staff_notice = """
 """
 # 上のメッセージを非表示にする場合は、以下の行をコメントアウトするか空にしてください。
 # sales_staff_notice = ""
+
+showSidebarNavigation = false
