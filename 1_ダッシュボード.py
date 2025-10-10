@@ -25,12 +25,11 @@ st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wi
 st.image("img/UniversalAI_logo.png", width=240)
 st.divider()
 
-# ▼▼▼ 変更点 1: ページング用のセッションステートとサイドバーコントロールを追加 ▼▼▼
 # ページングの初期設定
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 1
 if 'items_per_page' not in st.session_state:
-    st.session_state.items_per_page = 10 # デフォルト10件
+    st.session_state.items_per_page = 10 
 
 st.sidebar.subheader("ページング設定")
 items_per_page_options = [5, 10, 20, 50]
@@ -40,7 +39,6 @@ st.session_state.items_per_page = st.sidebar.selectbox(
     index=items_per_page_options.index(st.session_state.items_per_page),
     key="items_per_page_selector"
 )
-# ▲▲▲ 変更点 1 ここまで ▲▲▲
 
 # --- サイドバー (既存のフィルター) ---
 st.sidebar.header("フィルター")
@@ -57,7 +55,11 @@ grade_options = ['S','A', 'B', 'C', 'D', 'E']
 selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, placeholder="評価を選択して絞り込み")
 st.sidebar.divider()
 
-min_score_filter = st.sidebar.slider("最小マッチ度 (%)", 0, 100, 0)
+# ▼▼▼ 変更点 1: 最小マッチ度フィルターを削除 ▼▼▼
+# min_score_filter = st.sidebar.slider("最小マッチ度 (%)", 0, 100, 0) # この行を削除
+min_score_filter = 0 # 削除に伴い、デフォルト値を0としておく
+# ▲▲▲ 変更点 1 ここまで ▲▲▲
+
 today = datetime.now().date()
 default_start_date = today - timedelta(days=30)
 keyword_filter = st.sidebar.text_input("キーワード検索 (担当者名も可)")
@@ -71,7 +73,6 @@ st.header("最新マッチング結果一覧")
 
 # --- DBからフィルタリングされた結果を取得 ---
 conn = get_db_connection()
-# ▼▼▼ 変更点 2: クエリに 'r.grade', 'r.positive_points', 'r.concern_points' を追加 ▼▼▼
 query = '''
     SELECT 
         r.id as res_id, 
@@ -86,9 +87,14 @@ query = '''
     LEFT JOIN users job_user ON j.assigned_user_id = job_user.id
     LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
 '''
-# ▲▲▲ 変更点 2 ここまで ▲▲▲
 params = []
-where_clauses = ["r.score >= ?"]; params.append(min_score_filter)
+# ▼▼▼ 変更点 2: 最小マッチ度フィルターのWHERE句を削除 ▼▼▼
+# where_clauses = ["r.score >= ?"]; params.append(min_score_filter) # この行を修正
+where_clauses = [] # 最小マッチ度フィルターの条件を削除
+if min_score_filter > 0: # 念のため、もし min_score_filter が使われる状況があれば残しておく
+    where_clauses.append("r.score >= ?")
+    params.append(min_score_filter)
+# ▲▲▲ 変更点 2 ここまで ▲▲▲
 
 if job_assignee_filter != "すべて":
     where_clauses.append("job_user.username = ?"); params.append(job_assignee_filter)
@@ -109,9 +115,7 @@ if not show_hidden_filter:
 
 if where_clauses: query += " WHERE " + " AND ".join(where_clauses)
 
-# ▼▼▼ 変更点 3: DB側のLIMITを削除。Python側でページングするため、全件取得 ▼▼▼
-query += " ORDER BY r.created_at DESC, r.score DESC" # LIMIT 200 を削除
-# ▲▲▲ 変更点 3 ここまで ▲▲▲
+query += " ORDER BY r.created_at DESC, r.score DESC"
 
 results = conn.execute(query, tuple(params)).fetchall()
 conn.close()
@@ -132,7 +136,6 @@ else:
     if not results_to_display:
         st.warning("AIが提案したマッチングはありましたが、ルールフィルターによってすべて除外されました。")
     else:
-        # ▼▼▼ 変更点 4: ページネーションロジックとUIを追加 ▼▼▼
         total_items = len(results_to_display)
         total_pages = (total_items + st.session_state.items_per_page - 1) // st.session_state.items_per_page
 
@@ -146,22 +149,20 @@ else:
                 if st.button("前のページ", key="prev_page_btn"):
                     if st.session_state.current_page > 1:
                         st.session_state.current_page -= 1
-                        st.rerun() # ページ番号変更時に画面を再描画
+                        st.rerun()
             with pagination_cols[1]:
                 st.markdown(f"<p style='text-align: center; font-weight: bold;'>ページ {st.session_state.current_page} / {total_pages}</p>", unsafe_allow_html=True)
             with pagination_cols[2]:
                 if st.button("次のページ", key="next_page_btn"):
                     if st.session_state.current_page < total_pages:
                         st.session_state.current_page += 1
-                        st.rerun() # ページ番号変更時に画面を再描画
+                        st.rerun()
             st.markdown("---")
 
-        # 現在のページに表示するアイテムの範囲を計算
         start_index = (st.session_state.current_page - 1) * st.session_state.items_per_page
         end_index = start_index + st.session_state.items_per_page
         paginated_results = results_to_display[start_index:end_index]
 
-        # ループで表示する部分を paginated_results に変更
         for res in paginated_results:
             score = float(res['score'])
             is_match_hidden = res['is_hidden'] == 1
@@ -191,7 +192,9 @@ else:
                     
                 with col2: # マッチ度とAI評価
                     st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-                    st.metric(label="マッチ度", value=f"{score:.1f}%", label_visibility="collapsed")
+                    # ▼▼▼ 変更点 3: マッチ度 (%) の表示を削除 ▼▼▼
+                    # st.metric(label="マッチ度", value=f"{score:.1f}%", label_visibility="collapsed") # この行を削除
+                    # ▲▲▲ 変更点 3 ここまで ▲▲▲
                     
                     if st.button("詳細を見る", key=f"detail_btn_{res['res_id']}", type="primary", use_container_width=True):
                         st.session_state['selected_match_id'] = res['res_id']
@@ -208,4 +211,3 @@ else:
                     display_doc = eng_doc.split('\n---\n', 1)[-1]
                     st.caption(display_doc.replace('\n', ' ').replace('\r', '')[:150] + "...")
             st.empty()
-        # ▲▲▲ 変更点 4 ここまで ▲▲▲
