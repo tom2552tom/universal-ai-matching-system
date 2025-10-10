@@ -20,7 +20,7 @@ with col1:
 with col2:
     sort_column = st.selectbox(
         "並び替え",
-        options=["プロジェクト名", "担当者名", "登録日"],
+        options=["登録日", "プロジェクト名", "担当者名"],
         index=0,
         key="sort_column"
     )
@@ -28,7 +28,7 @@ with col2:
 with col3:
     sort_order = st.selectbox(
         "順序",
-        options=["昇順", "降順"],
+        options=["降順 (新しい順)", "昇順 (古い順)"],
         index=0,
         key="sort_order"
     )
@@ -69,15 +69,13 @@ if where_clauses:
 # ▼▼▼【ここからが修正箇所】▼▼▼
 # --- ソート順の決定 ---
 sort_column_map = {
+    "登録日": "j.created_at",
     "プロジェクト名": "j.project_name",
-    "担当者名": "assigned_username", # LEFT JOIN後のエイリアス名を使用
-    "登録日": "j.created_at"
-    
-    
+    "担当者名": "assigned_username" # LEFT JOIN後のエイリアス名を使用
 }
 order_map = {
-    "降順 ": "DESC",
-    "昇順 ": "ASC"
+    "降順 (新しい順)": "DESC",
+    "昇順 (古い順)": "ASC"
 }
 
 # 選択されたオプションに基づいてORDER BY句を組み立てる
