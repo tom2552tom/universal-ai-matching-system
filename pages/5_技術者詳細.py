@@ -108,7 +108,7 @@ if engineer_data:
     if source_json_str:
         try:
             source_data = json.loads(source_json_str)
-            st.subheader("メール本文（編集可能）")
+            st.subheader("情報ソース（編集可能）")
             email_body = source_data.get("body", "（メール本文がありません）")
             
             edited_body = st.text_area("メール本文を編集", value=email_body, height=400, label_visibility="collapsed", key=f"eng_mail_editor_{selected_id}")
@@ -199,8 +199,8 @@ st.divider()
 
 
 # ▼▼▼【ここからが追加/修正箇所】▼▼▼
-st.header("⚙️ 高度な操作")
-st.warning("以下の操作は処理に時間がかかる場合があります。また、既存のマッチング結果がリセットされます。")
+st.header("⚙️ AI再評価＋マッチング")
+st.warning("技術者のスキル等の変更・追加などを行なった場合、技術者の再評価、再マッチングを行うことでヒットすることがあります。")
 
 if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
     with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
