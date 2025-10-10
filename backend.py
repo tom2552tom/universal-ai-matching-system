@@ -154,6 +154,10 @@ def init_database():
             cursor.execute("ALTER TABLE matching_results ADD COLUMN concern_points TEXT")
         # ▲▲▲ 追加 ここまで ▲▲▲
 
+        if 'status' not in match_columns:
+            # デフォルト値として「新規」を設定
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN status TEXT DEFAULT '新規'")
+
         conn.commit()
         print("Database initialized and schema verified successfully.")
 
@@ -1032,3 +1036,19 @@ def _build_meta_info_string(item_type, item_data):
     return " ".join(meta_parts) + "\n---\n"
 
 
+def update_match_status(match_id, new_status):
+    """
+    指定されたマッチングIDのステータスを更新する。
+    """
+    if not match_id or not new_status:
+        return False
+    
+    with get_db_connection() as conn:
+        try:
+            conn.execute("UPDATE matching_results SET status = ? WHERE id = ?", (new_status, match_id))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"ステータスの更新エラー: {e}")
+            conn.rollback()
+            return False

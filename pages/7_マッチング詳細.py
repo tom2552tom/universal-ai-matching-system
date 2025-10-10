@@ -3,6 +3,8 @@ import sys
 import os
 import json
 import html
+import time # timeモジュールを追加
+
 
 # プロジェクトルートをパスに追加
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -110,6 +112,44 @@ def get_source_text(source_json_str):
 # ==================================================================
 # ▼▼▼【画面レイアウト】▼▼▼
 # ==================================================================
+
+
+# --- 進捗ステータス管理セクション ---
+st.header("📈 進捗ステータス")
+
+# SEC事業で想定されるステータスオプション
+status_options = [
+    "新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", 
+    "採用", "見送り（自社都合）", "見送り（クライアント都合）", "見送り（技術者都合）", "クローズ"
+]
+
+current_status = match_data.get('status', '新規') # DBにstatusがない場合も考慮
+
+with st.container(border=True):
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        st.metric("現在のステータス", current_status)
+    with col2:
+        try:
+            default_index = status_options.index(current_status)
+        except ValueError:
+            default_index = 0 # リストにない場合は先頭を選択
+        
+        selected_status = st.selectbox(
+            "ステータスを変更",
+            options=status_options,
+            index=default_index,
+            key=f"status_selector_{selected_match_id}"
+        )
+        if st.button("ステータスを更新", use_container_width=True):
+            if be.update_match_status(selected_match_id, selected_status):
+                st.success(f"ステータスを「{selected_status}」に更新しました。")
+                time.sleep(1) # 1秒待機
+                st.rerun()
+            else:
+                st.error("ステータスの更新に失敗しました。")
+st.divider()
+
 
 
 # --- AI要約比較セクション ---
