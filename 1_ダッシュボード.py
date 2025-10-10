@@ -92,6 +92,7 @@ query = '''
     JOIN engineers e ON r.engineer_id = e.id
     LEFT JOIN users job_user ON j.assigned_user_id = job_user.id
     LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
+    order by r.grade
 '''
 # ▲▲▲ 変更点 3 ここまで ▲▲▲
 params = []
