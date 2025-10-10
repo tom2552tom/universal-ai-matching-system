@@ -3,6 +3,11 @@ import backend as be
 import json
 import html
 
+# ▼▼▼ 変更点 1: backend から get_evaluation_html をインポート ▼▼▼
+from backend import get_evaluation_html
+# ▲▲▲ 変更点 1 ここまで ▲▲▲
+
+
 st.set_page_config(page_title="案件詳細", layout="wide")
 
 # --- 表示用のカスタムCSS ---
@@ -118,13 +123,26 @@ if job_data:
 
     # --- マッチング済みの技術者一覧 ---
     st.header("🤝 マッチング済みの技術者一覧")
-    matched_engineers = conn.execute("""
-        SELECT e.id, e.name, e.document, r.score 
+
+    # ▼▼▼ 変更点 2: クエリを修正し、非表示の技術者・マッチング結果を除外し、gradeも取得 ▼▼▼
+    matched_engineers_query = """
+        SELECT 
+            e.id as engineer_id, 
+            e.name, 
+            e.document, 
+            r.score,
+            r.id as match_id,
+            r.grade  -- 追加: AI評価ランクも取得
         FROM matching_results r
         JOIN engineers e ON r.engineer_id = e.id
-        WHERE r.job_id = ? AND (e.is_hidden = 0 OR e.is_hidden IS NULL)
+        WHERE r.job_id = ? 
+          AND e.is_hidden = 0  -- 技術者が非表示でない
+          AND r.is_hidden = 0  -- マッチング結果が非表示でない
         ORDER BY r.score DESC
-    """, (selected_id,)).fetchall()
+    """
+    matched_engineers = conn.execute(matched_engineers_query, (selected_id,)).fetchall()
+    # ▲▲▲ 変更点 2 ここまで ▲▲▲
+
 
     if not matched_engineers:
         st.info("この案件にマッチング済みの技術者はいません。")
@@ -132,18 +150,26 @@ if job_data:
         st.write(f"計 {len(matched_engineers)} 名の技術者がマッチングしています。")
         for eng in matched_engineers:
             with st.container(border=True):
+                  # ▼▼▼ 変更点 3: レイアウトを調整し、マッチ度パーセンテージをAI評価ランクに置き換え ▼▼▼
                 col1, col2 = st.columns([4, 1])
                 with col1:
-                    engineer_name = eng['name'] if eng['name'] else f"技術者 (ID: {eng['id']})"
+                    engineer_name = eng['name'] if eng['name'] else f"技術者 (ID: {eng['engineer_id']})"
                     st.markdown(f"##### {engineer_name}")
                     eng_doc_parts = eng['document'].split('\n---\n', 1)
                     eng_main_doc = eng_doc_parts[1] if len(eng_doc_parts) > 1 else eng['document']
                     st.caption(eng_main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
                 with col2:
-                    st.metric("マッチ度", f"{eng['score']:.1f}%")
-                    if st.button("技術者詳細へ", key=f"matched_eng_detail_{eng['id']}", use_container_width=True):
-                        st.session_state['selected_engineer_id'] = eng['id']
-                        st.switch_page("pages/5_技術者詳細.py")
+                    # マッチ度 (%) の代わりにAI評価ランクを表示
+                    st.markdown(get_evaluation_html(eng['grade'], font_size='2em'), unsafe_allow_html=True)
+                    
+                    if st.button("詳細を見る", key=f"matched_job_detail_{eng['match_id']}", use_container_width=True):
+                        st.session_state['selected_engineer_id'] = eng['engineer_id']
+                        st.switch_page("pages/7_マッチング詳細.py")
+
+                    #if st.button("技術者詳細へ", key=f"matched_eng_detail_{eng['match_id']}", use_container_width=True):
+                    #    st.session_state['selected_engineer_id'] = eng['engineer_id']
+                    #    st.switch_page("pages/5_技術者詳細.py")
+                # ▲▲▲ 変更点 3 ここまで ▲▲▲
 else:
     st.error("指定されたIDの案件情報が見つかりませんでした。")
 
