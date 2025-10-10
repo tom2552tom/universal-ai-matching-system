@@ -46,6 +46,7 @@ def load_embedding_model():
 # backend.py
 
 # ▼▼▼【この関数全体を置き換えてください】▼▼▼
+
 def init_database():
     """
     データベースとテーブルを初期化する。
@@ -144,9 +145,7 @@ def init_database():
         conn.rollback()
     finally:
         conn.close()
-
-
-
+        
     """
     データベースとテーブルを初期化する。
     既存のテーブルのカラムをチェックし、不足しているカラムがあれば追加する。
@@ -492,10 +491,21 @@ def process_single_content(source_data: dict):
             item_data['id'] = cursor.lastrowid; item_data['document'] = full_document; newly_added_engineers.append(item_data)
 
         st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
-        all_jobs = conn.execute('SELECT id, document FROM jobs').fetchall()
-        all_engineers = conn.execute('SELECT id, document FROM engineers').fetchall()
-        if all_jobs: update_index(JOB_INDEX_FILE, all_jobs)
-        if all_engineers: update_index(ENGINEER_INDEX_FILE, all_engineers)
+
+        #all_jobs = conn.execute('SELECT id, document FROM jobs').fetchall()
+        #all_engineers = conn.execute('SELECT id, document FROM engineers').fetchall()
+        #if all_jobs: update_index(JOB_INDEX_FILE, all_jobs)
+        #if all_engineers: update_index(ENGINEER_INDEX_FILE, all_engineers)
+
+        # ▼▼▼ 修正点: is_hidden = 0 のアイテムのみを対象にインデックスを更新 ▼▼▼
+        all_active_jobs = conn.execute('SELECT id, document FROM jobs WHERE is_hidden = 0').fetchall()
+        all_active_engineers = conn.execute('SELECT id, document FROM engineers WHERE is_hidden = 0').fetchall()
+        
+        if all_active_jobs: update_index(JOB_INDEX_FILE, all_active_jobs)
+        if all_active_engineers: update_index(ENGINEER_INDEX_FILE, all_active_engineers)
+        # ▲▲▲ 修正点 ここまで ▲▲▲
+
+
         for new_job in newly_added_jobs: run_matching_for_item(new_job, 'job', cursor, now_str)
         for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', cursor, now_str)
     return True
