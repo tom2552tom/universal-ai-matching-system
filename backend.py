@@ -51,6 +51,106 @@ def init_database():
     データベースとテーブルを初期化する。
     既存のテーブルのカラムをチェックし、不足しているカラムがあれば追加する。
     """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # --- 基本テーブルの作成 (既存のCREATE TABLE文はそのまま) ---
+        cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
+        
+        # ▼▼▼ 修正: matching_results テーブルのCREATE TABLE文に AI評価関連カラムを追加 ▼▼▼
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS matching_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_id INTEGER NOT NULL,
+                engineer_id INTEGER NOT NULL,
+                score REAL NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_hidden INTEGER DEFAULT 0,
+                grade TEXT,                  -- 追加
+                positive_points TEXT,        -- 追加
+                concern_points TEXT,         -- 追加
+                proposal_text TEXT,          -- 追加
+                FOREIGN KEY (job_id) REFERENCES jobs (id),
+                FOREIGN KEY (engineer_id) REFERENCES engineers (id),
+                UNIQUE (job_id, engineer_id)
+            )
+        ''')
+        # ▲▲▲ 修正 ここまで ▲▲▲
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                email TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+
+        # --- 初回起動時のテストユーザー追加 (既存のコードはそのまま) ---
+        cursor.execute("SELECT COUNT(*) FROM users")
+        if cursor.fetchone()['COUNT(*)'] == 0:
+            print("初回起動のため、テストユーザーを追加します...")
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('熊崎', 'yamada@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩本', 'suzuki@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('小関', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('内山', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('島田', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('長谷川', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('北島', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩崎', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('根岸', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('添田', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('山浦', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('福田', 'sato@example.com'))
+            print(" -> テストユーザーを追加しました。")
+
+        # --- カラムの自動追加処理 ---
+        # (jobsテーブル, engineersテーブルのカラム追加チェックはそのまま)
+        cursor.execute("PRAGMA table_info(jobs)")
+        job_columns = [row['name'] for row in cursor.fetchall()]
+        if 'assigned_user_id' not in job_columns:
+            cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
+        if 'is_hidden' not in job_columns:
+            cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
+
+        cursor.execute("PRAGMA table_info(engineers)")
+        engineer_columns = [row['name'] for row in cursor.fetchall()]
+        if 'assigned_user_id' not in engineer_columns:
+            cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
+        if 'is_hidden' not in engineer_columns:
+            cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
+            
+        # (matching_resultsテーブルのカラム追加チェック)
+        cursor.execute("PRAGMA table_info(matching_results)")
+        match_columns = [row['name'] for row in cursor.fetchall()]
+        if 'proposal_text' not in match_columns:
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN proposal_text TEXT")
+        if 'grade' not in match_columns:
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN grade TEXT")
+        # ▼▼▼ 追加: positive_points と concern_points カラムの追加チェック ▼▼▼
+        if 'positive_points' not in match_columns:
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN positive_points TEXT")
+        if 'concern_points' not in match_columns:
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN concern_points TEXT")
+        # ▲▲▲ 追加 ここまで ▲▲▲
+
+        conn.commit()
+        print("Database initialized and schema verified successfully.")
+
+    except sqlite3.Error as e:
+        print(f"❌ データベース初期化中にエラーが発生しました: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
+
+
+
+    """
+    データベースとテーブルを初期化する。
+    既存のテーブルのカラムをチェックし、不足しているカラムがあれば追加する。
+    """
     conn = get_db_connection() # ★★★ 修正点: 独自の接続ではなく、共通関数を使用
     cursor = conn.cursor()
 
