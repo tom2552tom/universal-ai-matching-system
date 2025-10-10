@@ -96,7 +96,7 @@ query = '''
 '''
 # ▲▲▲ 変更点 3 ここまで ▲▲▲
 params = []
-where_clauses = "" #["r.score >= ?"]; params.append(min_score_filter)
+where_clauses = ["r.score >= ?"]; params.append(min_score_filter)
 
 # 担当者フィルター
 if job_assignee_filter != "すべて":
