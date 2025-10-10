@@ -65,8 +65,8 @@ st.sidebar.divider()
 min_score_filter = st.sidebar.slider("最小マッチ度 (%)", 0, 100, 0)
 today = datetime.now().date()
 default_start_date = today - timedelta(days=30)
-start_date_filter = st.sidebar.date_input("開始日", value=default_start_date)
-end_date_filter = st.sidebar.date_input("終了日", value=today)
+#start_date_filter = st.sidebar.date_input("開始日", value=default_start_date)
+#end_date_filter = st.sidebar.date_input("終了日", value=today)
 keyword_filter = st.sidebar.text_input("キーワード検索 (担当者名も可)")
 
 st.sidebar.divider()
@@ -112,8 +112,8 @@ if selected_grades:
 # ▲▲▲ 変更点 4 ここまで ▲▲▲
 
 # その他のフィルター
-if start_date_filter: where_clauses.append("date(r.created_at) >= ?"); params.append(start_date_filter)
-if end_date_filter: where_clauses.append("date(r.created_at) <= ?"); params.append(end_date_filter)
+#if start_date_filter: where_clauses.append("date(r.created_at) >= ?"); params.append(start_date_filter)
+#if end_date_filter: where_clauses.append("date(r.created_at) <= ?"); params.append(end_date_filter)
 if keyword_filter: 
     where_clauses.append("(j.document LIKE ? OR e.document LIKE ? OR j.project_name LIKE ? OR e.name LIKE ? OR job_user.username LIKE ? OR eng_user.username LIKE ?)")
     params.extend([f'%{keyword_filter}%']*6)
