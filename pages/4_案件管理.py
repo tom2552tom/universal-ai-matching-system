@@ -10,16 +10,35 @@ st.title("💼 案件管理")
 st.markdown("登録されている案件の一覧表示と検索ができます。")
 
 # --- 検索と表示オプション ---
-col1, col2 = st.columns([3, 1])
+col1, col2, col3, col4 = st.columns([4, 2, 2, 2])
 with col1:
     search_keyword = st.text_input(
         "🔍 キーワードで検索",
         placeholder="プロジェクト名、担当者名、業務内容などで絞り込み"
     )
+# ▼▼▼【ここからが追加箇所】▼▼▼
 with col2:
+    sort_column = st.selectbox(
+        "並び替え",
+        options=["登録日", "プロジェクト名", "担当者名"],
+        index=0,
+        key="sort_column"
+    )
+
+with col3:
+    sort_order = st.selectbox(
+        "順序",
+        options=["降順 (新しい順)", "昇順 (古い順)"],
+        index=0,
+        key="sort_order"
+    )
+# ▲▲▲【追加箇所はここまで】▲▲▲
+
+with col4:
     st.write("") 
     st.write("") 
     show_hidden = st.checkbox("非表示の案件も表示する", value=False)
+
 
 st.divider()
 
@@ -45,7 +64,32 @@ if search_keyword:
 if where_clauses:
     query += " WHERE " + " AND ".join(where_clauses)
 
-query += " ORDER BY j.created_at DESC"
+
+
+# ▼▼▼【ここからが修正箇所】▼▼▼
+# --- ソート順の決定 ---
+sort_column_map = {
+    "登録日": "j.created_at",
+    "プロジェクト名": "j.project_name",
+    "担当者名": "assigned_username" # LEFT JOIN後のエイリアス名を使用
+}
+order_map = {
+    "降順 (新しい順)": "DESC",
+    "昇順 (古い順)": "ASC"
+}
+
+# 選択されたオプションに基づいてORDER BY句を組み立てる
+# SQLインジェクションを防ぐため、ユーザー入力を直接クエリに埋め込まず、マップから安全な値を選択する
+order_by_column = sort_column_map.get(sort_column, "j.created_at")
+order_by_direction = order_map.get(sort_order, "DESC")
+
+query += f" ORDER BY {order_by_column} {order_by_direction}"
+# ▲▲▲【修正箇所はここまで】▲▲▲
+
+
+
+
+
 jobs = conn.execute(query, tuple(params)).fetchall()
 conn.close()
 
