@@ -27,6 +27,11 @@ st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wi
 st.image("img/UniversalAI_logo.png", width=240)
 # ▼▼▼ 変更点 1: 営業スタッフ向けメッセージの表示 ▼▼▼
 sales_notice = config.get("messages", {}).get("sales_staff_notice")
+# ▼▼▼ デバッグ用に追加 ▼▼▼
+st.write(f"Debug: config object = {config}")
+st.write(f"Debug: sales_notice variable = {sales_notice}")
+# ▲▲▲ デバッグ用に追加 ▲▲▲
+
 if sales_notice:
     st.markdown(sales_notice, unsafe_allow_html=True)
 # ▲▲▲ 変更点 1 ここまで ▲▲▲
