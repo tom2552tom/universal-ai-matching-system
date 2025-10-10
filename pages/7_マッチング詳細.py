@@ -14,33 +14,27 @@ import backend as be
 
 st.set_page_config(page_title="マッチング詳細", layout="wide")
 
-# ▼▼▼【ここからが修正箇所】▼▼▼
 # --- カスタムCSS ---
-# 高さを揃えるためのCSSを追加
+# 各カードの高さを100%にし、内部でFlexboxを使ってボタンを下部に固定する
 st.markdown("""
 <style>
-    /* Flexboxの親コンテナ */
-    .summary-wrapper {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem; /* コンテナ間の隙間 */
+    /* Streamlitのカラムの高さを揃えるためのハック */
+    div[data-testid="column"] {
+        height: 100%;
     }
-    /* Flexboxの子コンテナ（各カード） */
     .summary-card {
-        flex: 1;
+        height: 100%; /* 親要素(カラム)の高さいっぱいに広がる */
         display: flex;
         flex-direction: column;
         border: 1px solid rgba(49, 51, 63, 0.2);
         border-radius: 0.5rem;
         padding: 1rem;
     }
-    /* カード内のコンテンツエリア */
     .summary-content {
         flex-grow: 1; /* この要素が利用可能なスペースを全て埋める */
     }
 </style>
 """, unsafe_allow_html=True)
-# ▲▲▲【修正箇所はここまで】▲▲▲
 
 
 st.title("マッチング詳細")
@@ -109,47 +103,48 @@ def get_source_text(source_json_str):
 st.header("🤖 AIによる案件・技術者の要約")
 
 # ▼▼▼【ここからが修正箇所】▼▼▼
-# st.columns の代わりに、Flexboxラッパーを開始
-st.markdown('<div class="summary-wrapper">', unsafe_allow_html=True)
+# st.columns を復活させる
+col_job, col_eng = st.columns(2)
 
-# --- 案件カード ---
-# st.container の代わりに、カスタムHTMLブロックを使用
-st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-project_name = job_data['project_name'] or f"案件 (ID: {job_data['id']})"
-st.subheader(f"💼 {project_name}")
-if job_data['assignee_name']: st.caption(f"**担当:** {job_data['assignee_name']}")
-job_doc_parts = job_data['document'].split('\n---\n', 1)
-job_meta_info, job_main_doc = (job_doc_parts[0], job_doc_parts[1]) if len(job_doc_parts) > 1 else ("", job_data['document'])
-if job_meta_info: st.caption(job_meta_info.replace("][", " | ").strip("[]"))
-# 本文部分を別のコンテナで囲み、CSSを適用
-with st.container():
+with col_job:
+    # 各カラムの中で、カスタムHTMLカードを描画する
+    st.markdown('<div class="summary-card">', unsafe_allow_html=True)
+    project_name = job_data['project_name'] or f"案件 (ID: {job_data['id']})"
+    st.subheader(f"💼 {project_name}")
+    if job_data['assignee_name']: st.caption(f"**担当:** {job_data['assignee_name']}")
+    job_doc_parts = job_data['document'].split('\n---\n', 1)
+    job_meta_info, job_main_doc = (job_doc_parts[0], job_doc_parts[1]) if len(job_doc_parts) > 1 else ("", job_data['document'])
+    if job_meta_info: st.caption(job_meta_info.replace("][", " | ").strip("[]"))
+    
+    # 本文部分を .summary-content で囲む
     st.markdown('<div class="summary-content">', unsafe_allow_html=True)
     st.markdown(job_main_doc)
     st.markdown('</div>', unsafe_allow_html=True)
-if st.button("詳細を見る", key=f"nav_job_{job_data['id']}", use_container_width=True):
-    st.session_state['selected_job_id'] = job_data['id']
-    st.switch_page("pages/6_案件詳細.py")
-st.markdown('</div>', unsafe_allow_html=True) # summary-card の終了
+    
+    if st.button("詳細を見る", key=f"nav_job_{job_data['id']}", use_container_width=True):
+        st.session_state['selected_job_id'] = job_data['id']
+        st.switch_page("pages/6_案件詳細.py")
+    st.markdown('</div>', unsafe_allow_html=True) # summary-card の終了
 
-# --- 技術者カード ---
-st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-engineer_name = engineer_data['name'] or f"技術者 (ID: {engineer_data['id']})"
-st.subheader(f"👤 {engineer_name}")
-if engineer_data['assignee_name']: st.caption(f"**担当:** {engineer_data['assignee_name']}")
-eng_doc_parts = engineer_data['document'].split('\n---\n', 1)
-eng_meta_info, eng_main_doc = (eng_doc_parts[0], eng_doc_parts[1]) if len(eng_doc_parts) > 1 else ("", engineer_data['document'])
-if eng_meta_info: st.caption(eng_meta_info.replace("][", " | ").strip("[]"))
-with st.container():
+with col_eng:
+    # 各カラムの中で、カスタムHTMLカードを描画する
+    st.markdown('<div class="summary-card">', unsafe_allow_html=True)
+    engineer_name = engineer_data['name'] or f"技術者 (ID: {engineer_data['id']})"
+    st.subheader(f"👤 {engineer_name}")
+    if engineer_data['assignee_name']: st.caption(f"**担当:** {engineer_data['assignee_name']}")
+    eng_doc_parts = engineer_data['document'].split('\n---\n', 1)
+    eng_meta_info, eng_main_doc = (eng_doc_parts[0], eng_doc_parts[1]) if len(eng_doc_parts) > 1 else ("", engineer_data['document'])
+    if eng_meta_info: st.caption(eng_meta_info.replace("][", " | ").strip("[]"))
+    
+    # 本文部分を .summary-content で囲む
     st.markdown('<div class="summary-content">', unsafe_allow_html=True)
     st.markdown(eng_main_doc)
     st.markdown('</div>', unsafe_allow_html=True)
-if st.button("詳細を見る", key=f"nav_engineer_{engineer_data['id']}", use_container_width=True):
-    st.session_state['selected_engineer_id'] = engineer_data['id']
-    st.switch_page("pages/5_技術者詳細.py")
-st.markdown('</div>', unsafe_allow_html=True) # summary-card の終了
 
-# Flexboxラッパーを終了
-st.markdown('</div>', unsafe_allow_html=True)
+    if st.button("詳細を見る", key=f"nav_engineer_{engineer_data['id']}", use_container_width=True):
+        st.session_state['selected_engineer_id'] = engineer_data['id']
+        st.switch_page("pages/5_技術者詳細.py")
+    st.markdown('</div>', unsafe_allow_html=True) # summary-card の終了
 # ▲▲▲【修正箇所はここまで】▲▲▲
 
 st.divider()
