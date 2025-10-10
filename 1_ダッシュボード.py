@@ -202,19 +202,29 @@ else:
                     display_doc = job_doc.split('\n---\n', 1)[-1]
                     st.caption(display_doc.replace('\n', ' ').replace('\r', '')[:150] + "...")
                     
-                with col2: # マッチ度とAI評価
+                # ▼▼▼【ここが修正箇所です】▼▼▼
+                with col2: # AI評価と詳細を見るボタン
                     st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-                    # ▼▼▼【変更点3: マッチ度 (%) の表示を削除】▼▼▼
-                    # st.metric(label="マッチ度", value=f"{score:.1f}%", label_visibility="collapsed") # この行を削除
-                    # ▲▲▲【変更点3ここまで】▲▲▲
                     
-                    if st.button("詳細を見る", key=f"detail_btn_{res['res_id']}", type="primary", use_container_width=True):
-                        st.session_state['selected_match_id'] = res['res_id']
-                        # マッチング詳細画面のファイル名が '7_マッチング詳細.py' であることを想定
-                        
-                        st.experimental_set_query_params(result_id=res['res_id']) # URLパラメータを設定
-                        st.switch_page("pages/7_マッチング詳細.py")
-                        # ▲▲▲【修正箇所はここまでです】▲▲▲
+                    # ボタンのスタイルを定義
+                    button_style = """
+                        display: block;
+                        padding: 0.5rem; /* パディングを少し調整 */
+                        background-color: #ff4b4b; /* Streamlitのプライマリボタンの色 */
+                        color: white;
+                        text-align: center;
+                        text-decoration: none;
+                        border-radius: 0.5rem;
+                        font-weight: 600;
+                        margin-top: 10px; /* 上の要素との間隔 */
+                        border: 1px solid #ff4b4b;
+                    """
+                    # ページ名はURLエンコードされた 'マッチング詳細' を使用
+                    page_name = "マッチング詳細" 
+                    # HTMLのアンカータグでリンクを生成
+                    link = f'<a href="/{page_name}?result_id={res["res_id"]}" target="_self" style="{button_style}">詳細を見る</a>'
+                    st.markdown(link, unsafe_allow_html=True)
+                # ▲▲▲【修正箇所はここまでです】▲▲▲
 
 
                 with col3: # 技術者情報
