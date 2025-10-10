@@ -498,25 +498,9 @@ def process_single_content(source_data: dict):
             
             #meta_info = f"[国籍要件: {item_data.get('nationality_requirement', '不明')}] [開始時期: {item_data.get('start_date', '不明')}]\n---\n"; full_document = meta_info + doc
             
+            meta_info = _build_meta_info_string('job', item_data)
+            full_document = meta_info + doc
 
-            # ▼▼▼【ここを修正します】▼▼▼
-            # 案件から抽出したいメタ情報を指定します
-            # [表示名, JSONのキー名] のリスト形式で定義
-            job_meta_fields = [
-                ["国籍要件", "nationality_requirement"],
-                ["開始時期", "start_date"],
-                ["勤務地", "location"],       # ← 追加
-                ["単価", "unit_price"],       # ← 追加
-                ["必須スキル", "required_skills"] # ← 追加 (スキル)
-            ]
-            
-            meta_parts = []
-            for display_name, key in job_meta_fields:
-                value = item_data.get(key, '不明') # AIが抽出した値を取得
-                meta_parts.append(f"[{display_name}: {value}]")
-            
-            meta_info = " ".join(meta_parts) + "\n---\n"
-            # ▲▲▲【修正はここまで】▲▲▲
 
 
             cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at) VALUES (?, ?, ?, ?)', (project_name, full_document, source_json_str, now_str));
@@ -526,7 +510,13 @@ def process_single_content(source_data: dict):
             doc = item_data.get("document")
             engineer_name = item_data.get("name", "名称不明の技術者") # 名前を取得
             if not (doc and str(doc).strip() and str(doc).lower() != 'none'): doc = full_text_for_llm
-            meta_info = f"[国籍: {item_data.get('nationality', '不明')}] [稼働可能日: {item_data.get('start_date', '不明')}]\n---\n"; full_document = meta_info + doc
+            
+            #meta_info = f"[国籍: {item_data.get('nationality', '不明')}] [稼働可能日: {item_data.get('start_date', '不明')}]\n---\n"; full_document = meta_info + doc
+
+            meta_info = _build_meta_info_string('engineer', item_data)
+            full_document = meta_info + doc
+
+            
             cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at) VALUES (?, ?, ?, ?)', (engineer_name, full_document, source_json_str, now_str));
             item_data['id'] = cursor.lastrowid; item_data['document'] = full_document; newly_added_engineers.append(item_data)
 
@@ -941,7 +931,11 @@ def re_evaluate_and_match_single_engineer(engineer_id):
         if not (doc and str(doc).strip() and str(doc).lower() != 'none'):
             doc = full_text_for_llm
         
-        meta_info = f"[国籍: {item_data.get('nationality', '不明')}] [稼働可能日: {item_data.get('start_date', '不明')}]\n---\n"
+        #meta_info = f"[国籍: {item_data.get('nationality', '不明')}] [稼働可能日: {item_data.get('start_date', '不明')}]\n---\n"
+
+        meta_info = _build_meta_info_string('engineer', item_data)
+
+
         new_full_document = meta_info + doc
         
         # 3. データベースのドキュメントを更新
@@ -1002,3 +996,37 @@ def update_engineer_name(engineer_id, new_name):
     finally:
         if conn:
             conn.close()
+
+
+
+
+def _build_meta_info_string(item_type, item_data):
+    """メタ情報文字列を生成する共通ヘルパー関数"""
+    
+    if item_type == 'job':
+        # 案件から抽出したいメタ情報を定義
+        meta_fields = [
+            ["国籍要件", "nationality_requirement"],
+            ["開始時期", "start_date"],
+            ["勤務地", "location"],
+            ["単価", "unit_price"],
+            ["必須スキル", "required_skills"]
+        ]
+    elif item_type == 'engineer':
+        # 技術者から抽出したいメタ情報を定義
+        meta_fields = [
+            ["国籍", "nationality"],
+            ["稼働可能日", "availability_date"],
+            ["希望勤務地", "desired_location"],
+            ["希望単価", "desired_salary"],
+            ["主要スキル", "main_skills"]
+        ]
+    else:
+        return "\n---\n" # 不明なタイプの場合は空
+
+    meta_parts = []
+    for display_name, key in meta_fields:
+        value = item_data.get(key, '不明')
+        meta_parts.append(f"[{display_name}: {value}]")
+    
+    return " ".join(meta_parts) + "\n---\n"

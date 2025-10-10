@@ -221,7 +221,7 @@ conn.close()
 st.divider()
 
 
-st.header("⚙️ AI再評価＋マッチング")
+st.header("⚙️ AI再評価")
 if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
     with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
         st.write(f"技術者ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
