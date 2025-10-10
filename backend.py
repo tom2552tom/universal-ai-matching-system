@@ -33,26 +33,49 @@ MIN_SCORE_THRESHOLD = 70.0 # 推奨値に設定
 
 @st.cache_data
 def load_app_config():
+    config_file_path = "config.toml"
     
-    #try:
-    #    with open("config.toml", "r", encoding="utf-8") as f: return toml.load(f)
-    #except FileNotFoundError: return {"app": {"title": "Universal AI Agent"}}
+    # --- デバッグ情報出力 ---
+    print("--- load_app_config デバッグ開始 ---")
+    
+    # 1. 現在の作業ディレクトリを確認
+    current_directory = os.getcwd()
+    print(f"現在の作業ディレクトリ: {current_directory}")
 
-    """
-    config.toml からアプリケーション設定を読み込みます。
-    messages セクションも読み込むように修正。
-    """
-    try:
-        with open("config.toml", "r", encoding="utf-8") as f: 
-            config_data = toml.load(f)
-            return config_data
-    except FileNotFoundError: 
-        # config.toml が見つからない場合のデフォルト値を拡張
-        return {
-            "app": {"title": "Universal AI Agent"},
-            "messages": {"sales_staff_notice": ""}
-        }
+    # 2. config.toml の絶対パスを計算
+    absolute_path = os.path.abspath(config_file_path)
+    print(f"探している設定ファイルの絶対パス: {absolute_path}")
+
+    # 3. ファイルが存在するかどうかをチェック
+    if not os.path.exists(config_file_path):
+        print(f"❌ エラー: '{config_file_path}' が見つかりません。")
+        print("--- デバッグ終了 ---")
+        # ファイルが見つからない場合は、デフォルトの辞書を返す
+        return {"app": {"title": "Universal AI Agent (Default)"}}
     
+    print(f"✅ '{config_file_path}' が見つかりました。読み込みを試みます。")
+    # --- デバッグ情報ここまで ---
+
+    try:
+        with open(config_file_path, "r", encoding="utf-8") as f:
+            loaded_config = toml.load(f)
+            print("✅ tomlファイルの読み込みに成功しました。")
+            print(f"読み込まれた内容: {loaded_config}")
+            print("--- デバッグ終了 ---")
+            return loaded_config
+    except FileNotFoundError:
+        # この部分は os.path.exists でチェックしているので通常は通らない
+        print("❌ エラー: FileNotFoundErrorが発生しました。")
+        print("--- デバッグ終了 ---")
+        return {"app": {"title": "Universal AI Agent (Default)"}}
+    except Exception as e:
+        # tomlの構文エラーなど、その他のエラーをキャッチ
+        print(f"❌ エラー: 設定ファイルの読み込み中に予期せぬエラーが発生しました: {e}")
+        print("--- デバッグ終了 ---")
+        return {"app": {"title": "Universal AI Agent (Error)"}}
+    
+
+
 
 @st.cache_resource
 def load_embedding_model():
