@@ -28,7 +28,7 @@ with col2:
 with col3:
     sort_order = st.selectbox(
         "順序",
-        options=["降順", "昇順"],
+        options=["昇順", "降順"],
         index=0,
         key="sort_order"
     )
