@@ -42,23 +42,40 @@ def load_embedding_model():
     try: return SentenceTransformer(MODEL_NAME)
     except Exception as e: st.error(f"埋め込みモデル '{MODEL_NAME}' の読み込みに失敗しました: {e}"); return None
 
-
-# backend.py
-
-# ▼▼▼【この関数全体を置き換えてください】▼▼▼
+# ▼▼▼【init_database 関数全体を置き換え】▼▼▼
 def init_database():
     """
     データベースとテーブルを初期化する。
     既存のテーブルのカラムをチェックし、不足しているカラムがあれば追加する。
     """
-    conn = get_db_connection() # ★★★ 修正点: 独自の接続ではなく、共通関数を使用
+    conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
         # --- 基本テーブルの作成 ---
         cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
         cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS matching_results (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, engineer_id INTEGER, score REAL, created_at TEXT, is_hidden INTEGER DEFAULT 0, FOREIGN KEY (job_id) REFERENCES jobs (id), FOREIGN KEY (engineer_id) REFERENCES engineers (id))')
+        
+        # ▼▼▼ matching_results テーブルのCREATE TABLE文に grade, positive_points, concern_points, proposal_text を追加 ▼▼▼
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS matching_results (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_id INTEGER NOT NULL,
+                engineer_id INTEGER NOT NULL,
+                score REAL NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_hidden INTEGER DEFAULT 0,
+                grade TEXT,                  -- 追加
+                positive_points TEXT,        -- 追加
+                concern_points TEXT,         -- 追加
+                proposal_text TEXT,          -- 追加
+                FOREIGN KEY (job_id) REFERENCES jobs (id),
+                FOREIGN KEY (engineer_id) REFERENCES engineers (id),
+                UNIQUE (job_id, engineer_id)
+            )
+        ''')
+        # ▲▲▲ 修正点 ここまで ▲▲▲
+
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,13 +101,12 @@ def init_database():
             cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('添田', 'sato@example.com'))
             cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('山浦', 'sato@example.com'))
             cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('福田', 'sato@example.com'))
-            
-            print(" -> 3名のテストユーザーを追加しました。")
+            print(" -> テストユーザーを追加しました。") # ユーザー数を修正
 
         # --- カラムの自動追加処理 ---
         # (jobsテーブル)
         cursor.execute("PRAGMA table_info(jobs)")
-        job_columns = [row['name'] for row in cursor.fetchall()] # ★★★ 修正点: インデックスではなく名前でアクセス
+        job_columns = [row['name'] for row in cursor.fetchall()]
         if 'assigned_user_id' not in job_columns:
             cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
         if 'is_hidden' not in job_columns:
@@ -98,7 +114,7 @@ def init_database():
 
         # (engineersテーブル)
         cursor.execute("PRAGMA table_info(engineers)")
-        engineer_columns = [row['name'] for row in cursor.fetchall()] # ★★★ 修正点: インデックスではなく名前でアクセス
+        engineer_columns = [row['name'] for row in cursor.fetchall()]
         if 'assigned_user_id' not in engineer_columns:
             cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
         if 'is_hidden' not in engineer_columns:
@@ -106,21 +122,27 @@ def init_database():
             
         # (matching_resultsテーブル)
         cursor.execute("PRAGMA table_info(matching_results)")
-        match_columns = [row['name'] for row in cursor.fetchall()] # ★★★ 修正点: エラー箇所を修正
+        match_columns = [row['name'] for row in cursor.fetchall()]
         if 'proposal_text' not in match_columns:
             cursor.execute("ALTER TABLE matching_results ADD COLUMN proposal_text TEXT")
         if 'grade' not in match_columns:
             cursor.execute("ALTER TABLE matching_results ADD COLUMN grade TEXT")
+        # ▼▼▼ 追加: positive_points と concern_points カラムの追加チェック ▼▼▼
+        if 'positive_points' not in match_columns:
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN positive_points TEXT")
+        if 'concern_points' not in match_columns:
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN concern_points TEXT")
+        # ▲▲▲ 追加 ここまで ▲▲▲
 
         conn.commit()
         print("Database initialized and schema verified successfully.")
 
     except sqlite3.Error as e:
         print(f"❌ データベース初期化中にエラーが発生しました: {e}")
-        conn.rollback() # エラー発生時は変更を元に戻す
+        conn.rollback()
     finally:
-        conn.close() # ★★★ 修正点: 最後に接続を閉じる
-
+        conn.close()
+# ▲▲▲【init_database 関数全体 ここまで】▲▲▲
 
 
 def get_db_connection():
@@ -129,15 +151,8 @@ def get_db_connection():
     row_factoryを設定し、カラム名でアクセスできるようにします。
     """
     conn = sqlite3.connect(DB_FILE)
-    # ▼▼▼【この一行を追加・修正します】▼▼▼
     conn.row_factory = sqlite3.Row
-    # ▲▲▲【この一行を追加・修正します】▲▲▲
     return conn
-
-
-#def get_db_connection():
-#    conn = sqlite3.connect(DB_FILE); conn.row_factory = sqlite3.Row; return conn
-
 
 
 def update_job_source_json(job_id, new_json_str):
@@ -160,53 +175,22 @@ def update_job_source_json(job_id, new_json_str):
         return True
     except sqlite3.Error as e:
         print(f"データベース更新エラー: {e}")
-        conn.rollback() # エラーが発生した場合は変更を元に戻す
+        conn.rollback()
         return False
     finally:
         if conn:
             conn.close()
 
-
-def split_text_with_llm(text_content):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-    try:
-        with open('prompt.txt', 'r', encoding='utf-8') as f:
-            prompt_template = f.read()
-        prompt = prompt_template.replace('{text_content}', text_content)
-    except FileNotFoundError:
-        st.error("エラー: `prompt.txt` ファイルが見つかりません。`backend.py` と同じ場所に作成してください。")
-        return None
-    generation_config = {"response_mime_type": "application/json"}
-    safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
-    try:
-        with st.spinner("LLMがテキストを解析・構造化中..."):
-            response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
-        raw_text = response.text
-        start_index = raw_text.find('{')
-        end_index = raw_text.rfind('}')
-        if start_index != -1 and end_index != -1 and start_index < end_index:
-            json_str = raw_text[start_index : end_index + 1]
-            return json.loads(json_str)
-        else:
-            st.error("LLMの応答から有効なJSON形式を抽出できませんでした。"); st.error("LLMからの生レスポンス:"); st.code(raw_text, language='text'); return None
-    except Exception as e:
-        st.error(f"LLMによる構造化に失敗しました: {e}"); st.error("LLMからの生レスポンス:");
-        try: st.code(response.text, language='text')
-        except NameError: st.text("レスポンスの取得にも失敗しました。")
-        return None
-
-@st.cache_data # 【この一行を追加するだけ】
+# ▼▼▼【get_match_summary_with_llm 関数全体を置き換え】▼▼▼
+# @st.cache_data # Streamlit依存の処理から切り離すため、このデコレータは削除またはコメントアウト
 def get_match_summary_with_llm(job_doc, engineer_doc):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite') # モデル名を適宜修正
     prompt = f"""
 あなたは、経験豊富なIT人材紹介のエージェントです。
 あなたの仕事は、提示された「案件情報」と「技術者情報」を比較し、客観的かつ具体的なマッチング評価を行うことです。
 # 絶対的なルール
 - `summary`は最も重要な項目です。絶対に省略せず、必ずS, A, B, C, Dのいずれかの文字列を返してください。
 - ポジティブな点や懸念点が一つもない場合でも、その旨を正直に記載するか、空のリスト `[]` を返してください。
-# 指示
-以下の2つの情報を分析し、ポジティブな点と懸念点をリストアップしてください。最終的に、総合評価（summary）をS, A, B, C, Dの5段階で判定してください。
-- S: 完璧なマッチ, A: 非常に良いマッチ, B: 良いマッチ, C: 検討の余地あり, D: ミスマッチ
 # JSON出力形式
 {{
   "summary": "S, A, B, C, Dのいずれか",
@@ -224,8 +208,8 @@ def get_match_summary_with_llm(job_doc, engineer_doc):
     generation_config = {"response_mime_type": "application/json"}
     safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
     try:
-        with st.spinner("AIがマッチング根拠を分析中..."):
-            response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
+        # with st.spinner("AIがマッチング根拠を分析中...") ← Streamlit依存のため削除
+        response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
         raw_text = response.text
         start_index = raw_text.find('{')
         end_index = raw_text.rfind('}')
@@ -233,9 +217,13 @@ def get_match_summary_with_llm(job_doc, engineer_doc):
             json_str = raw_text[start_index : end_index + 1]
             return json.loads(json_str)
         else:
-            st.error("評価の分析中にLLMが有効なJSONを返しませんでした。"); st.code(raw_text); return None
+            print("LLMが有効なJSONを返しませんでした:", raw_text) # st.error を print に変更
+            return None
     except Exception as e:
-        st.error(f"根拠の分析中にエラー: {e}"); return None
+        print(f"根拠の分析中にエラー: {e}") # st.error を print に変更
+        return None
+# ▲▲▲【get_match_summary_with_llm 関数全体 ここまで】▲▲▲
+
 
 def update_index(index_path, items):
     embedding_model = load_embedding_model()
@@ -271,35 +259,31 @@ def get_records_by_ids(table_name, ids):
         results_map = {res['id']: res for res in results}
         return [results_map[id] for id in ids if id in results_map]
 
-def run_matching_for_item(item_data, item_type, cursor, now_str):
-    """
-    指定された案件または技術者データに対して、類似候補を検索し、LLMによる評価を行った上でマッチング結果をDBに保存する。
-    LLMの評価が 'S', 'A', 'B', 'C' の場合のみDBに保存し、'D', 'E' などそれ以外の場合はスキップする。
-    ログには案件名・技術者名を表示し、可読性を高める。
-    """
+# ▼▼▼【run_matching_for_item 関数全体を置き換え】▼▼▼
+def run_matching_for_item(item_data, item_type, conn, now_str): # conn を受け取る
+    cursor = conn.cursor() # connからcursorを作成
+
     # 1. 検索対象のインデックス、テーブル、名称を決定
     if item_type == 'job':
         query_text, index_path = item_data['document'], ENGINEER_INDEX_FILE
-        candidate_table = 'engineers'
-        # item_data は辞書なので .get() が安全
+        target_table_name = 'engineers'
         source_name = item_data.get('project_name', f"案件ID:{item_data['id']}")
     else:  # item_type == 'engineer'
         query_text, index_path = item_data['document'], JOB_INDEX_FILE
-        candidate_table = 'jobs'
-        # item_data は辞書なので .get() が安全
+        target_table_name = 'jobs'
         source_name = item_data.get('name', f"技術者ID:{item_data['id']}")
 
     # 2. Faissによる類似度検索を実行
     similarities, ids = search(query_text, index_path, top_k=TOP_K_CANDIDATES)
     if not ids:
-        st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) の類似候補は見つかりませんでした。")
+        print(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) の類似候補は見つかりませんでした。") # st.write を print に変更
         return
 
     # 3. 検索結果の候補データをDBから一括取得
-    candidate_records = get_records_by_ids(candidate_table, ids)
+    candidate_records = get_records_by_ids(target_table_name, ids)
     candidate_map = {record['id']: record for record in candidate_records}
 
-    st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) との類似候補 {len(ids)}件を評価します。")
+    print(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) との類似候補 {len(ids)}件を評価します。") # st.write を print に変更
 
     # 4. 各候補をループして評価と保存処理
     for sim, candidate_id in zip(similarities, ids):
@@ -310,16 +294,27 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
 
         candidate_record = candidate_map.get(candidate_id)
         if not candidate_record:
-            st.write(f"  - 候補ID:{candidate_id} のデータがDBから取得できなかったため、スキップします。")
+            print(f"  - 候補ID:{candidate_id} のデータがDBから取得できなかったため、スキップします。") # st.write を print に変更
             continue
 
-        # ▼▼▼【ここが修正箇所です】▼▼▼
-        # candidate_record は sqlite3.Row オブジェクトのため、.get() ではなくキーでアクセスする
-        if candidate_table == 'jobs':
+        # ▼▼▼ 修正点: 非表示チェックの追加 ▼▼▼
+        # 候補アイテムが非表示でないかチェック
+        if candidate_record['is_hidden'] == 1:
+            print(f"  - 候補アイテム『{candidate_record.get('name') or candidate_record.get('project_name')}』(ID:{candidate_id}) は非表示のためスキップします。")
+            continue
+        
+        # 基準アイテム自体が非表示でないかチェック (item_data は dict なので .get() が使えるはず)
+        if item_data.get('is_hidden') == 1:
+            print(f"  - 基準アイテム『{source_name}』(ID:{item_data['id']}) は非表示のためスキップします。")
+            continue
+        # ▲▲▲ 修正点 ここまで ▲▲▲
+
+        # 候補の名前を取得 (ログ出力用)
+        if target_table_name == 'jobs': # candidate_record が jobs テーブルのデータの場合
             candidate_name = candidate_record['project_name'] if candidate_record['project_name'] else f"案件ID:{candidate_id}"
-        else:  # 'engineers'
+        else:  # candidate_record が engineers テーブルのデータの場合
             candidate_name = candidate_record['name'] if candidate_record['name'] else f"技術者ID:{candidate_id}"
-        # ▲▲▲【修正箇所はここまでです】▲▲▲
+
 
         # 5. LLM評価のための案件・技術者情報を準備
         if item_type == 'job':
@@ -339,45 +334,58 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
         # 7. LLMの評価結果に基づいてDBへの保存を判断
         if llm_result and 'summary' in llm_result:
             grade = llm_result.get('summary')
+            positive_points = json.dumps(llm_result.get('positive_points', []), ensure_ascii=False)
+            concern_points = json.dumps(llm_result.get('concern_points', []), ensure_ascii=False)
 
+            # LLMの評価が 'S', 'A', 'B' の場合のみDBに保存
             if grade in ['S', 'A', 'B']:
                 cursor.execute(
-                    'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade) VALUES (?, ?, ?, ?, ?)',
-                    (job_id, engineer_id, score, now_str, grade)
+                    'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    (job_id, engineer_id, score, now_str, grade, positive_points, concern_points)
                 )
-                st.write(f"  - 候補: 『{candidate_name}』(ID:{candidate_id}) -> マッチング評価: {grade} (スコア: {score:.2f}) ... ✅ DBに保存しました。")
+                print(f"  - 候補: 『{candidate_name}』(ID:{candidate_id}) -> マッチング評価: {grade} (スコア: {score:.2f}) ... ✅ DBに保存しました。") # st.write を print に変更
             else:
-                st.write(f"  - 候補: 『{candidate_name}』(ID:{candidate_id}) -> マッチング評価: {grade} (スコア: {score:.2f}) ... ❌ スキップしました。")
+                print(f"  - 候補: 『{candidate_name}』(ID:{candidate_id}) -> マッチング評価: {grade} (スコア: {score:.2f}) ... ❌ スキップしました。") # st.write を print に変更
         else:
-            st.write(f"  - 候補: 『{candidate_name}』(ID:{candidate_id}) -> LLM評価に失敗したためスキップします。")
+            print(f"  - 候補: 『{candidate_name}』(ID:{candidate_id}) -> LLM評価に失敗したためスキップします。") # st.write を print に変更
+# ▲▲▲【run_matching_for_item 関数全体 ここまで】▲▲▲
 
 
-
-
-
+# ▼▼▼【process_single_content 関数全体を置き換え】▼▼▼
 def process_single_content(source_data: dict):
-    if not source_data: st.warning("処理するデータが空です。"); return False
+    if not source_data: print("処理するデータが空です。"); return False # st.warning を print に変更
     valid_attachments_content = []
     for att in source_data.get('attachments', []):
         content = att.get('content', '')
         if content and not content.startswith("[") and not content.endswith("]"):
              valid_attachments_content.append(f"\n\n--- 添付ファイル: {att['filename']} ---\n{content}")
         else:
-            st.write(f"⚠️ 添付ファイル '{att['filename']}' は内容を抽出できなかったため、解析から除外します。")
+            print(f"⚠️ 添付ファイル '{att['filename']}' は内容を抽出できなかったため、解析から除外します。") # st.write を print に変更
+    
     full_text_for_llm = source_data.get('body', '') + "".join(valid_attachments_content)
-    if not full_text_for_llm.strip(): st.warning("解析対象のテキストがありません。"); return False
+    if not full_text_for_llm.strip(): print("解析対象のテキストがありません。"); return False # st.warning を print に変更
+    
+    # LLMでテキストを構造化
+    # st.spinner はこの関数内では使わない (fetch_and_process_emailsで囲む)
     parsed_data = split_text_with_llm(full_text_for_llm)
     if not parsed_data: return False
-    new_jobs_data = parsed_data.get("jobs", []); new_engineers_data = parsed_data.get("engineers", [])
-    if not new_jobs_data and not new_engineers_data: st.warning("LLMはテキストから案件情報または技術者情報を抽出できませんでした。"); return False
+    
+    new_jobs_data = parsed_data.get("jobs", [])
+    new_engineers_data = parsed_data.get("engineers", [])
+    
+    if not new_jobs_data and not new_engineers_data:
+        print("LLMはテキストから案件情報または技術者情報を抽出できませんでした。") # st.warning を print に変更
+        return False
+    
     with get_db_connection() as conn:
-        cursor = conn.cursor(); now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cursor = conn.cursor()
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         source_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
         newly_added_jobs, newly_added_engineers = [], []
         
         for item_data in new_jobs_data:
             doc = item_data.get("document")
-            project_name = item_data.get("project_name", "名称未定の案件") # 名前を取得
+            project_name = item_data.get("project_name", "名称未定の案件")
             if not (doc and str(doc).strip() and str(doc).lower() != 'none'): doc = full_text_for_llm
             meta_info = f"[国籍要件: {item_data.get('nationality_requirement', '不明')}] [開始時期: {item_data.get('start_date', '不明')}]\n---\n"; full_document = meta_info + doc
             cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at) VALUES (?, ?, ?, ?)', (project_name, full_document, source_json_str, now_str));
@@ -385,20 +393,27 @@ def process_single_content(source_data: dict):
         
         for item_data in new_engineers_data:
             doc = item_data.get("document")
-            engineer_name = item_data.get("name", "名称不明の技術者") # 名前を取得
+            engineer_name = item_data.get("name", "名称不明の技術者")
             if not (doc and str(doc).strip() and str(doc).lower() != 'none'): doc = full_text_for_llm
             meta_info = f"[国籍: {item_data.get('nationality', '不明')}] [稼働可能日: {item_data.get('start_date', '不明')}]\n---\n"; full_document = meta_info + doc
             cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at) VALUES (?, ?, ?, ?)', (engineer_name, full_document, source_json_str, now_str));
             item_data['id'] = cursor.lastrowid; item_data['document'] = full_document; newly_added_engineers.append(item_data)
 
-        st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
-        all_jobs = conn.execute('SELECT id, document FROM jobs').fetchall()
-        all_engineers = conn.execute('SELECT id, document FROM engineers').fetchall()
+        print("ベクトルインデックスを更新し、マッチング処理を開始します...") # st.write を print に変更
+        
+        # インデックス生成は非表示アイテムも含む
+        all_jobs = conn.execute('SELECT id, document, is_hidden FROM jobs').fetchall() # is_hidden も取得
+        all_engineers = conn.execute('SELECT id, document, is_hidden FROM engineers').fetchall() # is_hidden も取得
+        
         if all_jobs: update_index(JOB_INDEX_FILE, all_jobs)
         if all_engineers: update_index(ENGINEER_INDEX_FILE, all_engineers)
-        for new_job in newly_added_jobs: run_matching_for_item(new_job, 'job', cursor, now_str)
-        for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', cursor, now_str)
+
+        # run_matching_for_item に conn を渡す
+        for new_job in newly_added_jobs: run_matching_for_item(new_job, 'job', conn, now_str)
+        for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', conn, now_str)
     return True
+# ▲▲▲【process_single_content 関数全体 ここまで】▲▲▲
+
 
 def extract_text_from_pdf(file_bytes):
     try:
@@ -412,6 +427,7 @@ def extract_text_from_docx(file_bytes):
         return text if text.strip() else "[DOCXテキスト抽出失敗: 内容が空]"
     except Exception as e: return f"[DOCXテキスト抽出エラー: {e}]"
 
+# ▼▼▼【get_email_contents 関数全体を置き換え】▼▼▼
 def get_email_contents(msg) -> dict:
     body_text = ""; attachments = []
     if msg.is_multipart():
@@ -426,36 +442,39 @@ def get_email_contents(msg) -> dict:
                 if raw_filename:
                     decoded_header = decode_header(raw_filename)
                     filename = "".join([s.decode(c or 'utf-8', 'ignore') if isinstance(s, bytes) else s for s, c in decoded_header])
-                    st.write(f"📄 添付ファイル '{filename}' を発見しました。")
+                    print(f"📄 添付ファイル '{filename}' を発見しました。") # st.write を print に変更
                     file_bytes = part.get_payload(decode=True)
                     lower_filename = filename.lower()
                     if lower_filename.endswith(".pdf"): attachments.append({"filename": filename, "content": extract_text_from_pdf(file_bytes)})
                     elif lower_filename.endswith(".docx"): attachments.append({"filename": filename, "content": extract_text_from_docx(file_bytes)})
                     elif lower_filename.endswith(".txt"): attachments.append({"filename": filename, "content": file_bytes.decode('utf-8', errors='ignore')})
-                    else: st.write(f"ℹ️ 添付ファイル '{filename}' は未対応の形式のため、テキスト抽出をスキップします。")
+                    else: print(f"ℹ️ 添付ファイル '{filename}' は未対応の形式のため、テキスト抽出をスキップします。") # st.write を print に変更
     else:
         charset = msg.get_content_charset()
         try: body_text = msg.get_payload(decode=True).decode(charset if charset else 'utf-8', errors='ignore')
         except Exception: body_text = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
     return {"body": body_text.strip(), "attachments": attachments}
+# ▲▲▲【get_email_contents 関数全体 ここまで】▲▲▲
 
+
+# ▼▼▼【fetch_and_process_emails 関数全体を置き換え】▼▼▼
 def fetch_and_process_emails():
     log_stream = io.StringIO()
     try:
         with contextlib.redirect_stdout(log_stream):
             try: SERVER, USER, PASSWORD = st.secrets["EMAIL_SERVER"], st.secrets["EMAIL_USER"], st.secrets["EMAIL_PASSWORD"]
-            except KeyError as e: st.error(f"メールサーバーの接続情報がSecretsに設定されていません: {e}"); return False, log_stream.getvalue()
+            except KeyError as e: print(f"メールサーバーの接続情報がSecretsに設定されていません: {e}"); return False, log_stream.getvalue() # st.error を print に変更
             try: mail = imaplib.IMAP4_SSL(SERVER); mail.login(USER, PASSWORD); mail.select('inbox')
-            except Exception as e: st.error(f"メールサーバーへの接続またはログインに失敗しました: {e}"); return False, log_stream.getvalue()
+            except Exception as e: print(f"メールサーバーへの接続またはログインに失敗しました: {e}"); return False, log_stream.getvalue() # st.error を print に変更
             total_processed_count = 0; checked_count = 0
             try:
                 with st.status("最新の未読メールを取得・処理中...", expanded=True) as status:
                     _, messages = mail.search(None, 'UNSEEN')
                     email_ids = messages[0].split()
-                    if not email_ids: st.write("処理対象の未読メールは見つかりませんでした。")
+                    if not email_ids: print("処理対象の未読メールは見つかりませんでした。") # st.write を print に変更
                     else:
                         latest_ids = email_ids[::-1][:10]; checked_count = len(latest_ids)
-                        st.write(f"最新の未読メール {checked_count}件をチェックします。")
+                        print(f"最新の未読メール {checked_count}件をチェックします。") # st.write を print に変更
                         for i, email_id in enumerate(latest_ids):
                             _, msg_data = mail.fetch(email_id, '(RFC822)')
                             for response_part in msg_data:
@@ -463,11 +482,11 @@ def fetch_and_process_emails():
                                     msg = email.message_from_bytes(response_part[1])
                                     source_data = get_email_contents(msg)
                                     if source_data['body'] or source_data['attachments']:
-                                        st.write(f"✅ メールID {email_id.decode()} は処理対象です。解析を開始します...")
+                                        print(f"✅ メールID {email_id.decode()} は処理対象です。解析を開始します...") # st.write を print に変更
                                         if process_single_content(source_data):
                                             total_processed_count += 1; mail.store(email_id, '+FLAGS', '\\Seen')
-                                    else: st.write(f"✖️ メールID {email_id.decode()} は本文も添付ファイルも無いため、スキップします。")
-                            st.write(f"({i+1}/{checked_count}) チェック完了")
+                                    else: print(f"✖️ メールID {email_id.decode()} は本文も添付ファイルも無いため、スキップします。") # st.write を print に変更
+                            print(f"({i+1}/{checked_count}) チェック完了") # st.write を print に変更
                     status.update(label="メールチェック完了", state="complete")
             finally: mail.close(); mail.logout()
         if checked_count > 0:
@@ -476,7 +495,9 @@ def fetch_and_process_emails():
         else: st.info("処理対象となる新しい未読メールはありませんでした。")
         return True, log_stream.getvalue()
     except Exception as e:
-        st.error(f"予期せぬエラーが発生しました: {e}"); return False, log_stream.getvalue()
+        print(f"予期せぬエラーが発生しました: {e}"); return False, log_stream.getvalue() # st.error を print に変更
+# ▲▲▲【fetch_and_process_emails 関数全体 ここまで】▲▲▲
+
 
 def hide_match(result_id):
     if not result_id: st.warning("非表示にするマッチング結果のIDが指定されていません。"); return False
@@ -498,7 +519,6 @@ def get_all_users():
         list: ユーザー情報の辞書を要素とするリスト。
     """
     conn = get_db_connection()
-    # conn.row_factory = sqlite3.Row が get_db_connection で設定されている前提
     users = conn.execute("SELECT id, username FROM users ORDER BY id").fetchall()
     conn.close()
     return users
@@ -555,8 +575,6 @@ def set_job_visibility(job_id, is_hidden):
     finally:
         if conn:
             conn.close()
-
-# 【ここから追加】 --- 技術者向けのバックエンド関数 ---
 
 def assign_user_to_engineer(engineer_id, user_id):
     """技術者に担当者を割り当てる。"""
@@ -651,14 +669,10 @@ def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_nam
 """
 
     try:
-        # st.secrets等でAPIキーを管理していることを想定
-        # genai.configure(api_key=st.secrets["google_api_key"])
-        #model = genai.GenerativeModel('gemini-2.5-pro')
         model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
-        # 本番環境では logging を使用することを推奨します
         print(f"Error generating proposal reply with LLM: {e}")
         return f"提案メールの生成中にエラーが発生しました: {e}"
 
