@@ -34,7 +34,18 @@ config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
 
-st.image("img/UniversalAI_logo.png", width=240)
+
+# ▼▼▼【ここからが変更点1】▼▼▼
+# --- サイドバーのロゴ表示 ---
+st.sidebar.image("img/UniversalAI_logo.png", width=200) # widthを少し調整
+st.sidebar.divider()
+# ▲▲▲【変更点1ここまで】▲▲▲
+
+
+# ▼▼▼【変更点2: メイン画面のロゴ表示を削除】▼▼▼
+# st.image("img/UniversalAI_logo.png", width=240) # この行を削除またはコメントアウト
+# ▲▲▲【変更点2ここまで】▲▲▲
+
 
 sales_staff_notice = """
 <div style="background-color: #ffcccc; color: #cc0000; padding: 10px; border-radius: 5px; border: 2px solid #cc0000; font-weight: bold; text-align: center; margin-bottom: 20px;">
