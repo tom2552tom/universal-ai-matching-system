@@ -52,7 +52,7 @@ engineer_assignee_filter = st.sidebar.selectbox(
 st.sidebar.divider()
 
 # ▼▼▼ 変更点 2: AI評価フィルターをサイドバーに追加 ▼▼▼
-grade_options = ['A', 'B', 'C', 'D', 'E']
+grade_options = ['S','A', 'B', 'C', 'D', 'E']
 selected_grades = st.sidebar.multiselect(
     "AI評価",
     options=grade_options,
