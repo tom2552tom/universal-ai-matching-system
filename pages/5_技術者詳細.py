@@ -215,7 +215,7 @@ st.divider()
 
 # ▼▼▼【ここからが追加/修正箇所】▼▼▼
 st.header("⚙️ AI再評価＋マッチング")
-st.warning("技術者のスキル等の変更・追加などを行なった場合、技術者の再評価、再マッチングを行うことでヒットすることがあります。")
+#st.warning("技術者のスキル等の変更・追加などを行なった場合、技術者の再評価、再マッチングを行うことでヒットすることがあります。")
 
 if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
     with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
