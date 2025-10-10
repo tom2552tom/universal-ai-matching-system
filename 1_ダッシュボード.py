@@ -22,7 +22,15 @@ config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
 
+
+
 st.image("img/UniversalAI_logo.png", width=240)
+# ▼▼▼ 変更点 1: 営業スタッフ向けメッセージの表示 ▼▼▼
+sales_notice = config.get("messages", {}).get("sales_staff_notice")
+if sales_notice:
+    st.markdown(sales_notice, unsafe_allow_html=True)
+# ▲▲▲ 変更点 1 ここまで ▲▲▲
+
 st.divider()
 
 # ページングの初期設定
