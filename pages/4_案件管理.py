@@ -20,7 +20,7 @@ with col1:
 with col2:
     sort_column = st.selectbox(
         "並び替え",
-        options=["登録日", "プロジェクト名", "担当者名"],
+        options=["プロジェクト名", "担当者名", "登録日"],
         index=0,
         key="sort_column"
     )
@@ -28,7 +28,7 @@ with col2:
 with col3:
     sort_order = st.selectbox(
         "順序",
-        options=["降順 (新しい順)", "昇順 (古い順)"],
+        options=["降順", "昇順"],
         index=0,
         key="sort_order"
     )
