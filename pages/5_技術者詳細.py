@@ -59,13 +59,11 @@ if engineer_data:
     st.title(title_display)
     st.caption(f"ID: {selected_id}")
 
-    # ▼▼▼【ここからが修正箇所】▼▼▼
-    # --- 基本情報セクション (氏名と担当者) ---
+    # --- 基本情報セクション ---
     st.subheader("👤 基本情報")
     with st.container(border=True):
         col1, col2 = st.columns(2)
         with col1:
-            # 氏名編集
             new_engineer_name = st.text_input("技術者氏名", value=engineer_data['name'] or "")
             if st.button("氏名を更新", use_container_width=True):
                 if be.update_engineer_name(selected_id, new_engineer_name):
@@ -76,7 +74,6 @@ if engineer_data:
                     st.error("氏名の更新に失敗しました。")
         
         with col2:
-            # 担当者割り当て
             all_users = be.get_all_users()
             user_options = {"未割り当て": None, **{user['username']: user['id'] for user in all_users}}
             current_user_id = engineer_data['assigned_user_id']
@@ -95,7 +92,6 @@ if engineer_data:
                 else: 
                     st.error("担当者の更新に失敗しました。")
     st.divider()
-    # ▲▲▲【修正箇所はここまで】▲▲▲
 
     # --- 技術者の操作（表示/非表示）セクション ---
     with st.expander("技術者の操作", expanded=False):
@@ -221,13 +217,29 @@ conn.close()
 st.divider()
 
 
-st.header("⚙️ AI再評価")
+st.header("⚙️ AI再評価＋マッチング")
 if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
+
+    # ▼▼▼【ここからが修正箇所】▼▼▼
     with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
-        st.write(f"技術者ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
+        # ログ表示用のコンテナを作成し、高さを固定
+        log_container = st.container(height=300)
+
+        # 既存の st.write を log_container.write に変更
+        log_container.write(f"技術者ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
         
-        success = be.re_evaluate_and_match_single_engineer(selected_id)
+        # backend.py の関数を呼び出す
+        # backend側の st.write もこのコンテナ内に表示されるように、contextlib を使う
+        import io
+        import contextlib
         
+        log_stream = io.StringIO()
+        with contextlib.redirect_stdout(log_stream):
+            success = be.re_evaluate_and_match_single_engineer(selected_id)
+        
+        # backendからのログをコンテナに表示
+        log_container.text(log_stream.getvalue())
+
         if success:
             status.update(label="処理が完了しました！", state="complete")
             st.success("AIによる再評価と再マッチングが完了しました。ページをリロードして最新のマッチング結果を確認してください。")
@@ -235,6 +247,7 @@ if st.button("🤖 AI再評価と再マッチングを実行する", type="prima
         else:
             status.update(label="処理に失敗しました", state="error")
             st.error("処理中にエラーが発生しました。詳細はログを確認してください。")
+    # ▲▲▲【修正箇所はここまで】▲▲▲
 
 st.divider()
 
