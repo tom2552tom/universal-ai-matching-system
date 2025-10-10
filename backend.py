@@ -271,23 +271,25 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
     if item_type == 'job':
         query_text, index_path = item_data['document'], ENGINEER_INDEX_FILE
         candidate_table = 'engineers'
+        # item_data は辞書なので .get() が安全
         source_name = item_data.get('project_name', f"案件ID:{item_data['id']}")
     else:  # item_type == 'engineer'
         query_text, index_path = item_data['document'], JOB_INDEX_FILE
         candidate_table = 'jobs'
+        # item_data は辞書なので .get() が安全
         source_name = item_data.get('name', f"技術者ID:{item_data['id']}")
 
     # 2. Faissによる類似度検索を実行
     similarities, ids = search(query_text, index_path, top_k=TOP_K_CANDIDATES)
     if not ids:
-        st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) のマッチング候補は見つかりませんでした。")
+        st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) の類似候補は見つかりませんでした。")
         return
 
     # 3. 検索結果の候補データをDBから一括取得
     candidate_records = get_records_by_ids(candidate_table, ids)
     candidate_map = {record['id']: record for record in candidate_records}
 
-    st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) とのマッチング候補 {len(ids)}件を評価します。")
+    st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) との類似候補 {len(ids)}件を評価します。")
 
     # 4. 各候補をループして評価と保存処理
     for sim, candidate_id in zip(similarities, ids):
@@ -301,11 +303,13 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
             st.write(f"  - 候補ID:{candidate_id} のデータがDBから取得できなかったため、スキップします。")
             continue
 
-        # 候補の名称を取得
+        # ▼▼▼【ここが修正箇所です】▼▼▼
+        # candidate_record は sqlite3.Row オブジェクトのため、.get() ではなくキーでアクセスする
         if candidate_table == 'jobs':
-            candidate_name = candidate_record.get('project_name', f"案件ID:{candidate_id}")
+            candidate_name = candidate_record['project_name'] if candidate_record['project_name'] else f"案件ID:{candidate_id}"
         else:  # 'engineers'
-            candidate_name = candidate_record.get('name', f"技術者ID:{candidate_id}")
+            candidate_name = candidate_record['name'] if candidate_record['name'] else f"技術者ID:{candidate_id}"
+        # ▲▲▲【修正箇所はここまでです】▲▲▲
 
         # 5. LLM評価のための案件・技術者情報を準備
         if item_type == 'job':
@@ -336,6 +340,8 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
                 st.write(f"  - 候補: 『{candidate_name}』(ID:{candidate_id}) -> マッチング評価: {grade} (スコア: {score:.2f}) ... ❌ スキップしました。")
         else:
             st.write(f"  - 候補: 『{candidate_name}』(ID:{candidate_id}) -> LLM評価に失敗したためスキップします。")
+
+
 
 
 
