@@ -59,13 +59,11 @@ if engineer_data:
     st.title(title_display)
     st.caption(f"ID: {selected_id}")
 
-    # ▼▼▼【ここからが修正箇所】▼▼▼
-    # --- 基本情報セクション (氏名と担当者) ---
+    # --- 基本情報セクション ---
     st.subheader("👤 基本情報")
     with st.container(border=True):
         col1, col2 = st.columns(2)
         with col1:
-            # 氏名編集
             new_engineer_name = st.text_input("技術者氏名", value=engineer_data['name'] or "")
             if st.button("氏名を更新", use_container_width=True):
                 if be.update_engineer_name(selected_id, new_engineer_name):
@@ -76,7 +74,6 @@ if engineer_data:
                     st.error("氏名の更新に失敗しました。")
         
         with col2:
-            # 担当者割り当て
             all_users = be.get_all_users()
             user_options = {"未割り当て": None, **{user['username']: user['id'] for user in all_users}}
             current_user_id = engineer_data['assigned_user_id']
@@ -95,7 +92,6 @@ if engineer_data:
                 else: 
                     st.error("担当者の更新に失敗しました。")
     st.divider()
-    # ▲▲▲【修正箇所はここまで】▲▲▲
 
     # --- 技術者の操作（表示/非表示）セクション ---
     with st.expander("技術者の操作", expanded=False):
@@ -119,20 +115,19 @@ if engineer_data:
     st.divider()
 
     # --- 元の情報の表示 ---
-    st.header("📄 元のメール・添付ファイル内容")
+    st.header("📄 元の情報ソース")
     source_json_str = engineer_data['source_data_json']
     
     if source_json_str:
         try:
             source_data = json.loads(source_json_str)
-            st.subheader("情報ソース（編集可能）")
+            
+            # --- メール本文の表示・編集 ---
+            st.subheader("メール本文（編集可能）")
             email_body = source_data.get("body", "（メール本文がありません）")
-            
-            edited_body = st.text_area("メール本文を編集", value=email_body, height=400, label_visibility="collapsed", key=f"eng_mail_editor_{selected_id}")
-            
-            st.warning("技術者のスキル等の変更・追加などを行なった場合、技術者のAI再評価＋再マッチングを行うことで案件がヒットすることがあります。追加情報はここに必ず保存するようにしてください。")
-
-            if st.button("更新する", type="primary"):
+            edited_body = st.text_area("メール本文を編集", value=email_body, height=300, label_visibility="collapsed", key=f"eng_mail_editor_{selected_id}")
+            st.warning("技術者のスキル等の変更・追加などを行なった場合、AI再評価＋再マッチングを行うことで案件がヒットすることがあります。追加情報はここに必ず保存するようにしてください。")
+            if st.button("本文を更新する", type="primary"):
                 source_data['body'] = edited_body
                 new_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
                 if be.update_engineer_source_json(selected_id, new_json_str):
@@ -142,32 +137,48 @@ if engineer_data:
                     st.rerun()
                 else:
                     st.error("データベースの更新に失敗しました。")
-
             st.divider()
 
-            st.subheader("添付ファイル")
+            # ▼▼▼【ここからが修正箇所】▼▼▼
+            # --- 添付ファイル内容の表示 ---
+            st.subheader("添付ファイルの内容")
             attachments = source_data.get("attachments", [])
             if attachments:
                 for i, att in enumerate(attachments):
                     filename = att.get("filename", "名称不明のファイル")
-                    content_b64 = att.get("content_b64", "")
+                    content_text = att.get("content", "[テキスト抽出失敗、または内容がありません]")
                     
+                    st.markdown(f"**ファイル名:** `{filename}`")
+                    
+                    # 読み取り専用のテキストエリアで内容を表示
+                    st.text_area(
+                        label=f"attachment_content_{i}",
+                        value=content_text,
+                        height=400, # 高さを調整
+                        disabled=True,
+                        label_visibility="collapsed"
+                    )
+
+                    # ダウンロードボタンも引き続き表示
+                    content_b64 = att.get("content_b64", "")
                     if content_b64:
                         try:
                             file_bytes = base64.b64decode(content_b64)
                             st.download_button(
-                                label=f"📄 {filename} をダウンロード",
+                                label=f"📄 原本ファイル「{filename}」をダウンロード",
                                 data=file_bytes,
                                 file_name=filename,
-                                key=f"att_dl_btn_{selected_id}_{i}",
-                                use_container_width=True
+                                key=f"att_dl_btn_{selected_id}_{i}"
                             )
                         except Exception as e:
-                            st.warning(f"ファイル「{filename}」のデコードまたは表示に失敗しました: {e}")
-                    else:
-                        st.info(f"ファイル「{filename}」にはダウンロード可能なコンテンツがありません。")
+                            st.warning(f"ファイル「{filename}」のダウンロード準備に失敗しました: {e}")
+                    
+                    # 複数の添付ファイルがある場合に備えて区切り線を追加
+                    if i < len(attachments) - 1:
+                        st.markdown("---")
             else:
                 st.caption("添付ファイルはありません。")
+            # ▲▲▲【修正箇所はここまで】▲▲▲
 
         except json.JSONDecodeError:
             st.error("元のデータの解析に失敗しました。"); st.text(source_json_str)
@@ -221,13 +232,21 @@ conn.close()
 st.divider()
 
 
-st.header("⚙️ AI再評価")
+st.header("⚙️ AI再評価＋マッチング")
 if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
     with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
-        st.write(f"技術者ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
+        log_container = st.container(height=300)
+        log_container.write(f"技術者ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
         
-        success = be.re_evaluate_and_match_single_engineer(selected_id)
+        import io
+        import contextlib
         
+        log_stream = io.StringIO()
+        with contextlib.redirect_stdout(log_stream):
+            success = be.re_evaluate_and_match_single_engineer(selected_id)
+        
+        log_container.text(log_stream.getvalue())
+
         if success:
             status.update(label="処理が完了しました！", state="complete")
             st.success("AIによる再評価と再マッチングが完了しました。ページをリロードして最新のマッチング結果を確認してください。")
