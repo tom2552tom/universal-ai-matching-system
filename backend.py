@@ -75,6 +75,16 @@ def init_database():
             cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('熊崎', 'yamada@example.com'))
             cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩本', 'suzuki@example.com'))
             cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('小関', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('内山', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('島田', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('長谷川', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('北島', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩崎', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('根岸', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('添田', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('山浦', 'sato@example.com'))
+            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('福田', 'sato@example.com'))
+            
             print(" -> 3名のテストユーザーを追加しました。")
 
         # --- カラムの自動追加処理 ---
