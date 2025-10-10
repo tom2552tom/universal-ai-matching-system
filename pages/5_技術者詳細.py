@@ -115,69 +115,76 @@ if engineer_data:
     st.divider()
 
     # --- 元の情報の表示 ---
-    st.header("📄 元の情報ソース")
+    st.header("📄 元の情報ソース（編集可能）")
     source_json_str = engineer_data['source_data_json']
     
     if source_json_str:
         try:
             source_data = json.loads(source_json_str)
+
+            # ▼▼▼【ここからが修正箇所】▼▼▼
             
-            # --- メール本文の表示・編集 ---
-            st.subheader("メール本文（編集可能）")
-            email_body = source_data.get("body", "（メール本文がありません）")
-            edited_body = st.text_area("メール本文を編集", value=email_body, height=300, label_visibility="collapsed", key=f"eng_mail_editor_{selected_id}")
-            st.warning("技術者のスキル等の変更・追加などを行なった場合、AI再評価＋再マッチングを行うことで案件がヒットすることがあります。追加情報はここに必ず保存するようにしてください。")
-            if st.button("本文を更新する", type="primary"):
-                source_data['body'] = edited_body
+            # --- テキストの統合 ---
+            initial_text_parts = [source_data.get("body", "")]
+            attachments = source_data.get("attachments", [])
+            if attachments:
+                for att in attachments:
+                    filename = att.get("filename", "名称不明")
+                    content = att.get("content", "") # 内容がない場合は空文字
+                    if content: # 内容がある場合のみ追加
+                        initial_text_parts.append(f"\n\n--- 添付ファイル: {filename} ---\n{content}")
+            full_source_text = "".join(initial_text_parts)
+
+            # --- 統合されたテキストエリア ---
+            st.markdown("メール本文と添付ファイルの内容が統合されています。スキル情報の追加や修正はこちらで行ってください。")
+            edited_source_text = st.text_area(
+                "情報ソースを編集",
+                value=full_source_text,
+                height=600, # 高さを大きくする
+                label_visibility="collapsed",
+                key=f"eng_source_editor_{selected_id}"
+            )
+            st.warning("スキル等の変更・追加などを行なった場合、AI再評価＋再マッチングを行うことで案件がヒットすることがあります。")
+
+            if st.button("情報ソースを更新する", type="primary"):
+                # 編集されたテキスト全体を新しい「本文」とする
+                source_data['body'] = edited_source_text
+                
+                # 添付ファイルのテキスト内容を空にして、再評価時に重複しないようにする
+                if 'attachments' in source_data:
+                    for att in source_data['attachments']:
+                        if 'content' in att:
+                            att['content'] = '' # テキスト内容をクリア
+                
                 new_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
                 if be.update_engineer_source_json(selected_id, new_json_str):
-                    success_message = st.success("メール本文を更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。")
+                    success_message = st.success("情報ソースを更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。")
                     time.sleep(3)
                     success_message.empty()
                     st.rerun()
                 else:
                     st.error("データベースの更新に失敗しました。")
+
             st.divider()
 
-            # ▼▼▼【ここからが修正箇所】▼▼▼
-            # --- 添付ファイル内容の表示 ---
-            st.subheader("添付ファイルの内容")
-            attachments = source_data.get("attachments", [])
+            # --- 添付ファイルのダウンロードセクション ---
             if attachments:
+                st.subheader("原本ファイルのダウンロード")
                 for i, att in enumerate(attachments):
                     filename = att.get("filename", "名称不明のファイル")
-                    content_text = att.get("content", "[テキスト抽出失敗、または内容がありません]")
-                    
-                    st.markdown(f"**ファイル名:** `{filename}`")
-                    
-                    # 読み取り専用のテキストエリアで内容を表示
-                    st.text_area(
-                        label=f"attachment_content_{i}",
-                        value=content_text,
-                        height=400, # 高さを調整
-                        disabled=True,
-                        label_visibility="collapsed"
-                    )
-
-                    # ダウンロードボタンも引き続き表示
                     content_b64 = att.get("content_b64", "")
                     if content_b64:
                         try:
                             file_bytes = base64.b64decode(content_b64)
                             st.download_button(
-                                label=f"📄 原本ファイル「{filename}」をダウンロード",
+                                label=f"📄 {filename}",
                                 data=file_bytes,
                                 file_name=filename,
                                 key=f"att_dl_btn_{selected_id}_{i}"
                             )
                         except Exception as e:
                             st.warning(f"ファイル「{filename}」のダウンロード準備に失敗しました: {e}")
-                    
-                    # 複数の添付ファイルがある場合に備えて区切り線を追加
-                    if i < len(attachments) - 1:
-                        st.markdown("---")
-            else:
-                st.caption("添付ファイルはありません。")
+                st.divider()
             # ▲▲▲【修正箇所はここまで】▲▲▲
 
         except json.JSONDecodeError:
