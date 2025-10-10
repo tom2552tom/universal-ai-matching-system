@@ -822,3 +822,16 @@ def save_match_grade(match_id, grade):
     finally:
         if conn:
             conn.close()
+
+
+def get_evaluation_html(grade, font_size='2.5em'):
+    """
+    評価（A-E）に基づいて色とスタイルが適用されたHTMLを生成します。
+    """
+    if not grade: return ""
+    color_map = {'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
+    color = color_map.get(grade.upper(), '#6c757d') 
+    style = f"color: {color}; font-size: {font_size}; font-weight: bold; text-align: center; line-height: 1; padding-top: 10px;"
+    # HTML構造もダッシュボードと同じにする
+    html_code = f"<div style='text-align: center; margin-bottom: 5px;'><span style='{style}'>{grade.upper()}</span></div><div style='text-align: center; font-size: 0.8em; color: #888;'>判定</div>"
+    return html_code

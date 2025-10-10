@@ -4,6 +4,10 @@ import json
 import html
 import base64 # ▼▼▼ 変更点: 添付ファイルダウンロードのためにインポート ▼▼▼
 
+# ▼▼▼ 変更点 1: backend から get_evaluation_html をインポート ▼▼▼
+from backend import get_evaluation_html
+# ▲▲▲ 変更点 1 ここまで ▲▲▲
+
 st.set_page_config(page_title="技術者詳細", layout="wide")
 
 # --- 表示用のカスタムCSS ---
@@ -150,21 +154,26 @@ if engineer_data:
     # --- マッチング済みの案件一覧 ---
     st.header("🤝 マッチング済みの案件一覧")
     
-    # ▼▼▼ 変更点2: クエリを修正し、マッチングID(r.id)も取得する ▼▼▼
+
+    # ▼▼▼ 変更点 2: クエリを修正し、非表示の案件・マッチング結果を除外し、gradeも取得 ▼▼▼
     matched_jobs_query = """
         SELECT 
             j.id as job_id, 
             j.project_name, 
             j.document, 
             r.score,
-            r.id as match_id
+            r.id as match_id,
+            r.grade  -- 追加: AI評価ランクも取得
         FROM matching_results r
         JOIN jobs j ON r.job_id = j.id
-        WHERE r.engineer_id = ? AND j.is_hidden = 0
+        WHERE r.engineer_id = ? 
+          AND j.is_hidden = 0  -- 案件が非表示でない
+          AND r.is_hidden = 0  -- マッチング結果が非表示でない
         ORDER BY r.score DESC
     """
     matched_jobs = conn.execute(matched_jobs_query, (selected_id,)).fetchall()
-    # ▲▲▲ 変更点2 ここまで ▲▲▲
+    # ▲▲▲ 変更点 2 ここまで ▲▲▲
+
 
     if not matched_jobs:
         st.info("この技術者にマッチング済みの案件はありません。")
