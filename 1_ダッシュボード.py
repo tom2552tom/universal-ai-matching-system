@@ -4,6 +4,8 @@ from backend import (
     init_database, load_embedding_model, get_db_connection,
     hide_match, load_app_config, get_all_users
 )
+from streamlit_cookies_manager import CookieManager
+
 
 # ヘルパー関数 (変更なし)
 def get_evaluation_html(grade, font_size='2.5em'):
@@ -11,7 +13,7 @@ def get_evaluation_html(grade, font_size='2.5em'):
     color_map = {'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
     color = color_map.get(grade.upper(), '#6c757d') 
     style = f"color: {color}; font-size: {font_size}; font-weight: bold; text-align: center; line-height: 1; padding-top: 10px;"
-    html_code = f"<div style='{style}'>{grade.upper()}</div><div style='text-align: center; font-size: 0.8em; color: #888;'>判定</div>"
+    html_code = f"<div style='text-align: center; margin-bottom: 5px;'><span style='{style}'>{grade.upper()}</span></div><div style='text-align: center; font-size: 0.8em; color: #888;'>判定</div>"
     return html_code
 
 # --- アプリケーションの初期化 ---
@@ -22,30 +24,15 @@ config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
 
-
+if 'cookies_manager' not in st.session_state:
+    st.session_state.cookies_manager = CookieManager()
+    st.session_state.cookies_manager.ready()
 
 st.image("img/UniversalAI_logo.png", width=240)
-# ▼▼▼ 変更点 1: 営業スタッフ向けメッセージの表示 ▼▼▼
-#sales_notice = config.get("messages", {}).get("メッセージ")
 
-# ▼▼▼ デバッグ用に追加 ▼▼▼
-#st.write(f"Debug: config object = {config}")
-#st.write(f"Debug: sales_notice variable = {sales_notice}")
-# ▲▲▲ デバッグ用に追加 ▲▲▲
-
-sales_staff_notice = """
-<div style="background-color: #ffcccc; color: #cc0000; padding: 10px; border-radius: 5px; border: 2px solid #cc0000; font-weight: bold; text-align: center; margin-bottom: 20px;">
-    🚨 営業スタッフへ: メール読み込み後、案件管理、技術者管理メニューより、担当をアサインしてください。<br>
-    マッチング不要な案件、技術者はアーカイブするようにしてください。マッチング処理から除外されます。<br>
-    特にS, A, B評価の技術者は優先的にアプローチしましょう！
-</div>
-"""
-
-#st.info(sales_staff_notice)
-
-if sales_staff_notice:
-    st.markdown(sales_staff_notice, unsafe_allow_html=True)
-# ▲▲▲ 変更点 1 ここまで ▲▲▲
+sales_notice_message = config.get("messages", {}).get("sales_staff_notice")
+if sales_notice_message:
+    st.markdown(sales_notice_message, unsafe_allow_html=True)
 
 st.divider()
 
@@ -64,7 +51,7 @@ st.session_state.items_per_page = st.sidebar.selectbox(
     key="items_per_page_selector"
 )
 
-# --- サイドバー (既存のフィルター) ---
+# --- サイドバー (フィルター) ---
 st.sidebar.header("フィルター")
 
 all_users = get_all_users()
@@ -76,13 +63,30 @@ engineer_assignee_filter = st.sidebar.selectbox("技術者担当者", options=as
 st.sidebar.divider()
 
 grade_options = ['S','A', 'B', 'C', 'D', 'E']
-selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, placeholder="評価を選択して絞り込み")
-st.sidebar.divider()
+cookie_key_grades = "selected_grades_filter"
 
-# ▼▼▼ 変更点 1: 最小マッチ度フィルターを削除 ▼▼▼
-# min_score_filter = st.sidebar.slider("最小マッチ度 (%)", 0, 100, 0) # この行を削除
-min_score_filter = 0 # 削除に伴い、デフォルト値を0としておく
-# ▲▲▲ 変更点 1 ここまで ▲▲▲
+default_grades_from_cookie = st.session_state.cookies_manager.get(cookie_key_grades)
+if default_grades_from_cookie:
+    try:
+        default_grades_from_cookie = [g.strip() for g in default_grades_from_cookie.split(',') if g.strip() in grade_options]
+    except Exception:
+        default_grades_from_cookie = []
+else:
+    default_grades_from_cookie = []
+
+selected_grades = st.sidebar.multiselect(
+    "AI評価",
+    options=grade_options,
+    default=default_grades_from_cookie,
+    placeholder="評価を選択して絞り込み",
+    key="ai_grade_filter"
+)
+
+if selected_grades != default_grades_from_cookie:
+    st.session_state.cookies_manager.set(cookie_key_grades, ",".join(selected_grades))
+    st.session_state.cookies_manager.save()
+
+min_score_filter = 0 
 
 today = datetime.now().date()
 default_start_date = today - timedelta(days=30)
@@ -92,6 +96,33 @@ st.sidebar.divider()
 st.sidebar.header("ルールフィルター")
 filter_nationality = st.sidebar.checkbox("「外国籍不可」の案件を除外する", value=False)
 show_hidden_filter = st.sidebar.checkbox("非表示も表示する", value=False)
+
+# ▼▼▼ 変更点 1: ソートオプションをサイドバーに追加 ▼▼▼
+st.sidebar.divider()
+st.sidebar.header("ソート設定")
+sort_by_options = {
+    "マッチ日": "created_at",
+    "AI評価": "grade",
+    "マッチ度": "score" # マッチ度は非表示ですが、ソートキーとしては残しておきます
+}
+selected_sort_by_display = st.sidebar.selectbox("ソート基準", options=list(sort_by_options.keys()), key="sort_by")
+
+sort_order_options = {
+    "マッチ日": {"新しい順": "DESC", "古い順": "ASC"},
+    "AI評価": {"良い順 (S→E)": "ASC", "悪い順 (E→S)": "DESC"},
+    "マッチ度": {"高い順": "DESC", "低い順": "ASC"}
+}
+selected_sort_order_display = st.sidebar.selectbox(
+    "ソート順", 
+    options=list(sort_order_options[selected_sort_by_display].keys()), 
+    key="sort_order"
+)
+
+# 選択された表示名から、実際のDBカラム名とソート順を取得
+sort_column = sort_by_options[selected_sort_by_display]
+sort_direction = sort_order_options[selected_sort_by_display][selected_sort_order_display]
+# ▲▲▲ 変更点 1 ここまで ▲▲▲
+
 
 st.header("最新マッチング結果一覧")
 
@@ -112,13 +143,10 @@ query = '''
     LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
 '''
 params = []
-# ▼▼▼ 変更点 2: 最小マッチ度フィルターのWHERE句を削除 ▼▼▼
-# where_clauses = ["r.score >= ?"]; params.append(min_score_filter) # この行を修正
-where_clauses = [] # 最小マッチ度フィルターの条件を削除
-if min_score_filter > 0: # 念のため、もし min_score_filter が使われる状況があれば残しておく
+where_clauses = [] 
+if min_score_filter > 0:
     where_clauses.append("r.score >= ?")
     params.append(min_score_filter)
-# ▲▲▲ 変更点 2 ここまで ▲▲▲
 
 if job_assignee_filter != "すべて":
     where_clauses.append("job_user.username = ?"); params.append(job_assignee_filter)
@@ -139,7 +167,30 @@ if not show_hidden_filter:
 
 if where_clauses: query += " WHERE " + " AND ".join(where_clauses)
 
-query += " ORDER BY r.created_at DESC, r.score DESC"
+# ▼▼▼ 変更点 2: ORDER BY 句を動的に生成 ▼▼▼
+order_by_clause = ""
+if sort_column == "grade":
+    # AI評価 (S, A, B, C, D, E) のカスタムソート順
+    order_by_clause = f"""
+        ORDER BY
+            CASE r.grade
+                WHEN 'S' THEN 1
+                WHEN 'A' THEN 2
+                WHEN 'B' THEN 3
+                WHEN 'C' THEN 4
+                WHEN 'D' THEN 5
+                WHEN 'E' THEN 6
+                ELSE 7 -- NULLやその他の評価は最後に
+            END {sort_direction},
+            r.created_at DESC -- 評価が同じ場合はマッチ日でソート
+    """
+elif sort_column == "score":
+    order_by_clause = f"ORDER BY r.score {sort_direction}, r.created_at DESC"
+else: # created_at (マッチ日) の場合
+    order_by_clause = f"ORDER BY r.created_at {sort_direction}, r.score DESC" # マッチ日が同じ場合はスコアでソート
+
+query += order_by_clause
+# ▲▲▲ 変更点 2 ここまで ▲▲▲
 
 results = conn.execute(query, tuple(params)).fetchall()
 conn.close()
@@ -216,9 +267,6 @@ else:
                     
                 with col2: # マッチ度とAI評価
                     st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-                    # ▼▼▼ 変更点 3: マッチ度 (%) の表示を削除 ▼▼▼
-                    # st.metric(label="マッチ度", value=f"{score:.1f}%", label_visibility="collapsed") # この行を削除
-                    # ▲▲▲ 変更点 3 ここまで ▲▲▲
                     
                     if st.button("詳細を見る", key=f"detail_btn_{res['res_id']}", type="primary", use_container_width=True):
                         st.session_state['selected_match_id'] = res['res_id']
@@ -231,7 +279,7 @@ else:
                     st.markdown(f"##### 👤 {engineer_name}", unsafe_allow_html=True)
 
                     if res['engineer_assignee']: st.caption(f"**担当:** {res['engineer_assignee']}")
-                    eng_doc = res['eng_doc'] if res['eng_doc'] else ""
+                    eng_doc = res['eng_doc'] if eng['eng_doc'] else ""
                     display_doc = eng_doc.split('\n---\n', 1)[-1]
                     st.caption(display_doc.replace('\n', ' ').replace('\r', '')[:150] + "...")
             st.empty()
