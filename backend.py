@@ -28,7 +28,7 @@ DB_FILE = "backend_system.db"
 JOB_INDEX_FILE = "backend_job_index.faiss"
 ENGINEER_INDEX_FILE = "backend_engineer_index.faiss"
 MODEL_NAME = 'intfloat/multilingual-e5-large'
-TOP_K_CANDIDATES = 50
+TOP_K_CANDIDATES = 500
 MIN_SCORE_THRESHOLD = 70.0 # 推奨値に設定
 
 @st.cache_data
@@ -956,4 +956,3 @@ def re_evaluate_and_match_single_engineer(engineer_id):
     finally:
         if conn:
             conn.close()
-            
