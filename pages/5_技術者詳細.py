@@ -144,7 +144,7 @@ if engineer_data:
                 label_visibility="collapsed",
                 key=f"eng_source_editor_{selected_id}"
             )
-            st.warning("スキル等の変更・追加などを行なった場合、AI再評価＋再マッチングを行うことで案件がヒットすることがあります。")
+            st.info("スキル等の変更・追加などを行なった場合、AI再評価＋再マッチングを行うことで案件がヒットすることがあります。")
 
             if st.button("情報ソースを更新する", type="primary"):
                 # 編集されたテキスト全体を新しい「本文」とする
