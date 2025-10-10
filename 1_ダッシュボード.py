@@ -26,14 +26,25 @@ st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wi
 
 st.image("img/UniversalAI_logo.png", width=240)
 # ▼▼▼ 変更点 1: 営業スタッフ向けメッセージの表示 ▼▼▼
-sales_notice = config.get("messages", {}).get("メッセージ")
+#sales_notice = config.get("messages", {}).get("メッセージ")
+
 # ▼▼▼ デバッグ用に追加 ▼▼▼
 #st.write(f"Debug: config object = {config}")
 #st.write(f"Debug: sales_notice variable = {sales_notice}")
 # ▲▲▲ デバッグ用に追加 ▲▲▲
 
-if sales_notice:
-    st.markdown(sales_notice, unsafe_allow_html=True)
+sales_staff_notice = """
+<div style="background-color: #ffcccc; color: #cc0000; padding: 10px; border-radius: 5px; border: 2px solid #cc0000; font-weight: bold; text-align: center; margin-bottom: 20px;">
+    🚨 営業スタッフへ: メール読み込み後、担当者、技術者管理より、担当をアサインしてください。<br>
+    マッチング不要な案件、技術者はアーカイブするようにしてください。マッチング処理から除外されます。<br>
+    特にS, A, B評価の技術者は優先的にアプローチしましょう！
+</div>
+"""
+
+st.info(sales_staff_notice)
+
+if sales_staff_notice:
+    st.markdown(sales_staff_notice, unsafe_allow_html=True)
 # ▲▲▲ 変更点 1 ここまで ▲▲▲
 
 st.divider()
