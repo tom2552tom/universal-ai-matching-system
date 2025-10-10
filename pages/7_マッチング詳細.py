@@ -222,7 +222,7 @@ with st.container(border=True):
     
     #if st.button("文面をクリップボードにコピー", use_container_width=True):
     #    st.toast("コピーしました！")
-    st.code(proposal_text, language="text")
+    #st.code(proposal_text, language="text")
     #st.caption("▲ 上のボックス内をクリックすると全文をコピーできます。")
 
 st.divider()
