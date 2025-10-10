@@ -71,7 +71,7 @@ keyword_filter = st.sidebar.text_input("キーワード検索 (担当者名も�
 
 st.sidebar.divider()
 st.sidebar.header("ルールフィルター")
-filter_nationality = st.sidebar.checkbox("「外国籍不可」の案件を除外する", value=True)
+filter_nationality = st.sidebar.checkbox("「外国籍不可」の案件を除外する", value=False)
 show_hidden_filter = st.sidebar.checkbox("非表示も表示する", value=False)
 
 st.header("最新マッチング結果一覧")
