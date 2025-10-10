@@ -5,13 +5,12 @@ import json
 import html
 
 # プロジェクトルートをパスに追加
-# これにより、pages/ フォルダ内のスクリプトから親ディレクトリにある backend.py をインポートできるようになります。
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, os.pardir))
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-import backend as be # backend.py をインポート
+import backend as be
 
 st.set_page_config(page_title="マッチング詳細", layout="wide")
 
@@ -41,13 +40,12 @@ else:
 
 if selected_match_id is None:
     st.error("表示するマッチング結果IDが指定されていません。")
-    st.info("URLの末尾に `?result_id=XXX` (XXXはマッチング結果のID) を追加するか、ダッシュボードから詳細を見たいマッチングを選択してください。")
+    st.info("ダッシュボードから詳細を見たいマッチングを選択するか、URLの末尾に `?result_id=XXX` (XXXはマッチング結果のID) を追加してアクセスしてください。")
     if st.button("ダッシュボードに戻る"): st.switch_page("1_ダッシュボード.py")
     st.stop()
 
 
 # --- データ取得 ---
-# backend.py に追加した get_matching_result_details 関数を使用
 details = be.get_matching_result_details(selected_match_id)
 
 if not details:
@@ -176,7 +174,6 @@ with st.container(border=True):
             # DBに保存されているgradeとLLMが生成したgradeが異なる場合のみ更新
             if match_data['grade'] != grade_to_save:
                 be.save_match_grade(selected_match_id, grade_to_save)
-                # match_dataを更新（Streamlitの再描画を考慮）
                 match_data['grade'] = grade_to_save # dict形式なので直接更新可能
 
             evaluation_html = get_evaluation_html(grade)
@@ -184,8 +181,9 @@ with st.container(border=True):
         else:
             st.warning("AI評価のSummaryが取得できませんでした。")
         
-        # マッチ度を表示
-        st.metric("類似度", f"{float(match_data['score']):.1f}%")
+        # ▼▼▼【ここをコメントアウトして類似度を非表示にします】▼▼▼
+        # st.metric("類似度", f"{float(match_data['score']):.1f}%")
+        # ▲▲▲【類似度非表示の修正はここまで】▲▲▲
 
     with col2:
         st.markdown("###### ✅ ポジティブな点")
@@ -223,9 +221,6 @@ with st.container(border=True):
     )
     if st.button("文面をクリップボードにコピー", use_container_width=True):
         st.toast("コピーしました！")
-        # Streamlitには直接クリップボードに書き込む機能がないため、
-        # このボタンは主にUI上のフィードバックとして機能します。
-        # ユーザーが手動でコピーしやすいようにst.codeを表示します。
     st.code(proposal_text, language="text")
     st.caption("▲ 上のボックス内をクリックすると全文をコピーできます。")
 
@@ -257,7 +252,5 @@ st.divider()
 
 
 if st.button("ダッシュボードに戻る"):
-    # ダッシュボードに戻る際に、現在のマッチングIDをセッションステートから削除する必要はない
-    # なぜなら、ダッシュボードはURLパラメータやセッションステートを直接使わないため
     st.switch_page("1_ダッシュボード.py")
 
