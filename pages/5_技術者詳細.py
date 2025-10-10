@@ -181,6 +181,7 @@ if engineer_data:
         st.write(f"計 {len(matched_jobs)} 件の案件がマッチングしています。")
         for job in matched_jobs:
             with st.container(border=True):
+                  # ▼▼▼ 変更点 3: レイアウトを調整し、マッチ度パーセンテージをAI評価ランクに置き換え ▼▼▼
                 col1, col2 = st.columns([4, 1])
                 with col1:
                     project_name = job['project_name'] if job['project_name'] else f"案件 (ID: {job['job_id']})"
@@ -189,15 +190,14 @@ if engineer_data:
                     job_main_doc = job_doc_parts[1] if len(job_doc_parts) > 1 else job['document']
                     st.caption(job_main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
                 with col2:
-                    st.metric("マッチ度", f"{job['score']:.1f}%")
+                    # マッチ度 (%) の代わりにAI評価ランクを表示
+                    st.markdown(get_evaluation_html(job['grade'], font_size='2em'), unsafe_allow_html=True)
                     
-                    # ▼▼▼ 変更点3: ボタンのロジックをシンプル化 ▼▼▼
                     if st.button("詳細を見る", key=f"matched_job_detail_{job['match_id']}", use_container_width=True):
-                        # 取得済みの match_id をセッションに保存
                         st.session_state['selected_match_id'] = job['match_id']
-                        # マッチング詳細ページに遷移
                         st.switch_page("pages/7_マッチング詳細.py")
-                    # ▲▲▲ 変更点3 ここまで ▲▲▲
+                # ▲▲▲ 変更点 3 ここまで ▲▲▲
+                
 else:
     st.error("指定されたIDの技術者情報が見つかりませんでした。")
 
