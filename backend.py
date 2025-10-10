@@ -956,3 +956,26 @@ def re_evaluate_and_match_single_engineer(engineer_id):
     finally:
         if conn:
             conn.close()
+
+
+def update_engineer_name(engineer_id, new_name):
+    """
+    指定された技術者IDの氏名を更新する。
+    """
+    if not new_name or not new_name.strip():
+        print("エラー: 新しい氏名が空です。")
+        return False
+        
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE engineers SET name = ? WHERE id = ?", (new_name.strip(), engineer_id))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"技術者氏名の更新エラー: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()

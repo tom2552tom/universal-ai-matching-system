@@ -3,11 +3,9 @@ import backend as be
 import json
 import html
 import base64
-import time # timeモジュールをインポート
-
+import time
 
 # backend から get_evaluation_html をインポート
-# backend.py にこの関数がない場合は、ダッシュボードのコードからコピーしてください
 try:
     from backend import get_evaluation_html
 except ImportError:
@@ -61,26 +59,43 @@ if engineer_data:
     st.title(title_display)
     st.caption(f"ID: {selected_id}")
 
-    # --- 担当者情報セクション ---
-    st.subheader("👤 担当者情報")
-    all_users = be.get_all_users()
-    user_options = {"未割り当て": None, **{user['username']: user['id'] for user in all_users}}
-    current_user_id = engineer_data['assigned_user_id']
-    id_to_username = {v: k for k, v in user_options.items()}
-    current_username = id_to_username.get(current_user_id, "未割り当て")
-
-    col1, col2 = st.columns([1, 2])
-    with col1: st.metric("現在の担当者", current_username)
-    with col2:
-        option_names = list(user_options.keys())
-        default_index = option_names.index(current_username)
-        selected_username = st.selectbox("担当者を変更/割り当て", options=option_names, index=default_index, key=f"eng_user_assign_{selected_id}")
-        if st.button("担当者を更新", use_container_width=True):
-            selected_user_id = user_options[selected_username]
-            if be.assign_user_to_engineer(selected_id, selected_user_id):
-                st.success(f"担当者を「{selected_username}」に更新しました。"); st.rerun()
-            else: st.error("担当者の更新に失敗しました。")
+    # ▼▼▼【ここからが修正箇所】▼▼▼
+    # --- 基本情報セクション (氏名と担当者) ---
+    st.subheader("👤 基本情報")
+    with st.container(border=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            # 氏名編集
+            new_engineer_name = st.text_input("技術者氏名", value=engineer_data['name'] or "")
+            if st.button("氏名を更新", use_container_width=True):
+                if be.update_engineer_name(selected_id, new_engineer_name):
+                    st.success("氏名を更新しました。")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("氏名の更新に失敗しました。")
+        
+        with col2:
+            # 担当者割り当て
+            all_users = be.get_all_users()
+            user_options = {"未割り当て": None, **{user['username']: user['id'] for user in all_users}}
+            current_user_id = engineer_data['assigned_user_id']
+            id_to_username = {v: k for k, v in user_options.items()}
+            current_username = id_to_username.get(current_user_id, "未割り当て")
+            
+            option_names = list(user_options.keys())
+            default_index = option_names.index(current_username)
+            selected_username = st.selectbox("担当者を変更/割り当て", options=option_names, index=default_index, key=f"eng_user_assign_{selected_id}")
+            if st.button("担当者を更新", use_container_width=True):
+                selected_user_id = user_options[selected_username]
+                if be.assign_user_to_engineer(selected_id, selected_user_id):
+                    st.success(f"担当者を「{selected_username}」に更新しました。")
+                    time.sleep(1)
+                    st.rerun()
+                else: 
+                    st.error("担当者の更新に失敗しました。")
     st.divider()
+    # ▲▲▲【修正箇所はここまで】▲▲▲
 
     # --- 技術者の操作（表示/非表示）セクション ---
     with st.expander("技術者の操作", expanded=False):
@@ -121,17 +136,10 @@ if engineer_data:
                 source_data['body'] = edited_body
                 new_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
                 if be.update_engineer_source_json(selected_id, new_json_str):
-                    
-                    #st.success("メール本文を更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。"); st.rerun()
-
                     success_message = st.success("メール本文を更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。")
-                    # 3秒間待機
                     time.sleep(3)
-                    # メッセージをクリア（非表示に）
                     success_message.empty()
-                    # ページをリロード
                     st.rerun()
-
                 else:
                     st.error("データベースの更新に失敗しました。")
 
@@ -142,7 +150,7 @@ if engineer_data:
             if attachments:
                 for i, att in enumerate(attachments):
                     filename = att.get("filename", "名称不明のファイル")
-                    content_b64 = att.get("content_b64", "") # content_b64を想定
+                    content_b64 = att.get("content_b64", "")
                     
                     if content_b64:
                         try:
@@ -213,15 +221,11 @@ conn.close()
 st.divider()
 
 
-# ▼▼▼【ここからが追加/修正箇所】▼▼▼
 st.header("⚙️ AI再評価＋マッチング")
-#st.warning("技術者のスキル等の変更・追加などを行なった場合、技術者の再評価、再マッチングを行うことでヒットすることがあります。")
-
 if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
     with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
         st.write(f"技術者ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
         
-        # backend.py に追加した関数を呼び出す
         success = be.re_evaluate_and_match_single_engineer(selected_id)
         
         if success:
@@ -233,7 +237,6 @@ if st.button("🤖 AI再評価と再マッチングを実行する", type="prima
             st.error("処理中にエラーが発生しました。詳細はログを確認してください。")
 
 st.divider()
-# ▲▲▲【追加/修正箇所はここまで】▲▲▲
 
 
 if st.button("一覧に戻る"):
