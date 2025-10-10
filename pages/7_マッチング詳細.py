@@ -219,10 +219,11 @@ with st.container(border=True):
         height=500,
         label_visibility="collapsed"
     )
-    if st.button("文面をクリップボードにコピー", use_container_width=True):
-        st.toast("コピーしました！")
+    
+    #if st.button("文面をクリップボードにコピー", use_container_width=True):
+    #    st.toast("コピーしました！")
     st.code(proposal_text, language="text")
-    st.caption("▲ 上のボックス内をクリックすると全文をコピーできます。")
+    #st.caption("▲ 上のボックス内をクリックすると全文をコピーできます。")
 
 st.divider()
 
