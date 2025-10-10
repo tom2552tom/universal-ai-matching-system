@@ -69,13 +69,15 @@ if where_clauses:
 # ▼▼▼【ここからが修正箇所】▼▼▼
 # --- ソート順の決定 ---
 sort_column_map = {
-    "登録日": "j.created_at",
     "プロジェクト名": "j.project_name",
-    "担当者名": "assigned_username" # LEFT JOIN後のエイリアス名を使用
+    "担当者名": "assigned_username", # LEFT JOIN後のエイリアス名を使用
+    "登録日": "j.created_at"
+    
+    
 }
 order_map = {
-    "降順 (新しい順)": "DESC",
-    "昇順 (古い順)": "ASC"
+    "降順 ": "DESC",
+    "昇順 ": "ASC"
 }
 
 # 選択されたオプションに基づいてORDER BY句を組み立てる
