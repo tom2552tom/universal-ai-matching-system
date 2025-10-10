@@ -115,7 +115,7 @@ if engineer_data:
             
             edited_body = st.text_area("メール本文を編集", value=email_body, height=400, label_visibility="collapsed", key=f"eng_mail_editor_{selected_id}")
             
-            st.warning("技術者のスキル等の変更・追加などを行なった場合、技術者のAI再評価＋再マッチングを行うことで案件がヒットすることがあります。<br>追加情報はここに必ず保存するようにしてください。")
+            st.warning("技術者のスキル等の変更・追加などを行なった場合、技術者のAI再評価＋再マッチングを行うことで案件がヒットすることがあります。追加情報はここに必ず保存するようにしてください。")
 
             if st.button("更新する", type="primary"):
                 source_data['body'] = edited_body
