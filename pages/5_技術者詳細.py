@@ -3,6 +3,8 @@ import backend as be
 import json
 import html
 import base64
+import time # timeモジュールをインポート
+
 
 # backend から get_evaluation_html をインポート
 # backend.py にこの関数がない場合は、ダッシュボードのコードからコピーしてください
@@ -119,7 +121,17 @@ if engineer_data:
                 source_data['body'] = edited_body
                 new_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
                 if be.update_engineer_source_json(selected_id, new_json_str):
-                    st.success("メール本文を更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。"); st.rerun()
+                    
+                    #st.success("メール本文を更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。"); st.rerun()
+
+                    success_message = st.success("メール本文を更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。")
+                    # 3秒間待機
+                    time.sleep(3)
+                    # メッセージをクリア（非表示に）
+                    success_message.empty()
+                    # ページをリロード
+                    st.rerun()
+
                 else:
                     st.error("データベースの更新に失敗しました。")
 
