@@ -112,7 +112,10 @@ if engineer_data:
             email_body = source_data.get("body", "（メール本文がありません）")
             
             edited_body = st.text_area("メール本文を編集", value=email_body, height=400, label_visibility="collapsed", key=f"eng_mail_editor_{selected_id}")
-            if st.button("メール本文を更新する", type="primary"):
+            
+            st.warning("技術者のスキル等の変更・追加などを行なった場合、技術者のAI再評価、再マッチングを行うことでヒットすることがあります。")
+
+            if st.button("更新する", type="primary"):
                 source_data['body'] = edited_body
                 new_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
                 if be.update_engineer_source_json(selected_id, new_json_str):
