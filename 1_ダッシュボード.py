@@ -5,7 +5,7 @@ from backend import (
     hide_match, load_app_config, get_all_users
 )
 
-# ヘルパー関数
+# --- ヘルパー関数 (変更なし) ---
 def get_evaluation_html(grade, font_size='2.5em'):
     if not grade: return ""
     color_map = {'S': '#00b894', 'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
@@ -54,11 +54,7 @@ if 'current_page' not in st.session_state:
 if 'items_per_page' not in st.session_state:
     st.session_state.items_per_page = 10 
 
-# ▼▼▼【変更点1: サイドバーからページング設定を削除】▼▼▼
-# st.sidebar.subheader("ページング設定") と st.sidebar.selectbox のブロックを削除
-# ▲▲▲【変更点1ここまで】▲▲▲
-
-# --- サイドバーフィルター ---
+# --- サイドバーフィルター (変更なし) ---
 st.sidebar.header("フィルター")
 all_users = get_all_users()
 user_names = [user['username'] for user in all_users]
@@ -83,7 +79,7 @@ show_hidden_filter = st.sidebar.checkbox("非表示も表示する", value=False
 
 st.header("最新マッチング結果一覧")
 
-# --- DBからフィルタリングされた結果を取得 ---
+# --- DBからフィルタリングされた結果を取得 (変更なし) ---
 conn = get_db_connection()
 query = '''
     SELECT 
@@ -115,7 +111,7 @@ query += " ORDER BY r.created_at DESC, r.score DESC"
 results = conn.execute(query, tuple(params)).fetchall()
 conn.close()
 
-# --- 結果のフィルタリング ---
+# --- 結果のフィルタリング (変更なし) ---
 if not results:
     st.info("フィルタリング条件に合致するマッチング結果はありませんでした。")
 else:
@@ -131,25 +127,35 @@ else:
         st.warning("AIが提案したマッチングはありましたが、ルールフィルターによってすべて除外されました。")
     else:
         total_items = len(results_to_display)
-        total_pages = (total_items + st.session_state.items_per_page - 1) // st.session_state.items_per_page
 
-        # ▼▼▼【ここからが変更点2】▼▼▼
+        # ▼▼▼【ここからが修正箇所】▼▼▼
         # --- ヘッダーと表示件数設定 ---
         header_cols = st.columns([3, 1])
         with header_cols[0]:
             st.write(f"**表示中のマッチング結果: {total_items}件**")
         with header_cols[1]:
             items_per_page_options = [5, 10, 20, 50]
-            st.session_state.items_per_page = st.selectbox(
+            
+            # selectboxが返す値を直接変数に受け取る
+            new_items_per_page = st.selectbox(
                 "表示件数",
                 options=items_per_page_options,
                 index=items_per_page_options.index(st.session_state.items_per_page),
                 key="items_per_page_selector",
-                label_visibility="collapsed" # ラベルを非表示にしてコンパクトに
+                label_visibility="collapsed"
             )
-        # ▲▲▲【変更点2ここまで】▲▲▲
+            
+            # 値が変更されたかチェック
+            if new_items_per_page != st.session_state.items_per_page:
+                st.session_state.items_per_page = new_items_per_page
+                st.session_state.current_page = 1 # 1ページ目に戻す
+                st.rerun() # 即座に再実行して変更を反映
 
-        # ページネーションコントロール (元のUIに戻す)
+        # 正しい items_per_page を使って総ページ数を計算
+        total_pages = (total_items + st.session_state.items_per_page - 1) // st.session_state.items_per_page
+        # ▲▲▲【修正箇所ここまで】▲▲▲
+
+        # ページネーションコントロール (元のUI)
         if total_pages > 1:
             st.markdown("---")
             pagination_cols = st.columns([1, 2, 1])
