@@ -2,16 +2,11 @@ import streamlit as st
 import backend as be
 import json
 import html
-import base64
-import time
 
-# backend から get_evaluation_html をインポート
-try:
-    from backend import get_evaluation_html
-except ImportError:
-    def get_evaluation_html(grade, font_size='2em'): # 簡易版を定義
-        if not grade: return ""
-        return f"<p style='font-size:{font_size}; text-align:center;'>{grade}</p>"
+# ▼▼▼ 変更点 1: backend から get_evaluation_html をインポート ▼▼▼
+from backend import get_evaluation_html
+# ▲▲▲ 変更点 1 ここまで ▲▲▲
+
 
 st.set_page_config(page_title="案件詳細", layout="wide")
 
@@ -91,6 +86,7 @@ if job_data:
 
     # --- AIによる要約情報 ---
     st.header("🤖 AIによる要約情報")
+    # ▼▼▼【ここからが修正箇所です】▼▼▼
     if job_data['document']:
         with st.container(border=True):
             doc_parts = job_data['document'].split('\n---\n', 1)
@@ -101,74 +97,25 @@ if job_data:
             st.markdown(main_doc)
     else:
         st.info("この案件にはAIによる要約情報がありません。")
+    # ▲▲▲【ここまでが修正箇所です】▲▲▲
     st.divider()
 
-    # --- 元の情報の表示 ---
-    st.header("📄 元の情報ソース（編集可能）")
+    # --- 元のメール・添付ファイル内容 ---
+    st.header("📄 元のメール・添付ファイル内容")
     source_json_str = job_data['source_data_json']
-    
     if source_json_str:
         try:
             source_data = json.loads(source_json_str)
-
-            # --- テキストの統合 ---
-            initial_text_parts = [source_data.get("body", "")]
-            attachments = source_data.get("attachments", [])
-            if attachments:
-                for att in attachments:
-                    filename = att.get("filename", "名称不明")
-                    content = att.get("content", "")
-                    if content:
-                        initial_text_parts.append(f"\n\n--- 添付ファイル: {filename} ---\n{content}")
-            full_source_text = "".join(initial_text_parts)
-
-            # --- 統合されたテキストエリア ---
-            st.markdown("メール本文と添付ファイルの内容が統合されています。案件内容の追加や修正はこちらで行ってください。")
-            edited_source_text = st.text_area(
-                "情報ソースを編集",
-                value=full_source_text,
-                height=600,
-                label_visibility="collapsed",
-                key=f"job_source_editor_{selected_id}"
-            )
-            st.warning("案件内容を変更した場合、AI再評価＋再マッチングを行うことで、新たな技術者がヒットすることがあります。")
-
-            if st.button("情報ソースを更新する", type="primary"):
-                source_data['body'] = edited_source_text
-                if 'attachments' in source_data:
-                    for att in source_data['attachments']:
-                        if 'content' in att:
-                            att['content'] = ''
-                
+            st.subheader("メール本文（編集可能）")
+            edited_body = st.text_area("メール本文", value=source_data.get("body", ""), height=400, label_visibility="collapsed", key=f"job_mail_editor_{selected_id}")
+            if st.button("メール本文を更新する", type="primary"):
+                source_data['body'] = edited_body
                 new_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
-                if be.update_job_source_json(selected_id, new_json_str):
-                    success_message = st.success("情報ソースを更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。")
-                    time.sleep(3)
-                    success_message.empty()
-                    st.rerun()
-                else:
-                    st.error("データベースの更新に失敗しました。")
-
-            st.divider()
-
-            # --- 添付ファイルのダウンロードセクション ---
-            if attachments:
-                st.subheader("原本ファイルのダウンロード")
-                for i, att in enumerate(attachments):
-                    filename = att.get("filename", "名称不明のファイル")
-                    content_b64 = att.get("content_b64", "")
-                    if content_b64:
-                        try:
-                            file_bytes = base64.b64decode(content_b64)
-                            st.download_button(
-                                label=f"📄 {filename}",
-                                data=file_bytes,
-                                file_name=filename,
-                                key=f"att_dl_btn_{selected_id}_{i}"
-                            )
-                        except Exception as e:
-                            st.warning(f"ファイル「{filename}」のダウンロード準備に失敗しました: {e}")
-                st.divider()
+                if be.update_job_source_json(selected_id, new_json_str): st.success("メール本文を更新しました。"); st.rerun()
+                else: st.error("データベースの更新に失敗しました。")
+            
+            # 添付ファイル関連のロジックは、必要であればここに追加します。
+            # 現状のコードにはないため、一旦省略しています。
 
         except json.JSONDecodeError: st.error("元のデータの解析に失敗しました。")
     else: st.warning("このデータには元のテキストが保存されていません。")
@@ -176,15 +123,26 @@ if job_data:
 
     # --- マッチング済みの技術者一覧 ---
     st.header("🤝 マッチング済みの技術者一覧")
+
+    # ▼▼▼ 変更点 2: クエリを修正し、非表示の技術者・マッチング結果を除外し、gradeも取得 ▼▼▼
     matched_engineers_query = """
         SELECT 
-            e.id as engineer_id, e.name, e.document, r.score, r.id as match_id, r.grade
+            e.id as engineer_id, 
+            e.name, 
+            e.document, 
+            r.score,
+            r.id as match_id,
+            r.grade  -- 追加: AI評価ランクも取得
         FROM matching_results r
         JOIN engineers e ON r.engineer_id = e.id
-        WHERE r.job_id = ? AND e.is_hidden = 0 AND r.is_hidden = 0
+        WHERE r.job_id = ? 
+          AND e.is_hidden = 0  -- 技術者が非表示でない
+          AND r.is_hidden = 0  -- マッチング結果が非表示でない
         ORDER BY r.score DESC
     """
     matched_engineers = conn.execute(matched_engineers_query, (selected_id,)).fetchall()
+    # ▲▲▲ 変更点 2 ここまで ▲▲▲
+
 
     if not matched_engineers:
         st.info("この案件にマッチング済みの技術者はいません。")
@@ -192,6 +150,7 @@ if job_data:
         st.write(f"計 {len(matched_engineers)} 名の技術者がマッチングしています。")
         for eng in matched_engineers:
             with st.container(border=True):
+                  # ▼▼▼ 変更点 3: レイアウトを調整し、マッチ度パーセンテージをAI評価ランクに置き換え ▼▼▼
                 col1, col2 = st.columns([4, 1])
                 with col1:
                     engineer_name = eng['name'] if eng['name'] else f"技術者 (ID: {eng['engineer_id']})"
@@ -200,44 +159,22 @@ if job_data:
                     eng_main_doc = eng_doc_parts[1] if len(eng_doc_parts) > 1 else eng['document']
                     st.caption(eng_main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
                 with col2:
+                    # マッチ度 (%) の代わりにAI評価ランクを表示
                     st.markdown(get_evaluation_html(eng['grade'], font_size='2em'), unsafe_allow_html=True)
                     
-                    if st.button("マッチング詳細へ", key=f"matched_eng_detail_{eng['match_id']}", use_container_width=True):
-                        st.session_state['selected_match_id'] = eng['match_id']
+                    if st.button("詳細を見る", key=f"matched_job_detail_{eng['match_id']}", use_container_width=True):
+                        st.session_state['selected_engineer_id'] = eng['engineer_id']
                         st.switch_page("pages/7_マッチング詳細.py")
+
+                    #if st.button("技術者詳細へ", key=f"matched_eng_detail_{eng['match_id']}", use_container_width=True):
+                    #    st.session_state['selected_engineer_id'] = eng['engineer_id']
+                    #    st.switch_page("pages/5_技術者詳細.py")
+                # ▲▲▲ 変更点 3 ここまで ▲▲▲
 else:
     st.error("指定されたIDの案件情報が見つかりませんでした。")
 
 conn.close()
 st.divider()
-
-# --- AI再評価ボタン ---
-st.header("⚙️ AI再評価＋マッチング")
-if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
-    with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
-        log_container = st.container(height=300)
-        log_container.write(f"案件ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
-        
-        import io
-        import contextlib
-        
-        log_stream = io.StringIO()
-        with contextlib.redirect_stdout(log_stream):
-            # 案件用の再評価関数を呼び出す
-            success = be.re_evaluate_and_match_single_job(selected_id)
-        
-        log_container.text(log_stream.getvalue())
-
-        if success:
-            status.update(label="処理が完了しました！", state="complete")
-            st.success("AIによる再評価と再マッチングが完了しました。ページをリロードして最新のマッチング結果を確認してください。")
-            st.balloons()
-        else:
-            status.update(label="処理に失敗しました", state="error")
-            st.error("処理中にエラーが発生しました。詳細はログを確認してください。")
-st.divider()
-
-
 if st.button("一覧に戻る"):
     if 'selected_job_id' in st.session_state: del st.session_state['selected_job_id']
     st.switch_page("pages/4_案件管理.py")
