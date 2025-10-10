@@ -222,7 +222,7 @@ else:
                     # ページ名はURLエンコードされた 'マッチング詳細' を使用
                     page_name = "マッチング詳細" 
                     # HTMLのアンカータグでリンクを生成
-                    link = f'<a href="/{page_name}?result_id={res["res_id"]}" target="_self" style="{button_style}">詳細を見る</a>'
+                    link = f'<a href="/{page_name}?result_id={res["res_id"]}" target="_blank" style="{button_style}">詳細を見る</a>'
                     st.markdown(link, unsafe_allow_html=True)
                 # ▲▲▲【修正箇所はここまでです】▲▲▲
 
