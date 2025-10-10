@@ -495,7 +495,30 @@ def process_single_content(source_data: dict):
             doc = item_data.get("document")
             project_name = item_data.get("project_name", "名称未定の案件") # 名前を取得
             if not (doc and str(doc).strip() and str(doc).lower() != 'none'): doc = full_text_for_llm
-            meta_info = f"[国籍要件: {item_data.get('nationality_requirement', '不明')}] [開始時期: {item_data.get('start_date', '不明')}]\n---\n"; full_document = meta_info + doc
+            
+            #meta_info = f"[国籍要件: {item_data.get('nationality_requirement', '不明')}] [開始時期: {item_data.get('start_date', '不明')}]\n---\n"; full_document = meta_info + doc
+            
+
+            # ▼▼▼【ここを修正します】▼▼▼
+            # 案件から抽出したいメタ情報を指定します
+            # [表示名, JSONのキー名] のリスト形式で定義
+            job_meta_fields = [
+                ["国籍要件", "nationality_requirement"],
+                ["開始時期", "start_date"],
+                ["勤務地", "location"],       # ← 追加
+                ["単価", "unit_price"],       # ← 追加
+                ["必須スキル", "required_skills"] # ← 追加 (スキル)
+            ]
+            
+            meta_parts = []
+            for display_name, key in job_meta_fields:
+                value = item_data.get(key, '不明') # AIが抽出した値を取得
+                meta_parts.append(f"[{display_name}: {value}]")
+            
+            meta_info = " ".join(meta_parts) + "\n---\n"
+            # ▲▲▲【修正はここまで】▲▲▲
+
+
             cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at) VALUES (?, ?, ?, ?)', (project_name, full_document, source_json_str, now_str));
             item_data['id'] = cursor.lastrowid; item_data['document'] = full_document; newly_added_jobs.append(item_data)
         
