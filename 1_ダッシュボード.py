@@ -93,7 +93,7 @@ user_names = [user['username'] for user in all_users]
 assignee_options = ["すべて"] + user_names 
 job_assignee_filter = st.sidebar.selectbox("案件担当者", options=assignee_options, key="job_assignee_filter")
 engineer_assignee_filter = st.sidebar.selectbox("技術者担当者", options=assignee_options, key="engineer_assignee_filter")
-st.sidebar.divider()
+
 
 # ▼▼▼【ここからが修正箇所 1】▼▼▼
 # --- ステータスフィルター ---
@@ -102,17 +102,14 @@ status_options = [
     "採用", "見送り（自社都合）", "見送り（クライアント都合）", "見送り（技術者都合）", "クローズ"
 ]
 selected_statuses = st.sidebar.multiselect("進捗ステータス", options=status_options, placeholder="ステータスを選択して絞り込み")
-st.sidebar.divider()
 # ▲▲▲【修正箇所 1 ここまで】▲▲▲
 
 # AI評価フィルター
 grade_options = ['S','A', 'B', 'C', 'D', 'E']
 selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, placeholder="評価を選択して絞り込み")
-st.sidebar.divider()
 
 # キーワードフィルター
 keyword_filter = st.sidebar.text_input("キーワード検索 (担当者名も可)")
-st.sidebar.divider()
 
 # ルールフィルター
 st.sidebar.header("ルールフィルター")
