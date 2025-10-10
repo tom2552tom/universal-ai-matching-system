@@ -211,7 +211,11 @@ else:
                     if st.button("詳細を見る", key=f"detail_btn_{res['res_id']}", type="primary", use_container_width=True):
                         st.session_state['selected_match_id'] = res['res_id']
                         # マッチング詳細画面のファイル名が '7_マッチング詳細.py' であることを想定
+                        
+                        st.experimental_set_query_params(result_id=res['res_id']) # URLパラメータを設定
                         st.switch_page("pages/7_マッチング詳細.py")
+                        # ▲▲▲【修正箇所はここまでです】▲▲▲
+
 
                 with col3: # 技術者情報
                     engineer_name = res['engineer_name'] if res['engineer_name'] else f"技術者(ID: {res['engineer_id']})"
