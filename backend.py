@@ -880,3 +880,80 @@ def get_matching_result_details(result_id):
 # ... (backend.pyの既存コードの続き) ...
 
 
+
+
+
+def re_evaluate_and_match_single_engineer(engineer_id):
+    """
+    指定された単一の技術者IDに対して、AIによる再評価と再マッチングを実行する。
+    1. 最新のsource_data_jsonからドキュメントを再生成する。
+    2. jobsテーブルとengineersテーブルのインデックスを更新する。
+    3. run_matching_for_itemを呼び出して、全案件とのマッチングを再実行する。
+    """
+    conn = get_db_connection()
+    try:
+        # 1. 対象技術者の最新情報を取得
+        engineer_record = conn.execute("SELECT * FROM engineers WHERE id = ?", (engineer_id,)).fetchone()
+        if not engineer_record:
+            st.error(f"技術者ID:{engineer_id} が見つかりませんでした。")
+            return False
+
+        source_data = json.loads(engineer_record['source_data_json'])
+        full_text_for_llm = source_data.get('body', '')
+        # 添付ファイルの内容も結合（もしあれば）
+        for att in source_data.get('attachments', []):
+            content = att.get('content', '')
+            if content and not content.startswith("[") and not content.endswith("]"):
+                full_text_for_llm += f"\n\n--- 添付ファイル: {att['filename']} ---\n{content}"
+
+        # 2. LLMでドキュメントを再生成
+        parsed_data = split_text_with_llm(full_text_for_llm)
+        if not parsed_data or not parsed_data.get("engineers"):
+            st.error("LLMによる再評価で、技術者情報の抽出に失敗しました。")
+            return False
+
+        # 複数抽出される可能性を考慮し、最初のものを使用する
+        item_data = parsed_data["engineers"][0]
+        doc = item_data.get("document")
+        if not (doc and str(doc).strip() and str(doc).lower() != 'none'):
+            doc = full_text_for_llm
+        
+        meta_info = f"[国籍: {item_data.get('nationality', '不明')}] [稼働可能日: {item_data.get('start_date', '不明')}]\n---\n"
+        new_full_document = meta_info + doc
+        
+        # 3. データベースのドキュメントを更新
+        cursor = conn.cursor()
+        cursor.execute("UPDATE engineers SET document = ? WHERE id = ?", (new_full_document, engineer_id))
+        
+        # 4. 既存の関連マッチング結果を一旦削除（重複を避けるため）
+        cursor.execute("DELETE FROM matching_results WHERE engineer_id = ?", (engineer_id,))
+        st.write(f"技術者ID:{engineer_id} の既存マッチング結果をクリアしました。")
+
+        # 5. インデックスを更新し、再マッチングを実行
+        st.write("ベクトルインデックスを更新し、再マッチング処理を開始します...")
+        all_jobs = conn.execute('SELECT id, document FROM jobs WHERE is_hidden = 0').fetchall()
+        all_engineers = conn.execute('SELECT id, document FROM engineers WHERE is_hidden = 0').fetchall()
+        if all_jobs: update_index(JOB_INDEX_FILE, all_jobs)
+        if all_engineers: update_index(ENGINEER_INDEX_FILE, all_engineers)
+
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # run_matching_for_item に渡すためのデータ構造を整える
+        engineer_data_for_matching = {
+            'id': engineer_id,
+            'document': new_full_document,
+            'name': engineer_record['name']
+        }
+        run_matching_for_item(engineer_data_for_matching, 'engineer', cursor, now_str)
+        
+        conn.commit()
+        return True
+
+    except Exception as e:
+        conn.rollback()
+        st.error(f"再評価・再マッチング中にエラーが発生しました: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+            

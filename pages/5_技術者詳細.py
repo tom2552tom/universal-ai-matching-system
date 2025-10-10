@@ -2,11 +2,17 @@ import streamlit as st
 import backend as be
 import json
 import html
-import base64 # ▼▼▼ 変更点: 添付ファイルダウンロードのためにインポート ▼▼▼
+import base64
 
-# ▼▼▼ 変更点 1: backend から get_evaluation_html をインポート ▼▼▼
-from backend import get_evaluation_html
-# ▲▲▲ 変更点 1 ここまで ▲▲▲
+# backend から get_evaluation_html をインポート
+# backend.py にこの関数がない場合は、ダッシュボードのコードからコピーしてください
+try:
+    from backend import get_evaluation_html
+except ImportError:
+    def get_evaluation_html(grade, font_size='2em'): # 簡易版を定義
+        if not grade: return ""
+        return f"<p style='font-size:{font_size}; text-align:center;'>{grade}</p>"
+
 
 st.set_page_config(page_title="技術者詳細", layout="wide")
 
@@ -109,27 +115,22 @@ if engineer_data:
             if st.button("メール本文を更新する", type="primary"):
                 source_data['body'] = edited_body
                 new_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
-                # be.update_engineer_source_json の代わりに、再スキャンまで行う関数を呼び出す方が望ましい
-                # 例: be.update_document_and_rescan_for_item('engineer', selected_id, new_json_str)
                 if be.update_engineer_source_json(selected_id, new_json_str):
-                    st.success("メール本文を更新しました。"); st.rerun()
+                    st.success("メール本文を更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。"); st.rerun()
                 else:
                     st.error("データベースの更新に失敗しました。")
 
-            st.divider() # 区切り線を追加
+            st.divider()
 
-            # ▼▼▼ 変更点1: 添付ファイルセクションをダウンロード機能に変更 ▼▼▼
             st.subheader("添付ファイル")
             attachments = source_data.get("attachments", [])
             if attachments:
                 for i, att in enumerate(attachments):
                     filename = att.get("filename", "名称不明のファイル")
-                    # Base64エンコードされたコンテンツを取得 (キー名は'content_b64'と仮定)
-                    content_b64 = att.get("content_b64", "") 
+                    content_b64 = att.get("content_b64", "") # content_b64を想定
                     
                     if content_b64:
                         try:
-                            # Base64をデコードしてバイナリデータに戻す
                             file_bytes = base64.b64decode(content_b64)
                             st.download_button(
                                 label=f"📄 {filename} をダウンロード",
@@ -144,7 +145,6 @@ if engineer_data:
                         st.info(f"ファイル「{filename}」にはダウンロード可能なコンテンツがありません。")
             else:
                 st.caption("添付ファイルはありません。")
-            # ▲▲▲ 変更点1 ここまで ▲▲▲
 
         except json.JSONDecodeError:
             st.error("元のデータの解析に失敗しました。"); st.text(source_json_str)
@@ -154,8 +154,6 @@ if engineer_data:
     # --- マッチング済みの案件一覧 ---
     st.header("🤝 マッチング済みの案件一覧")
     
-
-    # ▼▼▼ 変更点 2: クエリを修正し、非表示の案件・マッチング結果を除外し、gradeも取得 ▼▼▼
     matched_jobs_query = """
         SELECT 
             j.id as job_id, 
@@ -163,17 +161,15 @@ if engineer_data:
             j.document, 
             r.score,
             r.id as match_id,
-            r.grade  -- 追加: AI評価ランクも取得
+            r.grade
         FROM matching_results r
         JOIN jobs j ON r.job_id = j.id
         WHERE r.engineer_id = ? 
-          AND j.is_hidden = 0  -- 案件が非表示でない
-          AND r.is_hidden = 0  -- マッチング結果が非表示でない
+          AND j.is_hidden = 0
+          AND r.is_hidden = 0
         ORDER BY r.score DESC
     """
     matched_jobs = conn.execute(matched_jobs_query, (selected_id,)).fetchall()
-    # ▲▲▲ 変更点 2 ここまで ▲▲▲
-
 
     if not matched_jobs:
         st.info("この技術者にマッチング済みの案件はありません。")
@@ -181,7 +177,6 @@ if engineer_data:
         st.write(f"計 {len(matched_jobs)} 件の案件がマッチングしています。")
         for job in matched_jobs:
             with st.container(border=True):
-                  # ▼▼▼ 変更点 3: レイアウトを調整し、マッチ度パーセンテージをAI評価ランクに置き換え ▼▼▼
                 col1, col2 = st.columns([4, 1])
                 with col1:
                     project_name = job['project_name'] if job['project_name'] else f"案件 (ID: {job['job_id']})"
@@ -190,19 +185,42 @@ if engineer_data:
                     job_main_doc = job_doc_parts[1] if len(job_doc_parts) > 1 else job['document']
                     st.caption(job_main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
                 with col2:
-                    # マッチ度 (%) の代わりにAI評価ランクを表示
                     st.markdown(get_evaluation_html(job['grade'], font_size='2em'), unsafe_allow_html=True)
                     
                     if st.button("詳細を見る", key=f"matched_job_detail_{job['match_id']}", use_container_width=True):
                         st.session_state['selected_match_id'] = job['match_id']
                         st.switch_page("pages/7_マッチング詳細.py")
-                # ▲▲▲ 変更点 3 ここまで ▲▲▲
                 
 else:
     st.error("指定されたIDの技術者情報が見つかりませんでした。")
 
 conn.close()
 st.divider()
+
+
+# ▼▼▼【ここからが追加/修正箇所】▼▼▼
+st.header("⚙️ 高度な操作")
+st.warning("以下の操作は処理に時間がかかる場合があります。また、既存のマッチング結果がリセットされます。")
+
+if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
+    with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
+        st.write(f"技術者ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
+        
+        # backend.py に追加した関数を呼び出す
+        success = be.re_evaluate_and_match_single_engineer(selected_id)
+        
+        if success:
+            status.update(label="処理が完了しました！", state="complete")
+            st.success("AIによる再評価と再マッチングが完了しました。ページをリロードして最新のマッチング結果を確認してください。")
+            st.balloons()
+        else:
+            status.update(label="処理に失敗しました", state="error")
+            st.error("処理中にエラーが発生しました。詳細はログを確認してください。")
+
+st.divider()
+# ▲▲▲【追加/修正箇所はここまで】▲▲▲
+
+
 if st.button("一覧に戻る"):
     if 'selected_engineer_id' in st.session_state: del st.session_state['selected_engineer_id']
     st.switch_page("pages/3_技術者管理.py")
