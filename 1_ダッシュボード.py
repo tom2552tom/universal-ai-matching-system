@@ -37,8 +37,8 @@ st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wi
 
 # ▼▼▼【ここからが変更点1】▼▼▼
 # --- サイドバーのロゴ表示 ---
-st.sidebar.image("img/UniversalAI_logo.png", width=200) # widthを少し調整
-st.sidebar.divider()
+#st.sidebar.image("img/UniversalAI_logo.png", width=200) # widthを少し調整
+#st.sidebar.divider()
 # ▲▲▲【変更点1ここまで】▲▲▲
 
 
