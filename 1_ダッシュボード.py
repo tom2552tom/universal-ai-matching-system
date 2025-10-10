@@ -8,7 +8,7 @@ from backend import (
 # ヘルパー関数 (変更なし)
 def get_evaluation_html(grade, font_size='2.5em'):
     if not grade: return ""
-    color_map = {'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
+    color_map = {'S': '#00b894', 'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'} # Sを追加
     color = color_map.get(grade.upper(), '#6c757d') 
     style = f"color: {color}; font-size: {font_size}; font-weight: bold; text-align: center; line-height: 1; padding-top: 10px;"
     html_code = f"<div style='{style}'>{grade.upper()}</div><div style='text-align: center; font-size: 0.8em; color: #888;'>判定</div>"
@@ -23,15 +23,7 @@ APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
 
 
-
 st.image("img/UniversalAI_logo.png", width=240)
-# ▼▼▼ 変更点 1: 営業スタッフ向けメッセージの表示 ▼▼▼
-#sales_notice = config.get("messages", {}).get("メッセージ")
-
-# ▼▼▼ デバッグ用に追加 ▼▼▼
-#st.write(f"Debug: config object = {config}")
-#st.write(f"Debug: sales_notice variable = {sales_notice}")
-# ▲▲▲ デバッグ用に追加 ▲▲▲
 
 sales_staff_notice = """
 <div style="background-color: #ffcccc; color: #cc0000; padding: 10px; border-radius: 5px; border: 2px solid #cc0000; font-weight: bold; text-align: center; margin-bottom: 20px;">
@@ -41,11 +33,8 @@ sales_staff_notice = """
 </div>
 """
 
-#st.info(sales_staff_notice)
-
 if sales_staff_notice:
     st.markdown(sales_staff_notice, unsafe_allow_html=True)
-# ▲▲▲ 変更点 1 ここまで ▲▲▲
 
 st.divider()
 
@@ -79,10 +68,9 @@ grade_options = ['S','A', 'B', 'C', 'D', 'E']
 selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, placeholder="評価を選択して絞り込み")
 st.sidebar.divider()
 
-# ▼▼▼ 変更点 1: 最小マッチ度フィルターを削除 ▼▼▼
+# ▼▼▼【変更点1: 最小マッチ度フィルターを完全に削除】▼▼▼
 # min_score_filter = st.sidebar.slider("最小マッチ度 (%)", 0, 100, 0) # この行を削除
-min_score_filter = 0 # 削除に伴い、デフォルト値を0としておく
-# ▲▲▲ 変更点 1 ここまで ▲▲▲
+# ▲▲▲【変更点1ここまで】▲▲▲
 
 today = datetime.now().date()
 default_start_date = today - timedelta(days=30)
@@ -112,13 +100,10 @@ query = '''
     LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
 '''
 params = []
-# ▼▼▼ 変更点 2: 最小マッチ度フィルターのWHERE句を削除 ▼▼▼
-# where_clauses = ["r.score >= ?"]; params.append(min_score_filter) # この行を修正
+
+# ▼▼▼【変更点2: 最小マッチ度フィルターのWHERE句を削除】▼▼▼
 where_clauses = [] # 最小マッチ度フィルターの条件を削除
-if min_score_filter > 0: # 念のため、もし min_score_filter が使われる状況があれば残しておく
-    where_clauses.append("r.score >= ?")
-    params.append(min_score_filter)
-# ▲▲▲ 変更点 2 ここまで ▲▲▲
+# ▲▲▲【変更点2ここまで】▲▲▲
 
 if job_assignee_filter != "すべて":
     where_clauses.append("job_user.username = ?"); params.append(job_assignee_filter)
@@ -152,6 +137,9 @@ else:
     for res in results:
         job_doc = res['job_doc'] if res['job_doc'] else ""
         eng_doc = res['eng_doc'] if res['eng_doc'] else ""
+        
+        # 「外国籍不可」の案件フィルタリングロジック
+        # job_docに「外国籍不可」または「日本人」が含まれる場合、eng_docに「国籍: 日本」が含まれないとスキップ
         if filter_nationality and ("外国籍不可" in job_doc or "日本人" in job_doc):
             if "国籍: 日本" not in eng_doc:
                 continue
@@ -216,12 +204,13 @@ else:
                     
                 with col2: # マッチ度とAI評価
                     st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-                    # ▼▼▼ 変更点 3: マッチ度 (%) の表示を削除 ▼▼▼
+                    # ▼▼▼【変更点3: マッチ度 (%) の表示を削除】▼▼▼
                     # st.metric(label="マッチ度", value=f"{score:.1f}%", label_visibility="collapsed") # この行を削除
-                    # ▲▲▲ 変更点 3 ここまで ▲▲▲
+                    # ▲▲▲【変更点3ここまで】▲▲▲
                     
                     if st.button("詳細を見る", key=f"detail_btn_{res['res_id']}", type="primary", use_container_width=True):
                         st.session_state['selected_match_id'] = res['res_id']
+                        # マッチング詳細画面のファイル名が '7_マッチング詳細.py' であることを想定
                         st.switch_page("pages/7_マッチング詳細.py")
 
                 with col3: # 技術者情報
