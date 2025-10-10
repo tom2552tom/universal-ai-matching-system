@@ -5,14 +5,47 @@ from backend import (
     hide_match, load_app_config, get_all_users
 )
 
-# ヘルパー関数 (変更なし)
+# ヘルパー関数
 def get_evaluation_html(grade, font_size='2.5em'):
     if not grade: return ""
-    color_map = {'S': '#00b894', 'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'} # Sを追加
+    color_map = {'S': '#00b894', 'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
     color = color_map.get(grade.upper(), '#6c757d') 
     style = f"color: {color}; font-size: {font_size}; font-weight: bold; text-align: center; line-height: 1; padding-top: 10px;"
     html_code = f"<div style='{style}'>{grade.upper()}</div><div style='text-align: center; font-size: 0.8em; color: #888;'>判定</div>"
     return html_code
+
+# ▼▼▼【追加】ステータスバッジ用ヘルパー関数 ▼▼▼
+def get_status_badge(status):
+    if not status:
+        status = "新規"
+    
+    # ステータスごとの色を定義
+    status_color_map = {
+        "新規": "#6c757d", # Gray
+        "提案準備中": "#17a2b8", # Cyan
+        "提案中": "#007bff", # Blue
+        "クライアント面談": "#fd7e14", # Orange
+        "結果待ち": "#ffc107", # Yellow
+        "採用": "#28a745", # Green
+        "見送り（自社都合）": "#dc3545", # Red
+        "見送り（クライアント都合）": "#dc3545",
+        "見送り（技術者都合）": "#dc3545",
+        "クローズ": "#343a40" # Dark Gray
+    }
+    color = status_color_map.get(status, "#6c757d")
+    
+    style = f"""
+        background-color: {color};
+        color: white;
+        padding: 0.2em 0.6em;
+        border-radius: 0.8rem;
+        font-size: 0.8em;
+        font-weight: 600;
+        display: inline-block;
+        margin-top: 5px;
+    """
+    return f"<span style='{style}'>{status}</span>"
+# ▲▲▲【追加ここまで】▲▲▲
 
 # --- アプリケーションの初期化 ---
 init_database()
@@ -21,7 +54,6 @@ load_embedding_model()
 config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
-
 
 st.image("img/UniversalAI_logo.png", width=240)
 
@@ -32,13 +64,12 @@ sales_staff_notice = """
     特にS, A, B評価の技術者は優先的にアプローチしましょう！
 </div>
 """
-
 if sales_staff_notice:
     st.markdown(sales_staff_notice, unsafe_allow_html=True)
 
 st.divider()
 
-# ページングの初期設定
+# --- ページング設定 ---
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 1
 if 'items_per_page' not in st.session_state:
@@ -53,30 +84,37 @@ st.session_state.items_per_page = st.sidebar.selectbox(
     key="items_per_page_selector"
 )
 
-# --- サイドバー (既存のフィルター) ---
+# --- サイドバーフィルター ---
 st.sidebar.header("フィルター")
 
+# 担当者フィルター
 all_users = get_all_users()
 user_names = [user['username'] for user in all_users]
 assignee_options = ["すべて"] + user_names 
-
 job_assignee_filter = st.sidebar.selectbox("案件担当者", options=assignee_options, key="job_assignee_filter")
 engineer_assignee_filter = st.sidebar.selectbox("技術者担当者", options=assignee_options, key="engineer_assignee_filter")
 st.sidebar.divider()
 
+# ▼▼▼【ここからが修正箇所 1】▼▼▼
+# --- ステータスフィルター ---
+status_options = [
+    "新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", 
+    "採用", "見送り（自社都合）", "見送り（クライアント都合）", "見送り（技術者都合）", "クローズ"
+]
+selected_statuses = st.sidebar.multiselect("進捗ステータス", options=status_options, placeholder="ステータスを選択して絞り込み")
+st.sidebar.divider()
+# ▲▲▲【修正箇所 1 ここまで】▲▲▲
+
+# AI評価フィルター
 grade_options = ['S','A', 'B', 'C', 'D', 'E']
 selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, placeholder="評価を選択して絞り込み")
 st.sidebar.divider()
 
-# ▼▼▼【変更点1: 最小マッチ度フィルターを完全に削除】▼▼▼
-# min_score_filter = st.sidebar.slider("最小マッチ度 (%)", 0, 100, 0) # この行を削除
-# ▲▲▲【変更点1ここまで】▲▲▲
-
-today = datetime.now().date()
-default_start_date = today - timedelta(days=30)
+# キーワードフィルター
 keyword_filter = st.sidebar.text_input("キーワード検索 (担当者名も可)")
-
 st.sidebar.divider()
+
+# ルールフィルター
 st.sidebar.header("ルールフィルター")
 filter_nationality = st.sidebar.checkbox("「外国籍不可」の案件を除外する", value=False)
 show_hidden_filter = st.sidebar.checkbox("非表示も表示する", value=False)
@@ -85,12 +123,13 @@ st.header("最新マッチング結果一覧")
 
 # --- DBからフィルタリングされた結果を取得 ---
 conn = get_db_connection()
+# ▼▼▼【ここからが修正箇所 2】▼▼▼
 query = '''
     SELECT 
         r.id as res_id, 
         r.job_id, j.document as job_doc, j.project_name, j.is_hidden as job_is_hidden,
         r.engineer_id, e.document as eng_doc, e.name as engineer_name, e.is_hidden as engineer_is_hidden,
-        r.score, r.created_at, r.is_hidden, r.grade, r.positive_points, r.concern_points,
+        r.score, r.created_at, r.is_hidden, r.grade, r.status, -- status をSELECT句に追加
         job_user.username as job_assignee,
         eng_user.username as engineer_assignee
     FROM matching_results r
@@ -99,16 +138,21 @@ query = '''
     LEFT JOIN users job_user ON j.assigned_user_id = job_user.id
     LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
 '''
+# ▲▲▲【修正箇所 2 ここまで】▲▲▲
 params = []
-
-# ▼▼▼【変更点2: 最小マッチ度フィルターのWHERE句を削除】▼▼▼
-where_clauses = [] # 最小マッチ度フィルターの条件を削除
-# ▲▲▲【変更点2ここまで】▲▲▲
+where_clauses = [] 
 
 if job_assignee_filter != "すべて":
     where_clauses.append("job_user.username = ?"); params.append(job_assignee_filter)
 if engineer_assignee_filter != "すべて":
     where_clauses.append("eng_user.username = ?"); params.append(engineer_assignee_filter)
+
+# ▼▼▼【ここからが修正箇所 3】▼▼▼
+if selected_statuses:
+    placeholders = ','.join('?' for _ in selected_statuses)
+    where_clauses.append(f"r.status IN ({placeholders})")
+    params.extend(selected_statuses)
+# ▲▲▲【修正箇所 3 ここまで】▲▲▲
 
 if selected_grades:
     placeholders = ','.join('?' for _ in selected_grades)
@@ -116,8 +160,8 @@ if selected_grades:
     params.extend(selected_grades)
 
 if keyword_filter: 
-    where_clauses.append("(j.document LIKE ? OR e.document LIKE ? OR j.project_name LIKE ? OR e.name LIKE ? OR job_user.username LIKE ? OR eng_user.username LIKE ?)")
-    params.extend([f'%{keyword_filter}%']*6)
+    where_clauses.append("(j.document LIKE ? OR e.document LIKE ? OR j.project_name LIKE ? OR e.name LIKE ? OR job_user.username LIKE ? OR eng_user.username LIKE ? OR r.status LIKE ?)") # statusも検索対象に
+    params.extend([f'%{keyword_filter}%']*7)
 
 if not show_hidden_filter:
     where_clauses.append("((r.is_hidden = 0 OR r.is_hidden IS NULL) AND j.is_hidden = 0 AND e.is_hidden = 0)")
@@ -137,9 +181,6 @@ else:
     for res in results:
         job_doc = res['job_doc'] if res['job_doc'] else ""
         eng_doc = res['eng_doc'] if res['eng_doc'] else ""
-        
-        # 「外国籍不可」の案件フィルタリングロジック
-        # job_docに「外国籍不可」または「日本人」が含まれる場合、eng_docに「国籍: 日本」が含まれないとスキップ
         if filter_nationality and ("外国籍不可" in job_doc or "日本人" in job_doc):
             if "国籍: 日本" not in eng_doc:
                 continue
@@ -160,15 +201,13 @@ else:
             with pagination_cols[0]:
                 if st.button("前のページ", key="prev_page_btn"):
                     if st.session_state.current_page > 1:
-                        st.session_state.current_page -= 1
-                        st.rerun()
+                        st.session_state.current_page -= 1; st.rerun()
             with pagination_cols[1]:
                 st.markdown(f"<p style='text-align: center; font-weight: bold;'>ページ {st.session_state.current_page} / {total_pages}</p>", unsafe_allow_html=True)
             with pagination_cols[2]:
                 if st.button("次のページ", key="next_page_btn"):
                     if st.session_state.current_page < total_pages:
-                        st.session_state.current_page += 1
-                        st.rerun()
+                        st.session_state.current_page += 1; st.rerun()
             st.markdown("---")
 
         start_index = (st.session_state.current_page - 1) * st.session_state.items_per_page
@@ -176,65 +215,38 @@ else:
         paginated_results = results_to_display[start_index:end_index]
 
         for res in paginated_results:
-            score = float(res['score'])
-            is_match_hidden = res['is_hidden'] == 1
-            is_job_hidden = res['job_is_hidden'] == 1
-            is_engineer_hidden = res['engineer_is_hidden'] == 1
-            is_any_part_hidden = is_match_hidden or is_job_hidden or is_engineer_hidden
-
             with st.container(border=True):
-                header_col1, header_col2, header_col3 = st.columns([8, 3, 1])
-                with header_col1: st.caption(f"マッチング日時: {res['created_at']}")
+                # ▼▼▼【ここからが修正箇所 4】▼▼▼
+                header_col1, header_col2 = st.columns([5, 2])
+                with header_col1: 
+                    st.caption(f"マッチング日時: {res['created_at']}")
                 with header_col2:
-                    if is_any_part_hidden:
-                        st.markdown('<p style="text-align: right; opacity: 0.7;">(非表示を含む)</p>', unsafe_allow_html=True)
+                    # ステータスバッジを表示
+                    st.markdown(f"<div style='text-align: right;'>{get_status_badge(res['status'])}</div>", unsafe_allow_html=True)
 
                 col1, col2, col3 = st.columns([5, 2, 5])
+                # ▲▲▲【修正箇所 4 ここまで】▲▲▲
                 
                 with col1: # 案件情報
                     project_name = res['project_name'] if res['project_name'] else f"案件(ID: {res['job_id']})"
-                    if is_job_hidden:
+                    if res['job_is_hidden']:
                         project_name += " <span style='color: #888; font-size: 0.8em; vertical-align: middle;'>(非表示)</span>"
                     st.markdown(f"##### 💼 {project_name}", unsafe_allow_html=True)
-                    
                     if res['job_assignee']: st.caption(f"**担当:** {res['job_assignee']}")
-                    job_doc = res['job_doc'] if res['job_doc'] else ""
-                    display_doc = job_doc.split('\n---\n', 1)[-1]
-                    st.caption(display_doc.replace('\n', ' ').replace('\r', '')[:150] + "...")
+                    st.caption((res['job_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150] + "...")
                     
-                # ▼▼▼【ここが修正箇所です】▼▼▼
                 with col2: # AI評価と詳細を見るボタン
                     st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-                    
-                    # ボタンのスタイルを定義
-                    button_style = """
-                        display: block;
-                        padding: 0.5rem; /* パディングを少し調整 */
-                        background-color: #ff4b4b; /* Streamlitのプライマリボタンの色 */
-                        color: white;
-                        text-align: center;
-                        text-decoration: none;
-                        border-radius: 0.5rem;
-                        font-weight: 600;
-                        margin-top: 10px; /* 上の要素との間隔 */
-                        border: 1px solid #ff4b4b;
-                    """
-                    # ページ名はURLエンコードされた 'マッチング詳細' を使用
+                    button_style = "display: block; padding: 0.5rem; background-color: #ff4b4b; color: white; text-align: center; text-decoration: none; border-radius: 0.5rem; font-weight: 600; margin-top: 10px; border: 1px solid #ff4b4b;"
                     page_name = "マッチング詳細" 
-                    # HTMLのアンカータグでリンクを生成
                     link = f'<a href="/{page_name}?result_id={res["res_id"]}" target="_blank" style="{button_style}">詳細を見る</a>'
                     st.markdown(link, unsafe_allow_html=True)
-                # ▲▲▲【修正箇所はここまでです】▲▲▲
-
 
                 with col3: # 技術者情報
                     engineer_name = res['engineer_name'] if res['engineer_name'] else f"技術者(ID: {res['engineer_id']})"
-                    if is_engineer_hidden:
+                    if res['engineer_is_hidden']:
                         engineer_name += " <span style='color: #888; font-size: 0.8em; vertical-align: middle;'>(非表示)</span>"
                     st.markdown(f"##### 👤 {engineer_name}", unsafe_allow_html=True)
-
                     if res['engineer_assignee']: st.caption(f"**担当:** {res['engineer_assignee']}")
-                    eng_doc = res['eng_doc'] if res['eng_doc'] else ""
-                    display_doc = eng_doc.split('\n---\n', 1)[-1]
-                    st.caption(display_doc.replace('\n', ' ').replace('\r', '')[:150] + "...")
+                    st.caption((res['eng_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150] + "...")
             st.empty()
