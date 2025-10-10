@@ -124,8 +124,8 @@ if not show_hidden_filter:
 
 if where_clauses: query += " WHERE " + " AND ".join(where_clauses)
 
-#query += " ORDER BY r.created_at DESC, r.score DESC LIMIT 100"
-query += " ORDER BY r.score desc LIMIT 100"
+query += " ORDER BY r.created_at DESC, r.score DESC LIMIT 100"
+
 results = conn.execute(query, tuple(params)).fetchall()
 conn.close()
 
