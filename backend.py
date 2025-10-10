@@ -654,7 +654,7 @@ def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_nam
         # st.secrets等でAPIキーを管理していることを想定
         # genai.configure(api_key=st.secrets["google_api_key"])
         #model = genai.GenerativeModel('gemini-2.5-pro')
-        model = genai.GenerativeModel('models/gemini-2.5-pro')
+        model = genai.GenerativeModel('models/gemini-2.5-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
