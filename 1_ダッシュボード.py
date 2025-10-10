@@ -30,6 +30,78 @@ def get_status_badge(status):
 init_database()
 load_embedding_model()
 
+
+
+# ▼▼▼【ここからがデバッグ用の修正箇所】▼▼▼
+
+st.set_page_config(page_title="設定ファイル デバッグ", layout="wide")
+st.title("⚙️ `config.toml` 読み込みデバッグ")
+
+# --- ステップ1: ファイルの存在確認 ---
+st.subheader("1. ファイルパスと存在確認")
+config_file_path = "config.toml"
+current_directory = os.getcwd()
+absolute_path = os.path.abspath(config_file_path)
+
+st.write(f"**現在の作業ディレクトリ:** `{current_directory}`")
+st.write(f"**探している設定ファイル:** `{config_file_path}`")
+st.write(f"**計算された絶対パス:** `{absolute_path}`")
+
+if os.path.exists(config_file_path):
+    st.success(f"✅ **OK:** `{config_file_path}` が見つかりました。")
+    file_exists = True
+else:
+    st.error(f"❌ **エラー:** `{config_file_path}` が見つかりません。")
+    st.warning("`1_ダッシュボード.py` と同じ階層に `config.toml` ファイルを配置してください。")
+    file_exists = False
+
+st.divider()
+
+# --- ステップ2: ファイルの読み込みと内容表示 ---
+st.subheader("2. ファイルの読み込み試行と内容表示")
+config = {} # デフォルトの空辞書
+if file_exists:
+    try:
+        # backendの関数を呼び出して読み込み
+        config = load_app_config()
+        
+        st.success("✅ **OK:** `load_app_config()` の呼び出しに成功しました。")
+        
+        st.write("**読み込まれた設定内容:**")
+        st.json(config) # 読み込んだ内容をJSON形式で表示
+        
+        if not config:
+            st.warning("⚠️ **警告:** ファイルは読み込めましたが、内容が空のようです。`config.toml` の中身を確認してください。")
+
+    except Exception as e:
+        st.error(f"❌ **エラー:** `load_app_config()` の呼び出し中にエラーが発生しました。")
+        st.code(f"{type(e).__name__}: {e}", language="bash")
+else:
+    st.info("ファイルが見つからないため、読み込みをスキップしました。")
+
+st.divider()
+
+# --- ステップ3: 読み込んだ値の利用確認 ---
+st.subheader("3. 読み込んだ値の利用確認")
+APP_TITLE = config.get("app", {}).get("title", "AI Matching System (デフォルト)")
+sales_staff_notice_from_config = config.get("messages", {}).get("sales_notice", "（設定ファイルから取得できませんでした）")
+
+st.write(f"**configから取得したAPP_TITLE:** `{APP_TITLE}`")
+st.write(f"**configから取得したsales_staff_notice:** `{sales_staff_notice_from_config}`")
+
+# 取得した値がデフォルト値かどうかで成否を判定
+if APP_TITLE.endswith("(デフォルト)"):
+    st.warning("⚠️ **警告:** アプリケーションタイトルがデフォルト値です。`config.toml` の `[app]` セクションに `title` が正しく設定されているか確認してください。")
+else:
+    st.success("✅ **OK:** アプリケーションタイトルを正しく取得できました。")
+
+st.stop() # デバッグ表示をここで一旦停止
+
+
+
+
+
+
 config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
