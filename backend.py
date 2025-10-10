@@ -340,7 +340,7 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
         if llm_result and 'summary' in llm_result:
             grade = llm_result.get('summary')
 
-            if grade in ['S', 'A', 'B', 'C']:
+            if grade in ['S', 'A', 'B']:
                 cursor.execute(
                     'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade) VALUES (?, ?, ?, ?, ?)',
                     (job_id, engineer_id, score, now_str, grade)
