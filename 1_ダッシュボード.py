@@ -41,7 +41,7 @@ sales_staff_notice = """
 </div>
 """
 
-st.info(sales_staff_notice)
+#st.info(sales_staff_notice)
 
 if sales_staff_notice:
     st.markdown(sales_staff_notice, unsafe_allow_html=True)
