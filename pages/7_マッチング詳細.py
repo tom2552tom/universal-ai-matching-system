@@ -1,8 +1,68 @@
 import streamlit as st
-import backend as be
+import sys
+import os
 import json
 import html
 
+# プロジェクトルートをパスに追加
+# これにより、pages/ フォルダ内のスクリプトから親ディレクトリにある backend.py をインポートできるようになります。
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, os.pardir))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+import backend as be # backend.py をインポート
+
+st.set_page_config(page_title="マッチング詳細", layout="wide")
+
+st.title("マッチング詳細")
+
+# --- マッチングIDの取得ロジック ---
+# 1. URLパラメータから 'result_id' を取得
+selected_match_id_from_url = st.query_params.get("result_id")
+
+# 2. セッションステートから 'selected_match_id' を取得
+selected_match_id_from_session = st.session_state.get('selected_match_id', None)
+
+# 優先順位: URLパラメータ > セッションステート
+if selected_match_id_from_url:
+    try:
+        selected_match_id = int(selected_match_id_from_url)
+        # URLからIDが渡された場合、セッションステートも更新しておく
+        st.session_state['selected_match_id'] = selected_match_id
+    except ValueError:
+        st.error("URLパラメータの 'result_id' が無効です。数値で指定してください。")
+        selected_match_id = None
+elif selected_match_id_from_session:
+    selected_match_id = selected_match_id_from_session
+else:
+    selected_match_id = None
+
+
+if selected_match_id is None:
+    st.error("表示するマッチング結果IDが指定されていません。")
+    st.info("URLの末尾に `?result_id=XXX` (XXXはマッチング結果のID) を追加するか、ダッシュボードから詳細を見たいマッチングを選択してください。")
+    if st.button("ダッシュボードに戻る"): st.switch_page("1_ダッシュボード.py")
+    st.stop()
+
+
+# --- データ取得 ---
+# backend.py に追加した get_matching_result_details 関数を使用
+details = be.get_matching_result_details(selected_match_id)
+
+if not details:
+    st.error(f"指定されたマッチング情報 (ID: {selected_match_id}) が見つかりませんでした。データベースを確認してください。")
+    st.stop()
+
+match_data = details["match_result"]
+job_data = details["job_data"]
+engineer_data = details["engineer_data"]
+
+if not job_data or not engineer_data:
+    st.error("案件または技術者の情報が見つかりませんでした。データベースを確認してください。"); st.stop()
+
+
+# --- ヘルパー関数 ---
 def get_evaluation_html(grade):
     """
     評価（A-E）に基づいて色とスタイルが適用されたHTMLを生成します。
@@ -10,30 +70,25 @@ def get_evaluation_html(grade):
     if not grade:
         return ""
 
-    # 評価と色のマッピング
     color_map = {
+        'S': '#00b894', # Sを追加 (Emerald Green)
         'A': '#28a745',  # Green (Success)
         'B': '#17a2b8',  # Cyan (Info)
         'C': '#ffc107',  # Yellow (Warning)
         'D': '#fd7e14',  # Orange
         'E': '#dc3545',  # Red (Danger)
     }
-    # マップにない評価の場合はグレーにする
-    color = color_map.get(grade.upper(), '#6c757d') 
+    color = color_map.get(grade.upper(), '#6c757d')
     
-    # スタイルを定義（フォントサイズや太字など）
-    # font-size は '3em' や '48px' などお好みの大きさに調整してください
     style = f"""
         color: {color};
         font-size: 3em;
         font-weight: bold;
         text-align: center;
         line-height: 1.1;
-        margin-bottom: -10px; 
+        margin-bottom: -10px;
     """
     
-    # 表示するHTMLを組み立てる
-    # 評価（Aなど）を大きく表示し、その下に「判定」というラベルを配置
     html_code = f"""
     <div style='{style}'>
         {grade.upper()}
@@ -44,32 +99,6 @@ def get_evaluation_html(grade):
     """
     return html_code
 
-st.set_page_config(page_title="マッチング詳細", layout="wide")
-
-
-
-# --- データ取得 ---
-selected_match_id = st.session_state.get('selected_match_id', None)
-if selected_match_id is None:
-    st.error("マッチングが選択されていません。ダッシュボードから詳細を見たいマッチングを選択してください。")
-    if st.button("ダッシュボードに戻る"): st.switch_page("1_ダッシュボード.py")
-    st.stop()
-
-conn = be.get_db_connection()
-match_data = conn.execute("SELECT * FROM matching_results WHERE id = ?", (selected_match_id,)).fetchone()
-if not match_data:
-    st.error("指定されたマッチング情報が見つかりませんでした。"); conn.close(); st.stop()
-
-job_query = "SELECT j.*, u.username as assignee_name FROM jobs j LEFT JOIN users u ON j.assigned_user_id = u.id WHERE j.id = ?"
-job_data = conn.execute(job_query, (match_data['job_id'],)).fetchone()
-engineer_query = "SELECT e.*, u.username as assignee_name FROM engineers e LEFT JOIN users u ON e.assigned_user_id = u.id WHERE e.id = ?"
-engineer_data = conn.execute(engineer_query, (match_data['engineer_id'],)).fetchone()
-conn.close()
-
-if not job_data or not engineer_data:
-    st.error("案件または技術者の情報が見つかりませんでした。"); st.stop()
-
-# --- ヘルパー関数 ---
 def get_source_text(source_json_str):
     if not source_json_str: return "元のメール情報はありません。"
     try:
@@ -131,34 +160,33 @@ st.divider()
 
 # --- AIマッチング評価セクション ---
 st.header("📊 AIマッチング評価")
+# LLMを毎回呼び出すのはパフォーマンスに影響するため、可能であればDBに保存されたgradeを使用
+# ただし、positive_pointsやconcern_pointsはDBに保存されていないため、再生成が必要
+# ここでは、常にLLMを呼び出して最新の分析結果を表示するロジックを維持
 summary_data = be.get_match_summary_with_llm(job_data['document'], engineer_data['document'])
+
 with st.container(border=True):
     col1, col2, col3 = st.columns([1.5, 3, 3])
     with col1:
-        
+        grade = None
         if summary_data and summary_data.get('summary'):
             grade = summary_data.get('summary')
             grade_to_save = summary_data.get('summary')
 
-
-
+            # DBに保存されているgradeとLLMが生成したgradeが異なる場合のみ更新
             if match_data['grade'] != grade_to_save:
                 be.save_match_grade(selected_match_id, grade_to_save)
-                
-                match_data = dict(match_data) # sqlite3.Rowを辞書に変換
-                match_data['grade'] = grade_to_save
+                # match_dataを更新（Streamlitの再描画を考慮）
+                match_data['grade'] = grade_to_save # dict形式なので直接更新可能
 
-
-
-            # 上で定義したヘルパー関数を使って、スタイル付きのHTMLを生成
             evaluation_html = get_evaluation_html(grade)
             st.markdown(evaluation_html, unsafe_allow_html=True)
+        else:
+            st.warning("AI評価のSummaryが取得できませんでした。")
         
-        # マッチ度はその下に表示
-        #st.metric("マッチ度", f"{float(match_data['score']):.1f}%", label_visibility="collapsed")
+        # マッチ度を表示
+        st.metric("類似度", f"{float(match_data['score']):.1f}%")
 
-
-            
     with col2:
         st.markdown("###### ✅ ポジティブな点")
         if summary_data and summary_data.get('positive_points'):
@@ -172,16 +200,12 @@ with st.container(border=True):
 st.divider()
 
 
-# ▼▼▼【ここからが新しい機能】▼▼▼
 # --- AIによる提案メール案生成セクション ---
 st.header("✉️ AIによる提案メール案")
 with st.spinner("AIが技術者のセールスポイントを盛り込んだ提案メールを作成中です..."):
-    # backend.pyに追加した関数を呼び出す
-    # 案件名と技術者名も渡し、より精度の高い件名や本文を生成させる
     project_name_for_prompt = job_data['project_name'] or f"ID:{job_data['id']}の案件"
     engineer_name_for_prompt = engineer_data['name'] or f"ID:{engineer_data['id']}の技術者"
 
-    # backend.pyに関数を追加した前提で呼び出し
     proposal_text = be.generate_proposal_reply_with_llm(
         job_data['document'],
         engineer_data['document'],
@@ -191,24 +215,21 @@ with st.spinner("AIが技術者のセールスポイントを盛り込んだ提�
 
 with st.container(border=True):
     st.info("以下の文面はAIによって生成されたものです。提案前に必ず内容を確認・修正してください。")
-    # 生成されたテキストエリアで表示
     st.text_area(
         label="生成されたメール文面",
         value=proposal_text,
         height=500,
         label_visibility="collapsed"
     )
-    # ユーザーがコピーしやすいように、st.code を利用したコピー機能も追加
     if st.button("文面をクリップボードにコピー", use_container_width=True):
         st.toast("コピーしました！")
         # Streamlitには直接クリップボードに書き込む機能がないため、
         # このボタンは主にUI上のフィードバックとして機能します。
-        # 代わりに、ユーザーが手動でコピーしやすいようにst.codeを表示します。
+        # ユーザーが手動でコピーしやすいようにst.codeを表示します。
     st.code(proposal_text, language="text")
     st.caption("▲ 上のボックス内をクリックすると全文をコピーできます。")
 
 st.divider()
-# ▲▲▲【ここまでが新しい機能】▲▲▲
 
 
 # --- 元情報（タブ）セクション ---
@@ -236,6 +257,7 @@ st.divider()
 
 
 if st.button("ダッシュボードに戻る"):
-    if 'selected_match_id' in st.session_state: del st.session_state['selected_match_id']
+    # ダッシュボードに戻る際に、現在のマッチングIDをセッションステートから削除する必要はない
+    # なぜなら、ダッシュボードはURLパラメータやセッションステートを直接使わないため
     st.switch_page("1_ダッシュボード.py")
 

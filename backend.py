@@ -835,3 +835,40 @@ def get_evaluation_html(grade, font_size='2.5em'):
     # HTML構造もダッシュボードと同じにする
     html_code = f"<div style='text-align: center; margin-bottom: 5px;'><span style='{style}'>{grade.upper()}</span></div><div style='text-align: center; font-size: 0.8em; color: #888;'>判定</div>"
     return html_code
+
+
+def get_matching_result_details(result_id):
+    """
+    指定されたマッチング結果IDの詳細情報（マッチング、案件、技術者）を取得する。
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+        
+        # matching_results を取得
+        cursor.execute("SELECT * FROM matching_results WHERE id = ?", (result_id,))
+        match_result = cursor.fetchone()
+
+        if not match_result:
+            return None
+
+        # job 情報を取得
+        cursor.execute("SELECT * FROM jobs WHERE id = ?", (match_result['job_id'],))
+        job_data = cursor.fetchone()
+
+        # engineer 情報を取得
+        cursor.execute("SELECT * FROM engineers WHERE id = ?", (match_result['engineer_id'],))
+        engineer_data = cursor.fetchone()
+
+        return {
+            "match_result": dict(match_result), # sqlite3.Row を dict に変換
+            "job_data": dict(job_data) if job_data else None,
+            "engineer_data": dict(engineer_data) if engineer_data else None,
+        }
+    except sqlite3.Error as e:
+        print(f"マッチング詳細取得エラー: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
