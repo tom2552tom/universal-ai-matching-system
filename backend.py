@@ -837,9 +837,12 @@ def get_evaluation_html(grade, font_size='2.5em'):
     return html_code
 
 
+# ... (backend.pyの既存コード) ...
+
 def get_matching_result_details(result_id):
     """
     指定されたマッチング結果IDの詳細情報（マッチング、案件、技術者）を取得する。
+    案件、技術者情報には担当者名も含む。
     """
     conn = get_db_connection()
     try:
@@ -852,12 +855,14 @@ def get_matching_result_details(result_id):
         if not match_result:
             return None
 
-        # job 情報を取得
-        cursor.execute("SELECT * FROM jobs WHERE id = ?", (match_result['job_id'],))
+        # job 情報を取得 (担当者名を含むようにJOIN)
+        job_query = "SELECT j.*, u.username as assignee_name FROM jobs j LEFT JOIN users u ON j.assigned_user_id = u.id WHERE j.id = ?"
+        cursor.execute(job_query, (match_result['job_id'],))
         job_data = cursor.fetchone()
 
-        # engineer 情報を取得
-        cursor.execute("SELECT * FROM engineers WHERE id = ?", (match_result['engineer_id'],))
+        # engineer 情報を取得 (担当者名を含むようにJOIN)
+        engineer_query = "SELECT e.*, u.username as assignee_name FROM engineers e LEFT JOIN users u ON e.assigned_user_id = u.id WHERE e.id = ?"
+        cursor.execute(engineer_query, (match_result['engineer_id'],))
         engineer_data = cursor.fetchone()
 
         return {
@@ -871,4 +876,7 @@ def get_matching_result_details(result_id):
     finally:
         if conn:
             conn.close()
+
+# ... (backend.pyの既存コードの続き) ...
+
 
