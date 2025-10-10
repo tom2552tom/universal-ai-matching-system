@@ -29,7 +29,7 @@ with col2:
 with col3:
     sort_order = st.selectbox(
         "順序",
-        options=["降順 (新しい順)", "昇順 (古い順)"],
+        options=["昇順", "降順"],
         index=0,
         key="sort_order"
     )
@@ -73,8 +73,8 @@ sort_column_map = {
     "担当者名": "assigned_username" # LEFT JOIN後のエイリアス名を使用
 }
 order_map = {
-    "降順 (新しい順)": "DESC",
-    "昇順 (古い順)": "ASC"
+    "降順": "DESC",
+    "昇順": "ASC"
 }
 
 # 選択されたオプションに基づいてORDER BY句を組み立てる
