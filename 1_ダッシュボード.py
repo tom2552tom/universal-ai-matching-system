@@ -4,6 +4,9 @@ from backend import (
     init_database, load_embedding_model, get_db_connection,
     hide_match, load_app_config, get_all_users
 )
+import os # ★★★ エラー修正: osモジュールをインポート ★★★
+
+
 
 # --- ヘルパー関数 (変更なし) ---
 def get_evaluation_html(grade, font_size='2.5em'):
