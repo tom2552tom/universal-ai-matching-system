@@ -168,7 +168,7 @@ def update_job_source_json(job_id, new_json_str):
 
 
 def split_text_with_llm(text_content):
-    model = genai.GenerativeModel('models/gemini-2.0-flash-lite')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     try:
         with open('prompt.txt', 'r', encoding='utf-8') as f:
             prompt_template = f.read()
@@ -197,7 +197,7 @@ def split_text_with_llm(text_content):
 
 @st.cache_data # 【この一行を追加するだけ】
 def get_match_summary_with_llm(job_doc, engineer_doc):
-    model = genai.GenerativeModel('models/gemini-2.0-flash-lite')
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     prompt = f"""
 あなたは、経験豊富なIT人材紹介のエージェントです。
 あなたの仕事は、提示された「案件情報」と「技術者情報」を比較し、客観的かつ具体的なマッチング評価を行うことです。
@@ -654,7 +654,7 @@ def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_nam
         # st.secrets等でAPIキーを管理していることを想定
         # genai.configure(api_key=st.secrets["google_api_key"])
         #model = genai.GenerativeModel('gemini-2.5-pro')
-        model = genai.GenerativeModel('models/gemini-2.0-flash-lite')
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
