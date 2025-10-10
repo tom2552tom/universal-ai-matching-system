@@ -1,0 +1,41 @@
+# Streamlit Theme Configuration
+
+[theme]
+
+# "light"テーマをベースにする
+base = "dark"
+
+# アクセントカラー (Flatlyの緑)
+primaryColor = "#18bc9c"
+
+# メインの背景色 (純白)
+backgroundColor = "#ffffff"
+
+# サイドバーなどの背景色 (Flatlyのライトグレー)
+secondaryBackgroundColor = "#ecf0f1"
+
+# メインの文字色 (Flatlyの紺)
+textColor = "#2c3e50"
+
+# 使用するフォントファミリー
+font = "sans serif"
+
+[app]
+title = "Universal AI2"
+
+[llm]
+model_name = "models/gemini-2.5-pro"
+
+
+[messages]
+# 営業スタッフ向けの重要メッセージ。空の場合は表示されません。
+# HTMLタグを使用して、色やスタイルをカスタマイズできます。
+sales_staff_notice = """
+<div style="background-color: #ffcccc; color: #cc0000; padding: 10px; border-radius: 5px; border: 2px solid #cc0000; font-weight: bold; text-align: center; margin-bottom: 20px;">
+    🚨 営業スタッフへ: メール読み込み後、担当者、技術者管理より、担当をアサインしてください。<br>
+    マッチング不要な案件、技術者はアーカイブするようにしてください。マッチング処理から除外されます。<br>
+    特にS, A, B評価の技術者は優先的にアプローチしましょう！
+</div>
+"""
+# 上のメッセージを非表示にする場合は、以下の行をコメントアウトするか空にしてください。
+# sales_staff_notice = ""
