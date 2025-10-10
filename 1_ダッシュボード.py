@@ -5,45 +5,7 @@ from backend import (
     hide_match, load_app_config, get_all_users
 )
 
-# --- カスタムサイドバー ---
-def custom_sidebar():
-    """
-    ロゴとカスタムメニューをサイドバーに表示する。
-    """
-    st.sidebar.image("img/UniversalAI_logo.png", width=200)
-    st.sidebar.divider()
-
-    # 表示するページの情報を定義
-    PAGES = {
-        "ダッシュボード": {
-            "path": "1_ダッシュボード.py",
-            "icon": "📊"
-        },
-        "メール処理": {
-            "path": "_pages/2_メール処理.py",
-            "icon": "📧"
-        },
-        "技術者管理": {
-            "path": "_pages/3_技術者管理.py",
-            "icon": "👨‍💻"
-        },
-        "案件管理": {
-            "path": "_pages/4_案件管理.py",
-            "icon": "💼"
-        },
-    }
-
-    # st.page_link を使ってメニューを生成
-    for page_name, page_info in PAGES.items():
-        st.page_link(
-            page_info["path"], 
-            label=f"{page_info['icon']} {page_name}", 
-            use_container_width=True
-        )
-    
-    st.sidebar.divider()
-
-# --- ヘルパー関数 ---
+# --- ヘルパー関数 (変更なし) ---
 def get_evaluation_html(grade, font_size='2.5em'):
     if not grade: return ""
     color_map = {'S': '#00b894', 'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
@@ -72,10 +34,19 @@ config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
 
-# カスタムサイドバーを呼び出し
-custom_sidebar()
 
-# --- メインコンテンツ ---
+# ▼▼▼【ここからが変更点1】▼▼▼
+# --- サイドバーのロゴ表示 ---
+st.sidebar.image("img/UniversalAI_logo.png", width=200) # widthを少し調整
+st.sidebar.divider()
+# ▲▲▲【変更点1ここまで】▲▲▲
+
+
+# ▼▼▼【変更点2: メイン画面のロゴ表示を削除】▼▼▼
+# st.image("img/UniversalAI_logo.png", width=240) # この行を削除またはコメントアウト
+# ▲▲▲【変更点2ここまで】▲▲▲
+
+
 sales_staff_notice = """
 <div style="background-color: #ffcccc; color: #cc0000; padding: 10px; border-radius: 5px; border: 2px solid #cc0000; font-weight: bold; text-align: center; margin-bottom: 20px;">
     🚨 営業スタッフへ: メール読み込み後、案件管理、技術者管理メニューより、担当をアサインしてください。<br>
@@ -94,7 +65,7 @@ if 'current_page' not in st.session_state:
 if 'items_per_page' not in st.session_state:
     st.session_state.items_per_page = 10 
 
-# --- サイドバーフィルター ---
+# --- サイドバーフィルター (変更なし) ---
 st.sidebar.header("フィルター")
 all_users = get_all_users()
 user_names = [user['username'] for user in all_users]
@@ -119,7 +90,7 @@ show_hidden_filter = st.sidebar.checkbox("非表示も表示する", value=False
 
 st.header("最新マッチング結果一覧")
 
-# --- DBからフィルタリングされた結果を取得 ---
+# --- DBからフィルタリングされた結果を取得 (変更なし) ---
 conn = get_db_connection()
 query = '''
     SELECT 
@@ -151,7 +122,7 @@ query += " ORDER BY r.created_at DESC, r.score DESC"
 results = conn.execute(query, tuple(params)).fetchall()
 conn.close()
 
-# --- 結果のフィルタリングと表示 ---
+# --- 結果のフィルタリング (変更なし) ---
 if not results:
     st.info("フィルタリング条件に合致するマッチング結果はありませんでした。")
 else:
@@ -167,26 +138,35 @@ else:
         st.warning("AIが提案したマッチングはありましたが、ルールフィルターによってすべて除外されました。")
     else:
         total_items = len(results_to_display)
-        
+
+        # ▼▼▼【ここからが修正箇所】▼▼▼
         # --- ヘッダーと表示件数設定 ---
         header_cols = st.columns([3, 1])
         with header_cols[0]:
             st.write(f"**表示中のマッチング結果: {total_items}件**")
         with header_cols[1]:
             items_per_page_options = [5, 10, 20, 50]
+            
+            # selectboxが返す値を直接変数に受け取る
             new_items_per_page = st.selectbox(
-                "表示件数", options=items_per_page_options,
+                "表示件数",
+                options=items_per_page_options,
                 index=items_per_page_options.index(st.session_state.items_per_page),
-                key="items_per_page_selector", label_visibility="collapsed"
+                key="items_per_page_selector",
+                label_visibility="collapsed"
             )
+            
+            # 値が変更されたかチェック
             if new_items_per_page != st.session_state.items_per_page:
                 st.session_state.items_per_page = new_items_per_page
-                st.session_state.current_page = 1
-                st.rerun()
+                st.session_state.current_page = 1 # 1ページ目に戻す
+                st.rerun() # 即座に再実行して変更を反映
 
+        # 正しい items_per_page を使って総ページ数を計算
         total_pages = (total_items + st.session_state.items_per_page - 1) // st.session_state.items_per_page
-        
-        # ページネーションコントロール
+        # ▲▲▲【修正箇所ここまで】▲▲▲
+
+        # ページネーションコントロール (元のUI)
         if total_pages > 1:
             st.markdown("---")
             pagination_cols = st.columns([1, 2, 1])
@@ -206,7 +186,7 @@ else:
         end_index = start_index + st.session_state.items_per_page
         paginated_results = results_to_display[start_index:end_index]
 
-        # --- マッチング結果の表示ループ ---
+        # --- マッチング結果の表示ループ (変更なし) ---
         for res in paginated_results:
             with st.container(border=True):
                 header_col1, header_col2 = st.columns([5, 2])
