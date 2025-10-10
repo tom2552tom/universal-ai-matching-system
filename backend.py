@@ -33,9 +33,10 @@ MIN_SCORE_THRESHOLD = 70.0 # 推奨値に設定
 
 @st.cache_data
 def load_app_config():
-    try:
-        with open("config.toml", "r", encoding="utf-8") as f: return toml.load(f)
-    except FileNotFoundError: return {"app": {"title": "Universal AI Agent"}}
+    
+    #try:
+    #    with open("config.toml", "r", encoding="utf-8") as f: return toml.load(f)
+    #except FileNotFoundError: return {"app": {"title": "Universal AI Agent"}}
 
     """
     config.toml からアプリケーション設定を読み込みます。
