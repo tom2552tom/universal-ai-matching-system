@@ -261,18 +261,82 @@ def get_records_by_ids(table_name, ids):
         results_map = {res['id']: res for res in results}
         return [results_map[id] for id in ids if id in results_map]
 
+# ▼▼▼【ここからが修正箇所です】▼▼▼
 def run_matching_for_item(item_data, item_type, cursor, now_str):
-    if item_type == 'job': query_text, index_path = item_data['document'], ENGINEER_INDEX_FILE
-    else: query_text, index_path = item_data['document'], JOB_INDEX_FILE
+    """
+    指定された案件または技術者データに対して、類似候補を検索し、LLMによる評価を行った上でマッチング結果をDBに保存する。
+    LLMの評価が 'S', 'A', 'B', 'C' の場合のみDBに保存し、'D', 'E' などそれ以外の場合はスキップする。
+    """
+    # 1. 検索対象のインデックスとテーブルを決定
+    if item_type == 'job':
+        query_text, index_path = item_data['document'], ENGINEER_INDEX_FILE
+        candidate_table = 'engineers'
+    else: # item_type == 'engineer'
+        query_text, index_path = item_data['document'], JOB_INDEX_FILE
+        candidate_table = 'jobs'
+
+    # 2. Faissによる類似度検索を実行
     similarities, ids = search(query_text, index_path, top_k=TOP_K_CANDIDATES)
+    if not ids:
+        st.write(f"▶ ID:{item_data['id']} ({item_type}) の類似候補は見つかりませんでした。")
+        return
+
+    # 3. 検索結果の候補データをDBから一括取得
+    candidate_records = get_records_by_ids(candidate_table, ids)
+    # IDをキーにした辞書に変換して高速にアクセスできるようにする
+    candidate_map = {record['id']: record for record in candidate_records}
+
     st.write(f"▶ ID:{item_data['id']} ({item_type}) の類似候補 {len(ids)}件を評価します。")
+
+    # 4. 各候補をループして評価と保存処理
     for sim, candidate_id in zip(similarities, ids):
         score = float(sim) * 100
-        if score >= MIN_SCORE_THRESHOLD:
-            db_ids = {'job_id': item_data['id'] if item_type == 'job' else candidate_id, 'engineer_id': candidate_id if item_type == 'job' else item_data['id']}
-            cursor.execute('INSERT INTO matching_results (job_id, engineer_id, score, created_at) VALUES (?, ?, ?, ?)', (db_ids['job_id'], db_ids['engineer_id'], score, now_str))
 
-# ▼▼▼【修正箇所】新しい列にデータを保存するよう変更 ▼▼▼
+        # ベクトル検索のスコアが閾値未満の場合は、LLM評価を行わずにスキップ
+        if score < MIN_SCORE_THRESHOLD:
+            continue
+
+        candidate_record = candidate_map.get(candidate_id)
+        if not candidate_record:
+            st.write(f"  - 候補ID:{candidate_id} のデータがDBから取得できなかったため、スキップします。")
+            continue
+
+        # 5. LLM評価のための案件・技術者情報を準備
+        if item_type == 'job':
+            job_doc = item_data['document']
+            engineer_doc = candidate_record['document']
+            job_id = item_data['id']
+            engineer_id = candidate_record['id']
+        else: # item_type == 'engineer'
+            job_doc = candidate_record['document']
+            engineer_doc = item_data['document']
+            job_id = candidate_record['id']
+            engineer_id = item_data['id']
+
+        # 6. LLMによるマッチング評価を実行
+        # この関数はキャッシュされているため、同じ組み合わせの場合は高速に結果が返る
+        llm_result = get_match_summary_with_llm(job_doc, engineer_doc)
+
+        # 7. LLMの評価結果に基づいてDBへの保存を判断
+        if llm_result and 'summary' in llm_result:
+            grade = llm_result.get('summary')
+
+            # Summaryが 'S', 'A', 'B', 'C' の場合のみDBに保存
+            if grade in ['S', 'A', 'B', 'C']:
+                cursor.execute(
+                    'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade) VALUES (?, ?, ?, ?, ?)',
+                    (job_id, engineer_id, score, now_str, grade)
+                )
+                st.write(f"  - 候補ID:{candidate_id} -> マッチング評価: {grade} (スコア: {score:.2f}) ... ✅ DBに保存しました。")
+            else:
+                # Summaryが 'D', 'E' またはその他の場合はスキップ
+                st.write(f"  - 候補ID:{candidate_id} -> マッチング評価: {grade} (スコア: {score:.2f}) ... ❌ スキップしました。")
+        else:
+            # LLMからの応答が不正だった場合
+            st.write(f"  - 候補ID:{candidate_id} -> LLM評価に失敗したためスキップします。")
+# ▲▲▲【ここまでが修正箇所です】▲▲▲
+
+
 def process_single_content(source_data: dict):
     if not source_data: st.warning("処理するデータが空です。"); return False
     valid_attachments_content = []
