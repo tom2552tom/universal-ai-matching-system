@@ -10,7 +10,8 @@ import json
 from datetime import datetime
 import imaplib
 import email
-from email.header import decode_header, make_header # ★ make_header を追加
+from email.header import decode_header, make_header
+from email.utils import parsedate_to_datetime # ★ 日時変換のために追加
 import io
 import contextlib
 import toml
@@ -31,7 +32,7 @@ MODEL_NAME = 'intfloat/multilingual-e5-large'
 TOP_K_CANDIDATES = 500
 MIN_SCORE_THRESHOLD = 70.0
 
-# --- 関数定義 (get_email_contents と fetch_and_process_emails 以外は変更なし) ---
+# --- 関数定義 ---
 @st.cache_data
 def load_app_config():
     try:
@@ -61,27 +62,43 @@ def get_db_connection():
     except Exception as e:
         st.error(f"データベース接続中に予期せぬエラーが発生しました: {e}"); st.stop()
 
+# ▼▼▼【ここが修正箇所 1/4】▼▼▼
 def init_database():
+    """
+    データベースを初期化し、必要なカラムがなければ追加する。
+    `received_at` カラムを追加。
+    """
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id SERIAL PRIMARY KEY, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT, assigned_user_id INTEGER, is_hidden INTEGER NOT NULL DEFAULT 0)')
-            cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id SERIAL PRIMARY KEY, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT, assigned_user_id INTEGER, is_hidden INTEGER NOT NULL DEFAULT 0)')
+            # received_at カラムを追加
+            cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id SERIAL PRIMARY KEY, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT, assigned_user_id INTEGER, is_hidden INTEGER NOT NULL DEFAULT 0, received_at TIMESTAMP WITH TIME ZONE)')
+            cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id SERIAL PRIMARY KEY, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT, assigned_user_id INTEGER, is_hidden INTEGER NOT NULL DEFAULT 0, received_at TIMESTAMP WITH TIME ZONE)')
+            
             cursor.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT NOT NULL UNIQUE, email TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);")
             cursor.execute('''CREATE TABLE IF NOT EXISTS matching_results (id SERIAL PRIMARY KEY, job_id INTEGER NOT NULL, engineer_id INTEGER NOT NULL, score REAL NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, is_hidden INTEGER DEFAULT 0, grade TEXT, positive_points TEXT, concern_points TEXT, proposal_text TEXT, status TEXT DEFAULT '新規', FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE, FOREIGN KEY (engineer_id) REFERENCES engineers (id) ON DELETE CASCADE, UNIQUE (job_id, engineer_id))''')
+            
             cursor.execute("SELECT COUNT(*) FROM users")
             if cursor.fetchone()[0] == 0:
                 print("初回起動のため、テストユーザーを追加します...")
                 users_to_add = [('熊崎', 'yamada@example.com'), ('岩本', 'suzuki@example.com'), ('小関', 'sato@example.com'), ('内山', 'sato@example.com'), ('島田', 'sato@example.com'), ('長谷川', 'sato@example.com'), ('北島', 'sato@example.com'), ('岩崎', 'sato@example.com'), ('根岸', 'sato@example.com'), ('添田', 'sato@example.com'), ('山浦', 'sato@example.com'), ('福田', 'sato@example.com')]
                 cursor.executemany("INSERT INTO users (username, email) VALUES (%s, %s)", users_to_add)
                 print(" -> テストユーザーを追加しました。")
+            
             def get_columns(table_name):
                 cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s", (table_name,))
                 return [row['column_name'] for row in cursor.fetchall()]
-            if 'assigned_user_id' not in get_columns('jobs'): cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-            if 'is_hidden' not in get_columns('jobs'): cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
-            if 'assigned_user_id' not in get_columns('engineers'): cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-            if 'is_hidden' not in get_columns('engineers'): cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
+
+            job_columns = get_columns('jobs')
+            if 'assigned_user_id' not in job_columns: cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
+            if 'is_hidden' not in job_columns: cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
+            if 'received_at' not in job_columns: cursor.execute("ALTER TABLE jobs ADD COLUMN received_at TIMESTAMP WITH TIME ZONE") # カラム追加
+
+            engineer_columns = get_columns('engineers')
+            if 'assigned_user_id' not in engineer_columns: cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
+            if 'is_hidden' not in engineer_columns: cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
+            if 'received_at' not in engineer_columns: cursor.execute("ALTER TABLE engineers ADD COLUMN received_at TIMESTAMP WITH TIME ZONE") # カラム追加
+
             match_columns = get_columns('matching_results')
             if 'positive_points' not in match_columns: cursor.execute("ALTER TABLE matching_results ADD COLUMN positive_points TEXT")
             if 'concern_points' not in match_columns: cursor.execute("ALTER TABLE matching_results ADD COLUMN concern_points TEXT")
@@ -92,6 +109,7 @@ def init_database():
         print(f"❌ データベース初期化中にエラーが発生しました: {e}"); conn.rollback()
     finally:
         conn.close()
+# ▲▲▲【修正ここまで】▲▲▲
 
 def get_extraction_prompt(doc_type, text_content):
     if doc_type == 'engineer':
@@ -286,46 +304,65 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
         else:
             st.write(f"  - 候補: 『{candidate_name}』 -> LLM評価失敗のためスキップ")
 
+# ▼▼▼【ここが修正箇所 2/4】▼▼▼
 def process_single_content(source_data: dict):
     if not source_data: st.warning("処理するデータが空です。"); return False
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")]
     if valid_attachments_content: st.write(f"ℹ️ {len(valid_attachments_content)}件の添付ファイルの内容を解析に含めます。")
     full_text_for_llm = source_data.get('body', '') + "".join(valid_attachments_content)
     if not full_text_for_llm.strip(): st.warning("解析対象のテキストがありません。"); return False
+    
     parsed_data = split_text_with_llm(full_text_for_llm)
     if not parsed_data: return False
+    
     new_jobs_data, new_engineers_data = parsed_data.get("jobs", []), parsed_data.get("engineers", [])
     if not new_jobs_data and not new_engineers_data: st.warning("LLMはテキストから案件情報または技術者情報を抽出できませんでした。"); return False
+    
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            source_data['subject'] = source_data.get('subject', '件名なし')
-            source_data['from'] = source_data.get('from', '差出人不明')
-            source_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
+            # 受信日時を取得（存在しない場合はNone）
+            received_at = source_data.get('received_at')
+            # DB保存用に、不要なキーを削除してからJSON化
+            json_data_to_store = source_data.copy()
+            json_data_to_store.pop('body', None)
+            json_data_to_store.pop('attachments', None)
+            source_json_str = json.dumps(json_data_to_store, ensure_ascii=False, indent=2)
+
             newly_added_jobs, newly_added_engineers = [], []
+            
             for item_data in new_jobs_data:
                 doc = item_data.get("document") or full_text_for_llm
                 project_name = item_data.get("project_name", "名称未定の案件")
                 meta_info = _build_meta_info_string('job', item_data)
                 full_document = meta_info + doc
-                cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at) VALUES (%s, %s, %s, %s) RETURNING id', (project_name, full_document, source_json_str, now_str))
+                # received_at をINSERT文に追加
+                cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
+                               (project_name, full_document, source_json_str, now_str, received_at))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_jobs.append(item_data)
+            
             for item_data in new_engineers_data:
                 doc = item_data.get("document") or full_text_for_llm
                 engineer_name = item_data.get("name", "名称不明の技術者")
                 meta_info = _build_meta_info_string('engineer', item_data)
                 full_document = meta_info + doc
-                cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at) VALUES (%s, %s, %s, %s) RETURNING id', (engineer_name, full_document, source_json_str, now_str))
+                # received_at をINSERT文に追加
+                cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
+                               (engineer_name, full_document, source_json_str, now_str, received_at))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_engineers.append(item_data)
+            
             st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
             cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_active_jobs = cursor.fetchall()
             cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0'); all_active_engineers = cursor.fetchall()
+            
             if all_active_jobs: update_index(JOB_INDEX_FILE, all_active_jobs)
             if all_active_engineers: update_index(ENGINEER_INDEX_FILE, all_active_engineers)
+            
             for new_job in newly_added_jobs: run_matching_for_item(new_job, 'job', cursor, now_str)
             for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', cursor, now_str)
         conn.commit()
     return True
+# ▲▲▲【修正ここまで】▲▲▲
 
 def extract_text_from_pdf(file_bytes):
     try:
@@ -339,23 +376,19 @@ def extract_text_from_docx(file_bytes):
         return text if text.strip() else "[DOCXテキスト抽出失敗: 内容が空]"
     except Exception as e: return f"[DOCXテキスト抽出エラー: {e}]"
 
-# ▼▼▼【ここが修正箇所 1/2】▼▼▼
+# ▼▼▼【ここが修正箇所 3/4】▼▼▼
 def get_email_contents(msg) -> dict:
-    """
-    メールオブジェクトから、件名、差出人、本文、添付ファイルを抽出する。
-    """
-    # 件名(Subject)のデコード
-    subject = ""
-    if msg["subject"]:
-        subject = str(make_header(decode_header(msg["subject"])))
+    """メールオブジェクトから、件名、差出人、受信日時、本文、添付ファイルを抽出する。"""
+    subject = str(make_header(decode_header(msg["subject"]))) if msg["subject"] else ""
+    from_ = str(make_header(decode_header(msg["from"]))) if msg["from"] else ""
+    
+    # 日時(Date)のデコードとフォーマット
+    received_at = None
+    date_tuple = parsedate_to_datetime(msg["Date"])
+    if date_tuple:
+        received_at = date_tuple
 
-    # 差出人(From)のデコード
-    from_ = ""
-    if msg["from"]:
-        from_ = str(make_header(decode_header(msg["from"])))
-
-    body_text = ""
-    attachments = []
+    body_text, attachments = "", []
     if msg.is_multipart():
         for part in msg.walk():
             content_type, content_disposition = part.get_content_type(), str(part.get("Content-Disposition"))
@@ -376,11 +409,10 @@ def get_email_contents(msg) -> dict:
         try: body_text = msg.get_payload(decode=True).decode(charset or 'utf-8', errors='ignore')
         except Exception: body_text = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
     
-    # 辞書に subject と from_ を追加して返す
-    return {"subject": subject, "from": from_, "body": body_text.strip(), "attachments": attachments}
+    return {"subject": subject, "from": from_, "received_at": received_at, "body": body_text.strip(), "attachments": attachments}
 # ▲▲▲【修正ここまで】▲▲▲
 
-# ▼▼▼【ここが修正箇所 2/2】▼▼▼
+# ▼▼▼【ここが修正箇所 4/4】▼▼▼
 def fetch_and_process_emails():
     log_stream = io.StringIO()
     try:
@@ -403,14 +435,14 @@ def fetch_and_process_emails():
                             for response_part in msg_data:
                                 if isinstance(response_part, tuple):
                                     msg = email.message_from_bytes(response_part[1])
-                                    
-                                    # get_email_contents から全ての情報を取得
                                     source_data = get_email_contents(msg)
                                     
                                     if source_data['body'] or source_data['attachments']:
-                                        # ログに件名と差出人を表示
                                         st.write("---")
                                         st.write(f"✅ メールID {email_id.decode()} を処理します。")
+                                        # 受信日時をフォーマットして表示
+                                        received_at_str = source_data['received_at'].strftime('%Y-%m-%d %H:%M:%S') if source_data.get('received_at') else '取得不可'
+                                        st.write(f"   受信日時: {received_at_str}")
                                         st.write(f"   差出人: {source_data.get('from', '取得不可')}")
                                         st.write(f"   件名: {source_data.get('subject', '取得不可')}")
                                         
