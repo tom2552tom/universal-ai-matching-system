@@ -90,182 +90,107 @@ def load_embedding_model():
 
 # ▼▼▼【この関数全体を置き換えてください】▼▼▼
 
+# backend.py の init_database 関数を以下に置き換え
+
 def init_database():
     """
-    データベースとテーブルを初期化する。
-    既存のテーブルのカラムをチェックし、不足しているカラムがあれば追加する。
+    PostgreSQLデータベースとテーブルを初期化する。
+    既存のテーブルやカラムをチェックし、不足している場合は追加する。
     """
     conn = get_db_connection()
     cursor = conn.cursor()
 
     try:
-        # --- 基本テーブルの作成 (既存のCREATE TABLE文はそのまま) ---
-        cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
-        
-        # ▼▼▼ 修正: matching_results テーブルのCREATE TABLE文に AI評価関連カラムを追加 ▼▼▼
+        # --- ヘルパー関数 (カラム存在チェック用) ---
+        def column_exists(table, column):
+            cursor.execute("""
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_schema = 'public' AND table_name = %s AND column_name = %s
+            """, (table, column))
+            return cursor.fetchone() is not None
+
+        # --- テーブル作成 (PostgreSQL互換) ---
+        cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id SERIAL PRIMARY KEY, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
+        cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id SERIAL PRIMARY KEY, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT NOT NULL UNIQUE,
+                email TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS matching_results (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                job_id INTEGER NOT NULL,
-                engineer_id INTEGER NOT NULL,
+                id SERIAL PRIMARY KEY,
+                job_id INTEGER REFERENCES jobs(id) ON DELETE CASCADE,
+                engineer_id INTEGER REFERENCES engineers(id) ON DELETE CASCADE,
                 score REAL NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 is_hidden INTEGER DEFAULT 0,
-                grade TEXT,                  -- 追加
-                positive_points TEXT,        -- 追加
-                concern_points TEXT,         -- 追加
-                proposal_text TEXT,          -- 追加
-                FOREIGN KEY (job_id) REFERENCES jobs (id),
-                FOREIGN KEY (engineer_id) REFERENCES engineers (id),
+                grade TEXT,
+                positive_points TEXT,
+                concern_points TEXT,
+                proposal_text TEXT,
+                status TEXT DEFAULT '新規',
                 UNIQUE (job_id, engineer_id)
             )
         ''')
-        # ▲▲▲ 修正 ここまで ▲▲▲
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                email TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-
-        # --- 初回起動時のテストユーザー追加 (既存のコードはそのまま) ---
-        cursor.execute("SELECT COUNT(*) FROM users")
-        if cursor.fetchone()['COUNT(*)'] == 0:
-            print("初回起動のため、テストユーザーを追加します...")
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('熊崎', 'yamada@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩本', 'suzuki@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('小関', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('内山', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('島田', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('長谷川', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('北島', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩崎', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('根岸', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('添田', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('山浦', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('福田', 'sato@example.com'))
-            print(" -> テストユーザーを追加しました。")
-
-        # --- カラムの自動追加処理 ---
-        # (jobsテーブル, engineersテーブルのカラム追加チェックはそのまま)
-        cursor.execute("PRAGMA table_info(jobs)")
-        job_columns = [row['name'] for row in cursor.fetchall()]
-        if 'assigned_user_id' not in job_columns:
-            cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-        if 'is_hidden' not in job_columns:
-            cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
-
-        cursor.execute("PRAGMA table_info(engineers)")
-        engineer_columns = [row['name'] for row in cursor.fetchall()]
-        if 'assigned_user_id' not in engineer_columns:
-            cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-        if 'is_hidden' not in engineer_columns:
-            cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
-            
-        # (matching_resultsテーブルのカラム追加チェック)
-        cursor.execute("PRAGMA table_info(matching_results)")
-        match_columns = [row['name'] for row in cursor.fetchall()]
-        if 'proposal_text' not in match_columns:
-            cursor.execute("ALTER TABLE matching_results ADD COLUMN proposal_text TEXT")
-        if 'grade' not in match_columns:
-            cursor.execute("ALTER TABLE matching_results ADD COLUMN grade TEXT")
-        # ▼▼▼ 追加: positive_points と concern_points カラムの追加チェック ▼▼▼
-        if 'positive_points' not in match_columns:
-            cursor.execute("ALTER TABLE matching_results ADD COLUMN positive_points TEXT")
-        if 'concern_points' not in match_columns:
-            cursor.execute("ALTER TABLE matching_results ADD COLUMN concern_points TEXT")
-        # ▲▲▲ 追加 ここまで ▲▲▲
-
-        if 'status' not in match_columns:
-            # デフォルト値として「新規」を設定
-            cursor.execute("ALTER TABLE matching_results ADD COLUMN status TEXT DEFAULT '新規'")
-
-        conn.commit()
-        print("Database initialized and schema verified successfully.")
-
-    except sqlite3.Error as e:
-        print(f"❌ データベース初期化中にエラーが発生しました: {e}")
-        conn.rollback()
-    finally:
-        conn.close()
-        
-    """
-    データベースとテーブルを初期化する。
-    既存のテーブルのカラムをチェックし、不足しているカラムがあれば追加する。
-    """
-    conn = get_db_connection() # ★★★ 修正点: 独自の接続ではなく、共通関数を使用
-    cursor = conn.cursor()
-
-    try:
-        # --- 基本テーブルの作成 ---
-        cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT)')
-        cursor.execute('CREATE TABLE IF NOT EXISTS matching_results (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id INTEGER, engineer_id INTEGER, score REAL, created_at TEXT, is_hidden INTEGER DEFAULT 0, FOREIGN KEY (job_id) REFERENCES jobs (id), FOREIGN KEY (engineer_id) REFERENCES engineers (id))')
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                email TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
 
         # --- 初回起動時のテストユーザー追加 ---
         cursor.execute("SELECT COUNT(*) FROM users")
-        if cursor.fetchone()['COUNT(*)'] == 0:
+        if cursor.fetchone()[0] == 0:
             print("初回起動のため、テストユーザーを追加します...")
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('熊崎', 'yamada@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩本', 'suzuki@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('小関', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('内山', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('島田', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('長谷川', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('北島', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('岩崎', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('根岸', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('添田', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('山浦', 'sato@example.com'))
-            cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", ('福田', 'sato@example.com'))
-            
-            print(" -> 3名のテストユーザーを追加しました。")
+            users_to_add = [
+                ('熊崎', 'yamada@example.com'), ('岩本', 'suzuki@example.com'),
+                ('小関', 'sato@example.com'), ('内山', 'uchiyama@example.com'),
+                ('島田', 'shimada@example.com'), ('長谷川', 'hasegawa@example.com'),
+                ('北島', 'kitajima@example.com'), ('岩崎', 'iwasaki@example.com'),
+                ('根岸', 'negishi@example.com'), ('添田', 'soeda@example.com'),
+                ('山浦', 'yamaura@example.com'), ('福田', 'fukuda@example.com')
+            ]
+            # executemanyで一括挿入
+            cursor.executemany("INSERT INTO users (username, email) VALUES (%s, %s)", users_to_add)
+            print(f" -> {len(users_to_add)}名のテストユーザーを追加しました。")
 
-        # --- カラムの自動追加処理 ---
+        # --- カラムの自動追加処理 (PostgreSQL版) ---
         # (jobsテーブル)
-        cursor.execute("PRAGMA table_info(jobs)")
-        job_columns = [row['name'] for row in cursor.fetchall()] # ★★★ 修正点: インデックスではなく名前でアクセス
-        if 'assigned_user_id' not in job_columns:
+        if not column_exists('jobs', 'assigned_user_id'):
             cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-        if 'is_hidden' not in job_columns:
+        if not column_exists('jobs', 'is_hidden'):
             cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
 
         # (engineersテーブル)
-        cursor.execute("PRAGMA table_info(engineers)")
-        engineer_columns = [row['name'] for row in cursor.fetchall()] # ★★★ 修正点: インデックスではなく名前でアクセス
-        if 'assigned_user_id' not in engineer_columns:
+        if not column_exists('engineers', 'assigned_user_id'):
             cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-        if 'is_hidden' not in engineer_columns:
+        if not column_exists('engineers', 'is_hidden'):
             cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
-            
+
         # (matching_resultsテーブル)
-        cursor.execute("PRAGMA table_info(matching_results)")
-        match_columns = [row['name'] for row in cursor.fetchall()] # ★★★ 修正点: エラー箇所を修正
-        if 'proposal_text' not in match_columns:
+        if not column_exists('matching_results', 'proposal_text'):
             cursor.execute("ALTER TABLE matching_results ADD COLUMN proposal_text TEXT")
-        if 'grade' not in match_columns:
+        if not column_exists('matching_results', 'grade'):
             cursor.execute("ALTER TABLE matching_results ADD COLUMN grade TEXT")
+        if not column_exists('matching_results', 'positive_points'):
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN positive_points TEXT")
+        if not column_exists('matching_results', 'concern_points'):
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN concern_points TEXT")
+        if not column_exists('matching_results', 'status'):
+            cursor.execute("ALTER TABLE matching_results ADD COLUMN status TEXT DEFAULT '新規'")
 
         conn.commit()
-        print("Database initialized and schema verified successfully.")
+        print("Database initialized and schema verified for PostgreSQL successfully.")
 
-    except sqlite3.Error as e:
+    except Exception as e:
         print(f"❌ データベース初期化中にエラーが発生しました: {e}")
-        conn.rollback() # エラー発生時は変更を元に戻す
+        conn.rollback()
     finally:
-        conn.close() # ★★★ 修正点: 最後に接続を閉じる
+        # カーソルと接続を閉じる
+        if 'cursor' in locals() and not cursor.closed:
+            cursor.close()
+        if 'conn' in locals() and not conn.closed:
+            conn.close()
+
 
 
 def get_db_connection():
