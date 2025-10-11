@@ -15,6 +15,9 @@ import contextlib
 import toml
 import fitz
 import docx
+import psycopg2
+from psycopg2.extras import DictCursor
+
 
 # --- 1. 初期設定と定数 ---
 try:
@@ -265,17 +268,33 @@ def init_database():
         conn.close() # ★★★ 修正点: 最後に接続を閉じる
 
 
-
 def get_db_connection():
     """
-    データベース接続を取得します。
-    row_factoryを設定し、カラム名でアクセスできるようにします。
+    PostgreSQLデータベースへの接続を取得します。
+    接続情報は Streamlit の Secrets から読み込みます。
     """
-    conn = sqlite3.connect(DB_FILE)
-    # ▼▼▼【この一行を追加・修正します】▼▼▼
-    conn.row_factory = sqlite3.Row
-    # ▲▲▲【この一行を追加・修正します】▲▲▲
-    return conn
+    try:
+        conn_string = st.secrets["DATABASE_URL"]
+        conn = psycopg2.connect(conn_string)
+        # カラム名でアクセスできるように cursor_factory を設定
+        conn.cursor_factory = DictCursor
+        return conn
+    except Exception as e:
+        st.error(f"データベース接続エラー: {e}")
+        st.info("Supabaseの接続情報がStreamlitのSecretsに正しく設定されているか確認してください。")
+        st.stop()
+
+
+#def get_db_connection():
+#    """
+#    データベース接続を取得します。
+#    row_factoryを設定し、カラム名でアクセスできるようにします。
+#    """
+#    conn = sqlite3.connect(DB_FILE)
+#    # ▼▼▼【この一行を追加・修正します】▼▼▼
+#    conn.row_factory = sqlite3.Row
+#    # ▲▲▲【この一行を追加・修正します】▲▲▲
+#    return conn
 
 
 #def get_db_connection():
