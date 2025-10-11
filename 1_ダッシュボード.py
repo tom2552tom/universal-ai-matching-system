@@ -75,7 +75,7 @@ user_names = [user['username'] for user in all_users]
 assignee_options = ["すべて"] + user_names 
 job_assignee_filter = st.sidebar.selectbox("案件担当者", options=assignee_options, key="job_assignee_filter")
 engineer_assignee_filter = st.sidebar.selectbox("技術者担当者", options=assignee_options, key="engineer_assignee_filter")
-st.sidebar.divider()
+#st.sidebar.divider()
 status_options = [
     "新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", 
     "採用", "見送り（自社都合）", "見送り（クライアント都合）", "見送り（技術者都合）", "クローズ"
