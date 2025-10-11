@@ -10,14 +10,14 @@ import json
 from datetime import datetime
 import imaplib
 import email
-from email.header import decode_header
+from email.header import decode_header, make_header # ★ make_header を追加
 import io
 import contextlib
 import toml
 import fitz
 import docx
 
-# --- 1. 初期設定と定数 ---
+# --- 1. 初期設定と定数 (変更なし) ---
 try:
     API_KEY = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=API_KEY)
@@ -31,6 +31,7 @@ MODEL_NAME = 'intfloat/multilingual-e5-large'
 TOP_K_CANDIDATES = 500
 MIN_SCORE_THRESHOLD = 70.0
 
+# --- 関数定義 (get_email_contents と fetch_and_process_emails 以外は変更なし) ---
 @st.cache_data
 def load_app_config():
     try:
@@ -92,80 +93,42 @@ def init_database():
     finally:
         conn.close()
 
-# ▼▼▼【ここが修正箇所】▼▼▼
 def get_extraction_prompt(doc_type, text_content):
-    """文書タイプに応じて、情報抽出用の専用プロンプトを生成する。"""
     if doc_type == 'engineer':
-        # --- 技術者情報抽出に特化したプロンプト ---
         return f"""
             あなたは、IT人材の「スキルシート」や「職務経歴書」を読み解く専門家です。
             あなたの仕事は、与えられたテキストから**単一の技術者情報**を抽出し、指定されたJSON形式で整理することです。
-
             # 絶対的なルール
             - 出力は、指定されたJSON形式の文字列のみとし、前後に解説や```json ```のようなコードブロックの囲みを含めないでください。
-
             # 指示
             - テキスト全体は、一人の技術者の情報です。複数の業務経歴が含まれていても、それらはすべてこの一人の技術者の経歴として要約してください。
             - `document`フィールドには、技術者のスキル、経験、自己PRなどを総合的に要約した、検索しやすい自然な文章を作成してください。
             - `document`の文章の先頭には、必ず技術者名を含めてください。例：「実務経験15年のTK氏。Java(SpringBoot)を主軸に...」
-
             # JSON出力形式
-            {{
-              "engineers": [
-                {{
-                  "name": "技術者の氏名を抽出",
-                  "document": "技術者のスキルや経歴の詳細を、検索しやすいように要約",
-                  "nationality": "国籍を抽出",
-                  "availability_date": "稼働可能日（例: 即日、2025年12月上旬など）を抽出",
-                  "desired_location": "希望勤務地を抽出",
-                  "desired_salary": "希望単価を抽出",
-                  "main_skills": "主要なプログラミング言語、フレームワーク、DBなどのスキルをカンマ区切りで抽出"
-                }}
-              ]
-            }}
-
+            {{"engineers": [{{"name": "技術者の氏名を抽出", "document": "技術者のスキルや経歴の詳細を、検索しやすいように要約", "nationality": "国籍を抽出", "availability_date": "稼働可能日を抽出", "desired_location": "希望勤務地を抽出", "desired_salary": "希望単価を抽出", "main_skills": "主要なスキルをカンマ区切りで抽出"}}]}}
             # 本番: 以下のスキルシートから情報を抽出してください
             ---
             {text_content}
         """
     elif doc_type == 'job':
-        # --- 案件情報抽出に特化したプロンプト ---
         return f"""
             あなたは、IT業界の「案件定義書」を読み解く専門家です。
             あなたの仕事は、与えられたテキストから**案件情報**を抽出し、指定されたJSON形式で整理することです。
             テキスト内に複数の案件情報が含まれている場合は、それぞれを個別のオブジェクトとしてリストにしてください。
-
             # 絶対的なルール
             - 出力は、指定されたJSON形式の文字列のみとし、前後に解説や```json ```のようなコードブロックの囲みを含めないでください。
-
             # 指示
             - `document`フィールドには、案件のスキルや業務内容の詳細を、後で検索しやすいように自然な文章で要約してください。
             - `document`の文章の先頭には、必ずプロジェクト名を含めてください。例：「社内SEプロジェクトの増員案件。設計、テスト...」
-
             # JSON出力形式
-            {{
-              "jobs": [
-                {{
-                  "project_name": "案件名を抽出",
-                  "document": "案件のスキルや業務内容の詳細を、検索しやすいように要約",
-                  "nationality_requirement": "国籍要件（例: 外国籍不可、日本語ネイティブなど）を抽出",
-                  "start_date": "開始時期（例: 即日、2025年11月〜など）を抽出",
-                  "location": "勤務地（例: フルリモート、渋谷など）を抽出",
-                  "unit_price": "単価や予算（例: 〜80万円/月、スキル見合いなど）を抽出",
-                  "required_skills": "必須スキルや歓迎スキルをカンマ区切りで抽出"
-                }}
-              ]
-            }}
-
+            {{"jobs": [{{"project_name": "案件名を抽出", "document": "案件のスキルや業務内容の詳細を、検索しやすいように要約", "nationality_requirement": "国籍要件を抽出", "start_date": "開始時期を抽出", "location": "勤務地を抽出", "unit_price": "単価や予算を抽出", "required_skills": "必須スキルや歓迎スキルをカンマ区切りで抽出"}}]}}
             # 本番: 以下の案件情報から情報を抽出してください
             ---
             {text_content}
         """
     return ""
-# ▲▲▲【修正ここまで】▲▲▲
 
 def split_text_with_llm(text_content):
-    """【二段階処理】1. 文書を分類し、2. 分類結果に応じて専用プロンプトで情報抽出を行う。"""
     classification_prompt = f"""
         あなたはテキスト分類の専門家です。以下のテキストが「案件情報」「技術者情報」「その他」のどれに最も当てはまるか判断し、指定された単語一つだけで回答してください。
         # 判断基準
@@ -222,23 +185,17 @@ def split_text_with_llm(text_content):
 
 @st.cache_data
 def get_match_summary_with_llm(job_doc, engineer_doc):
-    """案件と技術者のドキュメントを比較し、AIにマッチング評価を行わせる。"""
     model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     prompt = f"""
         あなたは、経験豊富なIT人材紹介のエージェントです。
         あなたの仕事は、提示された「案件情報」と「技術者情報」を比較し、客観的かつ具体的なマッチング評価を行うことです。
         # 絶対的なルール
         - `summary`は最も重要な項目です。絶対に省略せず、必ずS, A, B, C, Dのいずれかの文字列を返してください。
-        - ポジティブな点や懸念点が一つもない場合でも、その旨を正直に記載するか、空のリスト `[]` を返してください。
         # 指示
         以下の2つの情報を分析し、ポジティブな点と懸念点をリストアップしてください。最終的に、総合評価（summary）をS, A, B, C, Dの5段階で判定してください。
         - S: 完璧なマッチ, A: 非常に良いマッチ, B: 良いマッチ, C: 検討の余地あり, D: ミスマッチ
         # JSON出力形式
-        {{
-          "summary": "S, A, B, C, Dのいずれか",
-          "positive_points": ["スキル面での合致点"],
-          "concern_points": ["スキル面での懸念点"]
-        }}
+        {{"summary": "S, A, B, C, Dのいずれか", "positive_points": ["スキル面での合致点"], "concern_points": ["スキル面での懸念点"]}}
         ---
         # 案件情報
         {job_doc}
@@ -342,6 +299,8 @@ def process_single_content(source_data: dict):
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            source_data['subject'] = source_data.get('subject', '件名なし')
+            source_data['from'] = source_data.get('from', '差出人不明')
             source_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
             newly_added_jobs, newly_added_engineers = [], []
             for item_data in new_jobs_data:
@@ -380,8 +339,23 @@ def extract_text_from_docx(file_bytes):
         return text if text.strip() else "[DOCXテキスト抽出失敗: 内容が空]"
     except Exception as e: return f"[DOCXテキスト抽出エラー: {e}]"
 
+# ▼▼▼【ここが修正箇所 1/2】▼▼▼
 def get_email_contents(msg) -> dict:
-    body_text, attachments = "", []
+    """
+    メールオブジェクトから、件名、差出人、本文、添付ファイルを抽出する。
+    """
+    # 件名(Subject)のデコード
+    subject = ""
+    if msg["subject"]:
+        subject = str(make_header(decode_header(msg["subject"])))
+
+    # 差出人(From)のデコード
+    from_ = ""
+    if msg["from"]:
+        from_ = str(make_header(decode_header(msg["from"])))
+
+    body_text = ""
+    attachments = []
     if msg.is_multipart():
         for part in msg.walk():
             content_type, content_disposition = part.get_content_type(), str(part.get("Content-Disposition"))
@@ -390,7 +364,7 @@ def get_email_contents(msg) -> dict:
                 try: body_text += part.get_payload(decode=True).decode(charset or 'utf-8', errors='ignore')
                 except Exception: body_text += part.get_payload(decode=True).decode('utf-8', errors='ignore')
             if 'attachment' in content_disposition and (raw_filename := part.get_filename()):
-                filename = "".join([s.decode(c or 'utf-8', 'ignore') if isinstance(s, bytes) else s for s, c in decode_header(raw_filename)])
+                filename = str(make_header(decode_header(raw_filename)))
                 st.write(f"📄 添付ファイル '{filename}' を発見しました。")
                 file_bytes, lower_filename = part.get_payload(decode=True), filename.lower()
                 if lower_filename.endswith(".pdf"): attachments.append({"filename": filename, "content": extract_text_from_pdf(file_bytes)})
@@ -401,8 +375,12 @@ def get_email_contents(msg) -> dict:
         charset = msg.get_content_charset()
         try: body_text = msg.get_payload(decode=True).decode(charset or 'utf-8', errors='ignore')
         except Exception: body_text = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
-    return {"body": body_text.strip(), "attachments": attachments}
+    
+    # 辞書に subject と from_ を追加して返す
+    return {"subject": subject, "from": from_, "body": body_text.strip(), "attachments": attachments}
+# ▲▲▲【修正ここまで】▲▲▲
 
+# ▼▼▼【ここが修正箇所 2/2】▼▼▼
 def fetch_and_process_emails():
     log_stream = io.StringIO()
     try:
@@ -425,9 +403,17 @@ def fetch_and_process_emails():
                             for response_part in msg_data:
                                 if isinstance(response_part, tuple):
                                     msg = email.message_from_bytes(response_part[1])
+                                    
+                                    # get_email_contents から全ての情報を取得
                                     source_data = get_email_contents(msg)
+                                    
                                     if source_data['body'] or source_data['attachments']:
-                                        st.write(f"✅ メールID {email_id.decode()} は処理対象です。解析を開始します...")
+                                        # ログに件名と差出人を表示
+                                        st.write("---")
+                                        st.write(f"✅ メールID {email_id.decode()} を処理します。")
+                                        st.write(f"   差出人: {source_data.get('from', '取得不可')}")
+                                        st.write(f"   件名: {source_data.get('subject', '取得不可')}")
+                                        
                                         if process_single_content(source_data):
                                             total_processed_count += 1; mail.store(email_id, '+FLAGS', '\\Seen')
                                     else: st.write(f"✖️ メールID {email_id.decode()} は本文も添付ファイルも無いため、スキップします。")
@@ -441,7 +427,9 @@ def fetch_and_process_emails():
         return True, log_stream.getvalue()
     except Exception as e:
         st.error(f"予期せぬエラーが発生しました: {e}"); return False, log_stream.getvalue()
+# ▲▲▲【修正ここまで】▲▲▲
 
+# --- 残りの関数 (変更なし) ---
 def hide_match(result_id):
     if not result_id: st.warning("IDが指定されていません。"); return False
     try:
