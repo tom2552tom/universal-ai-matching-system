@@ -103,11 +103,8 @@ if keyword_filter:
     keyword_param = f'%{keyword_filter}%'
     params.extend([keyword_param] * 7)
 
-# ▼▼▼【ここが修正箇所】▼▼▼
-# エイリアスではなく、元のカラム名 `r.is_hidden` を使用するように修正
 if not show_hidden_filter:
     where_clauses.append("((r.is_hidden = 0 OR r.is_hidden IS NULL) AND j.is_hidden = 0 AND e.is_hidden = 0)")
-# ▲▲▲【修正ここまで】▲▲▲
 
 if where_clauses:
     query += " WHERE " + " AND ".join(where_clauses)
@@ -184,10 +181,20 @@ else:
 
         # --- マッチング結果の表示ループ ---
         for res in paginated_results:
-            is_archived = res['match_is_hidden'] or res['job_is_hidden'] or res['engineer_is_hidden']
-            container_style = "opacity: 0.5; background-color: #262730;" if is_archived else ""
-            st.markdown(f"<div style='{container_style} border: 1px solid #333; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)
             
+            is_archived = res['match_is_hidden'] or res['job_is_hidden'] or res['engineer_is_hidden']
+            
+            # ▼▼▼【ここが修正箇所】▼▼▼
+            # スタイル定義を修正。margin-bottom を追加
+            container_style = "border: 1px solid #333; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;"
+            if is_archived:
+                container_style += " opacity: 0.5; background-color: #262730;"
+            
+            # st.container の代わりに st.markdown を使ってdivを生成し、スタイルを適用
+            st.markdown(f"<div style='{container_style}'>", unsafe_allow_html=True)
+            # ▲▲▲【修正ここまで】▲▲▲
+            
+            # コンテナの中身は変更なし
             header_col1, header_col2 = st.columns([5, 2])
             with header_col1:
                 created_at_dt = res['created_at']
