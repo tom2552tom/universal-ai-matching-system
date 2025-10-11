@@ -9,15 +9,15 @@ import time
 try:
     from backend import get_evaluation_html
 except ImportError:
-    def get_evaluation_html(grade, font_size='2em'): # 簡易版を定義
+    # インポート失敗時のフォールバック
+    def get_evaluation_html(grade, font_size='2em'):
         if not grade: return ""
         return f"<p style='font-size:{font_size}; text-align:center;'>{grade}</p>"
-
 
 st.set_page_config(page_title="技術者詳細", layout="wide")
 
 # --- 表示用のカスタムCSS ---
-custom_css = """
+st.markdown("""
 <style>
     .text-container {
         border: 1px solid #333; padding: 15px; border-radius: 5px; background-color: #1a1a1a;
@@ -25,32 +25,37 @@ custom_css = """
         word-wrap: break-word; font-family: monospace; font-size: 0.9em;
     }
 </style>
-"""
-st.markdown(custom_css, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 # --- ID取得 ---
 selected_id = st.session_state.get('selected_engineer_id', None)
 if selected_id is None:
-    st.error("技術者が選択されていません。ダッシュボードまたは技術者管理ページから技術者を選択してください。")
+    st.error("技術者が選択されていません。技術者管理ページから技術者を選択してください。")
     if st.button("技術者管理に戻る"): st.switch_page("pages/3_技術者管理.py")
     st.stop()
 
 # --- DBから全データを取得 ---
 conn = be.get_db_connection()
+cursor = conn.cursor()
+
+# ▼▼▼【ここが修正箇所】▼▼▼
+# プレースホルダを %s に変更し、executeとfetchoneを分離
 query = """
 SELECT 
     e.id, e.name, e.document, e.source_data_json, e.assigned_user_id, e.is_hidden,
     u.username as assigned_username
 FROM engineers e
 LEFT JOIN users u ON e.assigned_user_id = u.id
-WHERE e.id = ?
+WHERE e.id = %s
 """
-engineer_data = conn.execute(query, (selected_id,)).fetchone()
+cursor.execute(query, (selected_id,))
+engineer_data = cursor.fetchone()
+# ▲▲▲【修正ここまで】▲▲▲
 
 if engineer_data:
     # --- タイトル表示 ---
     is_currently_hidden = engineer_data['is_hidden'] == 1
-    engineer_name = engineer_data['name'] if engineer_data['name'] else f"技術者 (ID: {selected_id})"
+    engineer_name = engineer_data['name'] or f"技術者 (ID: {selected_id})"
     
     title_display = f"👨‍💻 {engineer_name}"
     if is_currently_hidden:
@@ -68,8 +73,7 @@ if engineer_data:
             if st.button("氏名を更新", use_container_width=True):
                 if be.update_engineer_name(selected_id, new_engineer_name):
                     st.success("氏名を更新しました。")
-                    time.sleep(1)
-                    st.rerun()
+                    time.sleep(1); st.rerun()
                 else:
                     st.error("氏名の更新に失敗しました。")
         
@@ -87,8 +91,7 @@ if engineer_data:
                 selected_user_id = user_options[selected_username]
                 if be.assign_user_to_engineer(selected_id, selected_user_id):
                     st.success(f"担当者を「{selected_username}」に更新しました。")
-                    time.sleep(1)
-                    st.rerun()
+                    time.sleep(1); st.rerun()
                 else: 
                     st.error("担当者の更新に失敗しました。")
     st.divider()
@@ -121,72 +124,42 @@ if engineer_data:
     if source_json_str:
         try:
             source_data = json.loads(source_json_str)
-
-            # ▼▼▼【ここからが修正箇所】▼▼▼
-            
-            # --- テキストの統合 ---
             initial_text_parts = [source_data.get("body", "")]
             attachments = source_data.get("attachments", [])
             if attachments:
                 for att in attachments:
                     filename = att.get("filename", "名称不明")
-                    content = att.get("content", "") # 内容がない場合は空文字
-                    if content: # 内容がある場合のみ追加
+                    content = att.get("content", "")
+                    if content:
                         initial_text_parts.append(f"\n\n--- 添付ファイル: {filename} ---\n{content}")
             full_source_text = "".join(initial_text_parts)
 
-            # --- 統合されたテキストエリア ---
             st.markdown("メール本文と添付ファイルの内容が統合されています。スキル情報の追加や修正はこちらで行ってください。")
             edited_source_text = st.text_area(
-                "情報ソースを編集",
-                value=full_source_text,
-                height=600, # 高さを大きくする
-                label_visibility="collapsed",
-                key=f"eng_source_editor_{selected_id}"
+                "情報ソースを編集", value=full_source_text, height=600,
+                label_visibility="collapsed", key=f"eng_source_editor_{selected_id}"
             )
-            #st.info("スキル等の変更・追加などを行なった場合、AI再評価＋再マッチングを行うことで案件がヒットすることがあります。")
-            st.warning("アピールしたいポイント、スキルなど、ここで追加してAIに再評価させることで案件がマッチすることがあります。")
+            st.warning("アピールしたいポイントやスキルなどを追加・修正し、「情報ソースを更新する」ボタンを押した後、「AI再評価」を実行することで、新たな案件がマッチする可能性があります。")
 
             if st.button("情報ソースを更新する", type="primary"):
-                # 編集されたテキスト全体を新しい「本文」とする
                 source_data['body'] = edited_source_text
-                
-                # 添付ファイルのテキスト内容を空にして、再評価時に重複しないようにする
                 if 'attachments' in source_data:
                     for att in source_data['attachments']:
-                        if 'content' in att:
-                            att['content'] = '' # テキスト内容をクリア
+                        if 'content' in att: att['content'] = ''
                 
                 new_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
                 if be.update_engineer_source_json(selected_id, new_json_str):
-                    success_message = st.success("情報ソースを更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。")
-                    time.sleep(3)
-                    success_message.empty()
-                    st.rerun()
+                    st.success("情報ソースを更新しました。下の「AI再評価」ボタンを押して、変更をマッチングに反映させてください。")
+                    time.sleep(2); st.rerun()
                 else:
                     st.error("データベースの更新に失敗しました。")
 
             st.divider()
 
-            # --- 添付ファイルのダウンロードセクション ---
             if attachments:
                 st.subheader("原本ファイルのダウンロード")
-                for i, att in enumerate(attachments):
-                    filename = att.get("filename", "名称不明のファイル")
-                    content_b64 = att.get("content_b64", "")
-                    if content_b64:
-                        try:
-                            file_bytes = base64.b64decode(content_b64)
-                            st.download_button(
-                                label=f"📄 {filename}",
-                                data=file_bytes,
-                                file_name=filename,
-                                key=f"att_dl_btn_{selected_id}_{i}"
-                            )
-                        except Exception as e:
-                            st.warning(f"ファイル「{filename}」のダウンロード準備に失敗しました: {e}")
-                st.divider()
-            # ▲▲▲【修正箇所はここまで】▲▲▲
+                # content_b64 はメール処理時に保存されていないため、この機能は現状では動作しない
+                st.info("この機能は現在実装されていません。")
 
         except json.JSONDecodeError:
             st.error("元のデータの解析に失敗しました。"); st.text(source_json_str)
@@ -196,22 +169,22 @@ if engineer_data:
     # --- マッチング済みの案件一覧 ---
     st.header("🤝 マッチング済みの案件一覧")
     
+    # ▼▼▼【ここも修正箇所】▼▼▼
+    # プレースホルダを %s に変更し、executeとfetchallを分離
     matched_jobs_query = """
         SELECT 
-            j.id as job_id, 
-            j.project_name, 
-            j.document, 
-            r.score,
-            r.id as match_id,
-            r.grade
+            j.id as job_id, j.project_name, j.document, 
+            r.score, r.id as match_id, r.grade
         FROM matching_results r
         JOIN jobs j ON r.job_id = j.id
-        WHERE r.engineer_id = ? 
+        WHERE r.engineer_id = %s 
           AND j.is_hidden = 0
           AND r.is_hidden = 0
         ORDER BY r.score DESC
     """
-    matched_jobs = conn.execute(matched_jobs_query, (selected_id,)).fetchall()
+    cursor.execute(matched_jobs_query, (selected_id,))
+    matched_jobs = cursor.fetchall()
+    # ▲▲▲【修正ここまで】▲▲▲
 
     if not matched_jobs:
         st.info("この技術者にマッチング済みの案件はありません。")
@@ -221,14 +194,13 @@ if engineer_data:
             with st.container(border=True):
                 col1, col2 = st.columns([4, 1])
                 with col1:
-                    project_name = job['project_name'] if job['project_name'] else f"案件 (ID: {job['job_id']})"
+                    project_name = job['project_name'] or f"案件 (ID: {job['job_id']})"
                     st.markdown(f"##### {project_name}")
                     job_doc_parts = job['document'].split('\n---\n', 1)
                     job_main_doc = job_doc_parts[1] if len(job_doc_parts) > 1 else job['document']
                     st.caption(job_main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
                 with col2:
                     st.markdown(get_evaluation_html(job['grade'], font_size='2em'), unsafe_allow_html=True)
-                    
                     if st.button("詳細を見る", key=f"matched_job_detail_{job['match_id']}", use_container_width=True):
                         st.session_state['selected_match_id'] = job['match_id']
                         st.switch_page("pages/7_マッチング詳細.py")
@@ -239,21 +211,18 @@ else:
 conn.close()
 st.divider()
 
-
 st.header("⚙️ AI再評価＋マッチング")
 if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
     with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
-        log_container = st.container(height=300)
+        log_container = st.container(height=300, border=True)
         log_container.write(f"技術者ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
         
-        import io
-        import contextlib
-        
+        import io, contextlib
         log_stream = io.StringIO()
         with contextlib.redirect_stdout(log_stream):
             success = be.re_evaluate_and_match_single_engineer(selected_id)
         
-        log_container.text(log_stream.getvalue())
+        log_container.code(log_stream.getvalue())
 
         if success:
             status.update(label="処理が完了しました！", state="complete")
@@ -265,7 +234,7 @@ if st.button("🤖 AI再評価と再マッチングを実行する", type="prima
 
 st.divider()
 
-
 if st.button("一覧に戻る"):
     if 'selected_engineer_id' in st.session_state: del st.session_state['selected_engineer_id']
     st.switch_page("pages/3_技術者管理.py")
+
