@@ -4,9 +4,7 @@ from backend import (
     init_database, load_embedding_model, get_db_connection,
     hide_match, load_app_config, get_all_users
 )
-import os # ★★★ エラー修正: osモジュールをインポート ★★★
-
-
+import os
 
 # --- ヘルパー関数 (変更なし) ---
 def get_evaluation_html(grade, font_size='2.5em'):
@@ -37,24 +35,12 @@ config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
 
-
-# ▼▼▼【ここからが変更点1】▼▼▼
-# --- サイドバーのロゴ表示 ---
-#st.sidebar.image("img/UniversalAI_logo.png", width=200) # widthを少し調整
-#st.sidebar.divider()
-# ▲▲▲【変更点1ここまで】▲▲▲
-
-
-# ▼▼▼【変更点2: メイン画面のロゴ表示を削除】▼▼▼
-# st.image("img/UniversalAI_logo.png", width=240) # この行を削除またはコメントアウト
-# ▲▲▲【変更点2ここまで】▲▲▲
-
+st.sidebar.image("img/UniversalAI_logo.png", width=200)
+st.sidebar.divider()
 
 sales_staff_notice = """
 <div style="background-color: #ffcccc; color: #cc0000; padding: 10px; border-radius: 5px; border: 2px solid #cc0000; font-weight: bold; text-align: center; margin-bottom: 20px;">
-    🚨 営業スタッフへ: メール読み込み後、案件管理、技術者管理メニューより、担当をアサインしてください。<br>
-    マッチング不要な案件、技術者はアーカイブするようにしてください。マッチング処理から除外されます。<br>
-    特にS, A, B評価の技術者は優先的にアプローチしましょう！
+    🚨 営業スタッフへ: ...
 </div>
 """
 if sales_staff_notice:
@@ -63,29 +49,26 @@ if sales_staff_notice:
 st.divider()
 
 # --- ページング設定の初期化 ---
-if 'current_page' not in st.session_state:
-    st.session_state.current_page = 1
-if 'items_per_page' not in st.session_state:
-    st.session_state.items_per_page = 10 
+if 'current_page' not in st.session_state: st.session_state.current_page = 1
+if 'items_per_page' not in st.session_state: st.session_state.items_per_page = 10 
 
-# --- サイドバーフィルター (変更なし) ---
+# --- サイドバーフィルター ---
 st.sidebar.header("フィルター")
 all_users = get_all_users()
 user_names = [user['username'] for user in all_users]
 assignee_options = ["すべて"] + user_names 
 job_assignee_filter = st.sidebar.selectbox("案件担当者", options=assignee_options, key="job_assignee_filter")
 engineer_assignee_filter = st.sidebar.selectbox("技術者担当者", options=assignee_options, key="engineer_assignee_filter")
-
-
+st.sidebar.divider()
 status_options = [
     "新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", 
     "採用", "見送り（自社都合）", "見送り（クライアント都合）", "見送り（技術者都合）", "クローズ"
 ]
 selected_statuses = st.sidebar.multiselect("進捗ステータス", options=status_options, placeholder="ステータスを選択して絞り込み")
-#st.sidebar.divider()
+st.sidebar.divider()
 grade_options = ['S','A', 'B', 'C', 'D', 'E']
 selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, placeholder="評価を選択して絞り込み")
-#st.sidebar.divider()
+st.sidebar.divider()
 keyword_filter = st.sidebar.text_input("キーワード検索 (担当者名も可)")
 st.sidebar.divider()
 st.sidebar.header("ルールフィルター")
@@ -94,39 +77,51 @@ show_hidden_filter = st.sidebar.checkbox("非表示も表示する", value=False
 
 st.header("最新マッチング結果一覧")
 
-# --- DBからフィルタリングされた結果を取得 (変更なし) ---
-conn = get_db_connection()
-query = '''
-    SELECT 
-        r.id as res_id, r.job_id, j.document as job_doc, j.project_name, j.is_hidden as job_is_hidden,
-        r.engineer_id, e.document as eng_doc, e.name as engineer_name, e.is_hidden as engineer_is_hidden,
-        r.score, r.created_at, r.is_hidden, r.grade, r.status,
-        job_user.username as job_assignee, eng_user.username as engineer_assignee
-    FROM matching_results r
-    JOIN jobs j ON r.job_id = j.id
-    JOIN engineers e ON r.engineer_id = e.id
-    LEFT JOIN users job_user ON j.assigned_user_id = job_user.id
-    LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
-'''
-params = []; where_clauses = [] 
-if job_assignee_filter != "すべて": where_clauses.append("job_user.username = ?"); params.append(job_assignee_filter)
-if engineer_assignee_filter != "すべて": where_clauses.append("eng_user.username = ?"); params.append(engineer_assignee_filter)
-if selected_statuses:
-    placeholders = ','.join('?' for _ in selected_statuses)
-    where_clauses.append(f"r.status IN ({placeholders})"); params.extend(selected_statuses)
-if selected_grades:
-    placeholders = ','.join('?' for _ in selected_grades)
-    where_clauses.append(f"r.grade IN ({placeholders})"); params.extend(selected_grades)
-if keyword_filter: 
-    where_clauses.append("(j.document LIKE ? OR e.document LIKE ? OR j.project_name LIKE ? OR e.name LIKE ? OR job_user.username LIKE ? OR eng_user.username LIKE ? OR r.status LIKE ?)")
-    params.extend([f'%{keyword_filter}%']*7)
-if not show_hidden_filter: where_clauses.append("((r.is_hidden = 0 OR r.is_hidden IS NULL) AND j.is_hidden = 0 AND e.is_hidden = 0)")
-if where_clauses: query += " WHERE " + " AND ".join(where_clauses)
-query += " ORDER BY r.created_at DESC, r.score DESC"
-results = conn.execute(query, tuple(params)).fetchall()
-conn.close()
+# ▼▼▼【ここからが修正箇所】▼▼▼
+# --- DBからフィルタリングされた結果を取得 ---
+with get_db_connection() as conn:
+    with conn.cursor() as cursor:
+        query = '''
+            SELECT 
+                r.id as res_id, r.job_id, j.document as job_doc, j.project_name, j.is_hidden as job_is_hidden,
+                r.engineer_id, e.document as eng_doc, e.name as engineer_name, e.is_hidden as engineer_is_hidden,
+                r.score, r.created_at, r.is_hidden, r.grade, r.status,
+                job_user.username as job_assignee, eng_user.username as engineer_assignee
+            FROM matching_results r
+            JOIN jobs j ON r.job_id = j.id
+            JOIN engineers e ON r.engineer_id = e.id
+            LEFT JOIN users job_user ON j.assigned_user_id = job_user.id
+            LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
+        '''
+        params = []; where_clauses = [] 
+        
+        # プレースホルダーを %s に変更
+        if job_assignee_filter != "すべて": where_clauses.append("job_user.username = %s"); params.append(job_assignee_filter)
+        if engineer_assignee_filter != "すべて": where_clauses.append("eng_user.username = %s"); params.append(engineer_assignee_filter)
+        
+        if selected_statuses:
+            placeholders = ','.join(['%s'] * len(selected_statuses))
+            where_clauses.append(f"r.status IN ({placeholders})"); params.extend(selected_statuses)
+        
+        if selected_grades:
+            placeholders = ','.join(['%s'] * len(selected_grades))
+            where_clauses.append(f"r.grade IN ({placeholders})"); params.extend(selected_grades)
+        
+        if keyword_filter: 
+            where_clauses.append("(j.document LIKE %s OR e.document LIKE %s OR j.project_name LIKE %s OR e.name LIKE %s OR job_user.username LIKE %s OR eng_user.username LIKE %s OR r.status LIKE %s)")
+            params.extend([f'%{keyword_filter}%']*7)
+        
+        if not show_hidden_filter: where_clauses.append("((r.is_hidden = 0 OR r.is_hidden IS NULL) AND j.is_hidden = 0 AND e.is_hidden = 0)")
+        
+        if where_clauses: query += " WHERE " + " AND ".join(where_clauses)
+        
+        query += " ORDER BY r.created_at DESC, r.score DESC"
+        
+        cursor.execute(query, tuple(params))
+        results = cursor.fetchall()
+# ▲▲▲【修正箇所ここまで】▲▲▲
 
-# --- 結果のフィルタリング (変更なし) ---
+# --- 結果のフィルタリングと表示 (以降は変更なし) ---
 if not results:
     st.info("フィルタリング条件に合致するマッチング結果はありませんでした。")
 else:
@@ -142,35 +137,24 @@ else:
         st.warning("AIが提案したマッチングはありましたが、ルールフィルターによってすべて除外されました。")
     else:
         total_items = len(results_to_display)
-
-        # ▼▼▼【ここからが修正箇所】▼▼▼
-        # --- ヘッダーと表示件数設定 ---
+        
         header_cols = st.columns([3, 1])
         with header_cols[0]:
             st.write(f"**表示中のマッチング結果: {total_items}件**")
         with header_cols[1]:
             items_per_page_options = [5, 10, 20, 50]
-            
-            # selectboxが返す値を直接変数に受け取る
             new_items_per_page = st.selectbox(
-                "表示件数",
-                options=items_per_page_options,
+                "表示件数", options=items_per_page_options,
                 index=items_per_page_options.index(st.session_state.items_per_page),
-                key="items_per_page_selector",
-                label_visibility="collapsed"
+                key="items_per_page_selector", label_visibility="collapsed"
             )
-            
-            # 値が変更されたかチェック
             if new_items_per_page != st.session_state.items_per_page:
                 st.session_state.items_per_page = new_items_per_page
-                st.session_state.current_page = 1 # 1ページ目に戻す
-                st.rerun() # 即座に再実行して変更を反映
+                st.session_state.current_page = 1
+                st.rerun()
 
-        # 正しい items_per_page を使って総ページ数を計算
         total_pages = (total_items + st.session_state.items_per_page - 1) // st.session_state.items_per_page
-        # ▲▲▲【修正箇所ここまで】▲▲▲
-
-        # ページネーションコントロール (元のUI)
+        
         if total_pages > 1:
             st.markdown("---")
             pagination_cols = st.columns([1, 2, 1])
@@ -190,7 +174,6 @@ else:
         end_index = start_index + st.session_state.items_per_page
         paginated_results = results_to_display[start_index:end_index]
 
-        # --- マッチング結果の表示ループ (変更なし) ---
         for res in paginated_results:
             with st.container(border=True):
                 header_col1, header_col2 = st.columns([5, 2])
