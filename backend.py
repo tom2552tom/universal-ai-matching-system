@@ -98,23 +98,17 @@ def init_database():
     finally:
         if conn: conn.close()
 
-# ▼▼▼【ここが修正箇所】▼▼▼
 def get_extraction_prompt(doc_type, text_content):
-    """文書タイプに応じて、情報抽出用の専用プロンプトを生成する。"""
     if doc_type == 'engineer':
-        # --- 技術者情報抽出に特化したプロンプト ---
         return f"""
             あなたは、IT人材の「スキルシート」や「職務経歴書」を読み解く専門家です。
             あなたの仕事は、与えられたテキストから**単一の技術者情報**を抽出し、指定されたJSON形式で整理することです。
-
             # 絶対的なルール
             - 出力は、指定されたJSON形式の文字列のみとし、前後に解説や```json ```のようなコードブロックの囲みを含めないでください。
-
             # 指示
             - テキスト全体は、一人の技術者の情報です。複数の業務経歴が含まれていても、それらはすべてこの一人の技術者の経歴として要約してください。
             - `document`フィールドには、技術者のスキル、経験、自己PRなどを総合的に要約した、検索しやすい自然な文章を作成してください。
             - `document`の文章の先頭には、必ず技術者名を含めてください。例：「実務経験15年のTK氏。Java(SpringBoot)を主軸に...」
-
             # 具体例
             ## 入力テキスト:
             氏名: 山田 太郎
@@ -123,61 +117,29 @@ def get_extraction_prompt(doc_type, text_content):
             自己PR: Webアプリ開発が得意です。
             ## 出力JSON:
             {{"engineers": [{{"name": "山田 太郎", "document": "35歳の山田太郎氏。Java, Springを用いたWebアプリ開発が得意。", "main_skills": "Java, Spring"}}]}}
-
             # JSON出力形式
-            {{
-              "engineers": [
-                {{
-                  "name": "技術者の氏名を抽出",
-                  "document": "技術者のスキルや経歴の詳細を、検索しやすいように要約",
-                  "nationality": "国籍を抽出",
-                  "availability_date": "稼働可能日（例: 即日、2025年12月上旬など）を抽出",
-                  "desired_location": "希望勤務地を抽出",
-                  "desired_salary": "希望単価を抽出",
-                  "main_skills": "主要なプログラミング言語、フレームワーク、DBなどのスキルをカンマ区切りで抽出"
-                }}
-              ]
-            }}
-
+            {{"engineers": [{{"name": "技術者の氏名を抽出", "document": "技術者のスキルや経歴の詳細を、検索しやすいように要約", "nationality": "国籍を抽出", "availability_date": "稼働可能日を抽出", "desired_location": "希望勤務地を抽出", "desired_salary": "希望単価を抽出", "main_skills": "主要なスキルをカンマ区切りで抽出"}}]}}
             # 本番: 以下のスキルシートから情報を抽出してください
             ---
             {text_content}
         """
     elif doc_type == 'job':
-        # --- 案件情報抽出に特化したプロンプト ---
         return f"""
             あなたは、IT業界の「案件定義書」を読み解く専門家です。
             あなたの仕事は、与えられたテキストから**案件情報**を抽出し、指定されたJSON形式で整理することです。
             テキスト内に複数の案件情報が含まれている場合は、それぞれを個別のオブジェクトとしてリストにしてください。
-
             # 絶対的なルール
             - 出力は、指定されたJSON形式の文字列のみとし、前後に解説や```json ```のようなコードブロックの囲みを含めないでください。
-
             # 指示
             - `document`フィールドには、案件のスキルや業務内容の詳細を、後で検索しやすいように自然な文章で要約してください。
             - `document`の文章の先頭には、必ずプロジェクト名を含めてください。例：「社内SEプロジェクトの増員案件。設計、テスト...」
-
             # JSON出力形式
-            {{
-              "jobs": [
-                {{
-                  "project_name": "案件名を抽出",
-                  "document": "案件のスキルや業務内容の詳細を、検索しやすいように要約",
-                  "nationality_requirement": "国籍要件（例: 外国籍不可、日本語ネイティブなど）を抽出",
-                  "start_date": "開始時期（例: 即日、2025年11月〜など）を抽出",
-                  "location": "勤務地（例: フルリモート、渋谷など）を抽出",
-                  "unit_price": "単価や予算（例: 〜80万円/月、スキル見合いなど）を抽出",
-                  "required_skills": "必須スキルや歓迎スキルをカンマ区切りで抽出"
-                }}
-              ]
-            }}
-
+            {{"jobs": [{{"project_name": "案件名を抽出", "document": "案件のスキルや業務内容の詳細を、検索しやすいように要約", "nationality_requirement": "国籍要件を抽出", "start_date": "開始時期を抽出", "location": "勤務地を抽出", "unit_price": "単価や予算を抽出", "required_skills": "必須スキルや歓迎スキルをカンマ区切りで抽出"}}]}}
             # 本番: 以下の案件情報から情報を抽出してください
             ---
             {text_content}
         """
     return ""
-# ▲▲▲【修正ここまで】▲▲▲
 
 def split_text_with_llm(text_content):
     classification_prompt = f"""
@@ -217,13 +179,10 @@ def split_text_with_llm(text_content):
         with st.spinner("AIが情報を構造化中..."):
             response = model.generate_content(extraction_prompt, generation_config=generation_config, safety_settings=safety_settings)
         raw_text = response.text
-        # JSON部分のみを抽出するロジックをより堅牢にする
         try:
-            # 最も一般的なケース: ```json ... ``` で囲まれている
             json_str = raw_text.split('```json\n')[1].split('\n```')[0]
             parsed_json = json.loads(json_str)
         except (IndexError, json.JSONDecodeError):
-             # 上記が失敗した場合、最初と最後の波括弧で囲まれた部分を抽出
             start_index = raw_text.find('{'); end_index = raw_text.rfind('}')
             if start_index != -1 and end_index != -1 and start_index < end_index:
                 json_str = raw_text[start_index : end_index + 1]
@@ -345,6 +304,7 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
         else:
             st.write(f"  - 候補: 『{candidate_name}』 -> LLM評価失敗のためスキップ")
 
+# ▼▼▼【ここが修正箇所】▼▼▼
 def process_single_content(source_data: dict):
     if not source_data: st.warning("処理するデータが空です。"); return False
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")]
@@ -361,14 +321,20 @@ def process_single_content(source_data: dict):
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            
+            # --- JSON保存用の処理 ---
             received_at_dt = source_data.get('received_at')
             json_data_to_store = source_data.copy()
             if isinstance(json_data_to_store.get('received_at'), datetime):
                 json_data_to_store['received_at'] = json_data_to_store['received_at'].isoformat()
-            json_data_to_store.pop('body', None)
-            json_data_to_store.pop('attachments', None)
+            
+            # 本文と添付ファイル内容もJSONに含めるように修正
+            # json_data_to_store.pop('body', None) # この行をコメントアウト
+            # json_data_to_store.pop('attachments', None) # この行をコメントアウト
+            
             source_json_str = json.dumps(json_data_to_store, ensure_ascii=False, indent=2)
-
+            
+            # --- DB登録処理 ---
             newly_added_jobs, newly_added_engineers = [], []
             
             for item_data in new_jobs_data:
@@ -376,7 +342,8 @@ def process_single_content(source_data: dict):
                 project_name = item_data.get("project_name", "名称未定の案件")
                 meta_info = _build_meta_info_string('job', item_data)
                 full_document = meta_info + doc
-                cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (project_name, full_document, source_json_str, now_str, received_at_dt))
+                cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
+                               (project_name, full_document, source_json_str, now_str, received_at_dt))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_jobs.append(item_data)
             
             for item_data in new_engineers_data:
@@ -384,7 +351,8 @@ def process_single_content(source_data: dict):
                 engineer_name = item_data.get("name", "名称不明の技術者")
                 meta_info = _build_meta_info_string('engineer', item_data)
                 full_document = meta_info + doc
-                cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (engineer_name, full_document, source_json_str, now_str, received_at_dt))
+                cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
+                               (engineer_name, full_document, source_json_str, now_str, received_at_dt))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_engineers.append(item_data)
             
             st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
@@ -398,6 +366,7 @@ def process_single_content(source_data: dict):
             for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', cursor, now_str)
         conn.commit()
     return True
+# ▲▲▲【修正ここまで】▲▲▲
 
 def extract_text_from_pdf(file_bytes):
     try:
