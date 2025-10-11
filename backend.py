@@ -141,13 +141,14 @@ def get_extraction_prompt(doc_type, text_content):
         """
     return ""
 
+# ▼▼▼【ここが修正箇所】▼▼▼
 def split_text_with_llm(text_content):
+    """【二段階処理】1. 文書を分類し、2. 分類結果に応じて専用プロンプトで情報抽出を行う。"""
     classification_prompt = f"""
         あなたはテキスト分類の専門家です。以下のテキストが「案件情報」「技術者情報」「その他」のどれに最も当てはまるか判断し、指定された単語一つだけで回答してください。
         # 判断基準
         - 「スキルシート」「職務経歴書」「氏名」「年齢」といった単語が含まれていれば「技術者情報」の可能性が高い。
         - 「募集」「必須スキル」「歓迎スキル」「求める人物像」といった単語が含まれていれば「案件情報」の可能性が高い。
-        - 上記のどちらでもない場合は「その他」と判断してください。
         # 回答形式
         - `案件情報`
         - `技術者情報`
@@ -175,31 +176,47 @@ def split_text_with_llm(text_content):
 
     generation_config = {"response_mime_type": "application/json"}
     safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
+    
     try:
         with st.spinner("AIが情報を構造化中..."):
             response = model.generate_content(extraction_prompt, generation_config=generation_config, safety_settings=safety_settings)
+        
         raw_text = response.text
+        
+        # --- JSON抽出ロジックの強化 ---
         try:
-            json_str = raw_text.split('```json\n')[1].split('\n```')[0]
-            parsed_json = json.loads(json_str)
-        except (IndexError, json.JSONDecodeError):
-            start_index = raw_text.find('{'); end_index = raw_text.rfind('}')
-            if start_index != -1 and end_index != -1 and start_index < end_index:
-                json_str = raw_text[start_index : end_index + 1]
-                parsed_json = json.loads(json_str)
+            # 1. ```json ... ``` 形式のコードブロックを探す
+            if '```json' in raw_text:
+                json_str = raw_text.split('```json\n')[1].split('\n```')[0]
+            # 2. コードブロックがない場合、最初と最後の波括弧を探す
             else:
-                raise ValueError("有効なJSONブロックが見つかりません。")
+                start_index = raw_text.find('{')
+                end_index = raw_text.rfind('}')
+                if start_index != -1 and end_index != -1 and start_index < end_index:
+                    json_str = raw_text[start_index : end_index + 1]
+                else:
+                    # どちらも見つからない場合は、テキスト全体を試す
+                    json_str = raw_text
+            
+            parsed_json = json.loads(json_str)
+
+        except (IndexError, json.JSONDecodeError) as e:
+            # 上記の処理で失敗した場合は、エラーとして元のテキストを表示
+            st.error(f"LLMによる構造化に失敗しました: {e}")
+            st.code(raw_text, language='text')
+            return None
+        # --- 強化ロジックここまで ---
 
         if "技術者情報" in doc_type: parsed_json["jobs"] = []
         elif "案件情報" in doc_type: parsed_json["engineers"] = []
         return parsed_json
-    except (json.JSONDecodeError, ValueError) as e:
-        st.error(f"LLMによる構造化に失敗しました: {e}"); st.code(raw_text, language='text'); return None
+        
     except Exception as e:
-        st.error(f"LLMによる構造化に失敗しました: {e}");
+        st.error(f"LLMによる構造化処理中に予期せぬエラーが発生しました: {e}");
         try: st.code(response.text, language='text')
         except NameError: st.text("レスポンスの取得にも失敗しました。")
         return None
+# ▲▲▲【修正ここまで】▲▲▲
 
 @st.cache_data
 def get_match_summary_with_llm(job_doc, engineer_doc):
@@ -304,7 +321,6 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
         else:
             st.write(f"  - 候補: 『{candidate_name}』 -> LLM評価失敗のためスキップ")
 
-# ▼▼▼【ここが修正箇所】▼▼▼
 def process_single_content(source_data: dict):
     if not source_data: st.warning("処理するデータが空です。"); return False
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")]
@@ -321,20 +337,12 @@ def process_single_content(source_data: dict):
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
-            # --- JSON保存用の処理 ---
             received_at_dt = source_data.get('received_at')
             json_data_to_store = source_data.copy()
             if isinstance(json_data_to_store.get('received_at'), datetime):
                 json_data_to_store['received_at'] = json_data_to_store['received_at'].isoformat()
-            
-            # 本文と添付ファイル内容もJSONに含めるように修正
-            # json_data_to_store.pop('body', None) # この行をコメントアウト
-            # json_data_to_store.pop('attachments', None) # この行をコメントアウト
-            
             source_json_str = json.dumps(json_data_to_store, ensure_ascii=False, indent=2)
-            
-            # --- DB登録処理 ---
+
             newly_added_jobs, newly_added_engineers = [], []
             
             for item_data in new_jobs_data:
@@ -342,8 +350,7 @@ def process_single_content(source_data: dict):
                 project_name = item_data.get("project_name", "名称未定の案件")
                 meta_info = _build_meta_info_string('job', item_data)
                 full_document = meta_info + doc
-                cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
-                               (project_name, full_document, source_json_str, now_str, received_at_dt))
+                cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (project_name, full_document, source_json_str, now_str, received_at_dt))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_jobs.append(item_data)
             
             for item_data in new_engineers_data:
@@ -351,8 +358,7 @@ def process_single_content(source_data: dict):
                 engineer_name = item_data.get("name", "名称不明の技術者")
                 meta_info = _build_meta_info_string('engineer', item_data)
                 full_document = meta_info + doc
-                cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
-                               (engineer_name, full_document, source_json_str, now_str, received_at_dt))
+                cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (engineer_name, full_document, source_json_str, now_str, received_at_dt))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_engineers.append(item_data)
             
             st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
@@ -366,7 +372,6 @@ def process_single_content(source_data: dict):
             for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', cursor, now_str)
         conn.commit()
     return True
-# ▲▲▲【修正ここまで】▲▲▲
 
 def extract_text_from_pdf(file_bytes):
     try:
