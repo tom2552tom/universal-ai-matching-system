@@ -38,8 +38,6 @@ if selected_id is None:
 conn = be.get_db_connection()
 cursor = conn.cursor()
 
-# ▼▼▼【ここが修正箇所】▼▼▼
-# プレースホルダを %s に変更し、executeとfetchoneを分離
 query = """
 SELECT 
     e.id, e.name, e.document, e.source_data_json, e.assigned_user_id, e.is_hidden,
@@ -50,7 +48,6 @@ WHERE e.id = %s
 """
 cursor.execute(query, (selected_id,))
 engineer_data = cursor.fetchone()
-# ▲▲▲【修正ここまで】▲▲▲
 
 if engineer_data:
     # --- タイトル表示 ---
@@ -158,7 +155,6 @@ if engineer_data:
 
             if attachments:
                 st.subheader("原本ファイルのダウンロード")
-                # content_b64 はメール処理時に保存されていないため、この機能は現状では動作しない
                 st.info("この機能は現在実装されていません。")
 
         except json.JSONDecodeError:
@@ -169,8 +165,6 @@ if engineer_data:
     # --- マッチング済みの案件一覧 ---
     st.header("🤝 マッチング済みの案件一覧")
     
-    # ▼▼▼【ここも修正箇所】▼▼▼
-    # プレースホルダを %s に変更し、executeとfetchallを分離
     matched_jobs_query = """
         SELECT 
             j.id as job_id, j.project_name, j.document, 
@@ -184,7 +178,6 @@ if engineer_data:
     """
     cursor.execute(matched_jobs_query, (selected_id,))
     matched_jobs = cursor.fetchall()
-    # ▲▲▲【修正ここまで】▲▲▲
 
     if not matched_jobs:
         st.info("この技術者にマッチング済みの案件はありません。")
@@ -224,17 +217,20 @@ if st.button("🤖 AI再評価と再マッチングを実行する", type="prima
         
         log_container.code(log_stream.getvalue())
 
+        # ▼▼▼【ここが修正箇所】▼▼▼
         if success:
             status.update(label="処理が完了しました！", state="complete")
-            st.success("AIによる再評価と再マッチングが完了しました。ページをリロードして最新のマッチング結果を確認してください。")
+            st.success("AIによる再評価と再マッチングが完了しました。画面を自動で更新します。")
             st.balloons()
+            time.sleep(2) # メッセージを2秒間表示
+            st.rerun() # ページを自動でリフレッシュ
         else:
             status.update(label="処理に失敗しました", state="error")
             st.error("処理中にエラーが発生しました。詳細はログを確認してください。")
+        # ▲▲▲【修正ここまで】▲▲▲
 
 st.divider()
 
 if st.button("一覧に戻る"):
     if 'selected_engineer_id' in st.session_state: del st.session_state['selected_engineer_id']
     st.switch_page("pages/3_技術者管理.py")
-
