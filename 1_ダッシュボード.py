@@ -81,10 +81,10 @@ status_options = [
     "採用", "見送り（自社都合）", "見送り（クライアント都合）", "見送り（技術者都合）", "クローズ"
 ]
 selected_statuses = st.sidebar.multiselect("進捗ステータス", options=status_options, placeholder="ステータスを選択して絞り込み")
-#st.sidebar.divider()
+st.sidebar.divider()
 grade_options = ['S','A', 'B', 'C', 'D', 'E']
 selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, placeholder="評価を選択して絞り込み")
-#st.sidebar.divider()
+st.sidebar.divider()
 keyword_filter = st.sidebar.text_input("キーワード検索 (担当者名も可)")
 st.sidebar.divider()
 st.sidebar.header("ルールフィルター")

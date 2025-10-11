@@ -15,9 +15,6 @@ import contextlib
 import toml
 import fitz
 import docx
-import psycopg2
-from psycopg2.extras import DictCursor
-
 
 # --- 1. 初期設定と定数 ---
 try:
@@ -78,7 +75,27 @@ def load_app_config():
         return {"app": {"title": "Universal AI Agent (Error)"}}
     
 
+def load_app_config():
+    
+    #try:
+    #    with open("config.toml", "r", encoding="utf-8") as f: return toml.load(f)
+    #except FileNotFoundError: return {"app": {"title": "Universal AI Agent"}}
 
+    """
+    config.toml からアプリケーション設定を読み込みます。
+    messages セクションも読み込むように修正。
+    """
+    try:
+        with open("config.toml", "r", encoding="utf-8") as f: 
+            config_data = toml.load(f)
+            return config_data
+    except FileNotFoundError: 
+        # config.toml が見つからない場合のデフォルト値を拡張
+        return {
+            "app": {"title": "Universal AI Agent"},
+            "messages": {"sales_staff_notice": ""}
+        }
+    
 
 @st.cache_resource
 def load_embedding_model():
@@ -268,32 +285,16 @@ def init_database():
         conn.close() # ★★★ 修正点: 最後に接続を閉じる
 
 
+
 def get_db_connection():
     """
-    PostgreSQLデータベースへの接続を取得します。
-    接続情報は Streamlit の Secrets から読み込みます。
+    データベース接続を取得します。
+    row_factoryを設定し、カラム名でアクセスできるようにします。
     """
-    try:
-        conn_string = st.secrets["DATABASE_URL"]
-        conn = psycopg2.connect(conn_string)
-        # カラム名でアクセスできるように cursor_factory を設定
-        conn.cursor_factory = DictCursor
-        return conn
-    except Exception as e:
-        st.error(f"データベース接続エラー: {e}")
-        st.info("Supabaseの接続情報がStreamlitのSecretsに正しく設定されているか確認してください。")
-        st.stop()
-
-
-#def get_db_connection():
-#    """
-#    データベース接続を取得します。
-#    row_factoryを設定し、カラム名でアクセスできるようにします。
-#    """
-#    conn = sqlite3.connect(DB_FILE)
-#    # ▼▼▼【この一行を追加・修正します】▼▼▼
-#    conn.row_factory = sqlite3.Row
-#    # ▲▲▲【この一行を追加・修正します】▲▲▲
+    conn = sqlite3.connect(DB_FILE)
+    # ▼▼▼【この一行を追加・修正します】▼▼▼
+    conn.row_factory = sqlite3.Row
+    # ▲▲▲【この一行を追加・修正します】▲▲▲
     return conn
 
 
