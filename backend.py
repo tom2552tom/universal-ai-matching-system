@@ -159,40 +159,84 @@ def split_text_with_llm(text_content):
         return None
 
 @st.cache_data
-def get_match_summary_with_llm(job_doc, engineer_doc):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-    prompt = f"""
-あなたは、経験豊富なIT人材紹介のエージェントです。あなたの仕事は、提示された「案件情報」と「技術者情報」を比較し、客観的かつ具体的なマッチング評価を行うことです。
-# 絶対的なルール
-- `summary`は最も重要な項目です。絶対に省略せず、必ずS, A, B, C, Dのいずれかの文字列を返してください。
-- ポジティブな点や懸念点が一つもない場合でも、その旨を正直に記載するか、空のリスト `[]` を返してください。
-# 指示
-以下の2つの情報を分析し、ポジティブな点と懸念点をリストアップしてください。最終的に、総合評価（summary）をS, A, B, C, Dの5段階で判定してください。
-- S: 完璧なマッチ, A: 非常に良いマッチ, B: 良いマッチ, C: 検討の余地あり, D: ミスマッチ
-# JSON出力形式
-{{"summary": "S, A, B, C, Dのいずれか", "positive_points": ["スキル面での合致点"], "concern_points": ["スキル面での懸念点"]}}
----
-# 案件情報
-{job_doc}
----
-# 技術者情報
-{engineer_doc}
----
-"""
+
+def split_text_with_llm(text_content):
+    """
+    【二段階処理】
+    1. まず文書を「案件」か「技術者」か「その他」に分類する。
+    2. 分類結果に応じて、専用のプロンプトで情報抽出を行う。
+    """
+    # --- 第一段階：文書の分類 ---
+    classification_prompt = f"""
+        あなたはテキスト分類の専門家です。以下のテキストが「案件情報」「技術者情報」「その他」のどれに最も当てはまるか判断し、指定された単語一つだけで回答してください。
+
+        # 判断基準
+        - 「スキルシート」「職務経歴書」「氏名」「年齢」といった単語が含まれていれば「技術者情報」の可能性が高い。
+        - 「募集」「必須スキル」「歓迎スキル」「求める人物像」といった単語が含まれていれば「案件情報」の可能性が高い。
+        - 上記のどちらでもない場合は「その他」と判断してください。
+
+        # 回答形式
+        - `案件情報`
+        - `技術者情報`
+        - `その他`
+
+        # 分析対象テキスト
+        ---
+        {text_content[:2000]} # テキストの先頭2000文字で判断
+        ---
+    """
+
+    try:
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        st.write("📄 文書タイプを分類中...")
+        response = model.generate_content(classification_prompt)
+        doc_type = response.text.strip()
+        st.write(f"✅ AIによる分類結果: **{doc_type}**")
+
+    except Exception as e:
+        st.error(f"文書の分類中にエラーが発生しました: {e}")
+        return None
+
+    # --- 第二段階：分類結果に応じた情報抽出 ---
+    if "技術者情報" in doc_type:
+        # 技術者抽出用の専用プロンプトを使用
+        extraction_prompt = get_extraction_prompt('engineer', text_content)
+    elif "案件情報" in doc_type:
+        # 案件抽出用の専用プロンプトを使用
+        extraction_prompt = get_extraction_prompt('job', text_content)
+    else:
+        st.warning("このテキストは案件情報または技術者情報として分類されませんでした。処理をスキップします。")
+        return None
+
+    # 情報抽出の実行
     generation_config = {"response_mime_type": "application/json"}
     safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
+    
     try:
-        with st.spinner("AIがマッチング根拠を分析中..."):
-            response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
+        with st.spinner("AIが情報を構造化中..."):
+            response = model.generate_content(extraction_prompt, generation_config=generation_config, safety_settings=safety_settings)
+        
         raw_text = response.text
-        start_index = raw_text.find('{'); end_index = raw_text.rfind('}')
+        start_index = raw_text.find('{')
+        end_index = raw_text.rfind('}')
         if start_index != -1 and end_index != -1 and start_index < end_index:
             json_str = raw_text[start_index : end_index + 1]
-            return json.loads(json_str)
+            parsed_json = json.loads(json_str)
+            # 分類に応じて空のリストを補完する
+            if "技術者情報" in doc_type:
+                parsed_json["jobs"] = []
+            elif "案件情報" in doc_type:
+                parsed_json["engineers"] = []
+            return parsed_json
         else:
-            st.error("評価の分析中にLLMが有効なJSONを返しませんでした。"); st.code(raw_text); return None
+            st.error("LLMの応答から有効なJSON形式を抽出できませんでした。"); st.code(raw_text, language='text'); return None
     except Exception as e:
-        st.error(f"根拠の分析中にエラー: {e}"); return None
+        st.error(f"LLMによる構造化に失敗しました: {e}");
+        try: st.code(response.text, language='text')
+        except NameError: st.text("レスポンスの取得にも失敗しました。")
+        return None
+
+
 
 def update_index(index_path, items):
     embedding_model = load_embedding_model()
@@ -567,3 +611,70 @@ def update_match_status(match_id, new_status):
             conn.commit(); return True
         except (Exception, psycopg2.Error) as e:
             print(f"ステータスの更新エラー: {e}"); conn.rollback(); return False
+
+def get_extraction_prompt(doc_type, text_content):
+    """
+    文書タイプ（'job'または'engineer'）に応じて、
+    情報抽出用の専用プロンプトを生成する。
+    """
+    if doc_type == 'engineer':
+        # --- 技術者情報抽出に特化したプロンプト ---
+        return f"""
+            あなたは、IT人材の「スキルシート」や「職務経歴書」を読み解く専門家です。
+            あなたの仕事は、与えられたテキストから**単一の技術者情報**を抽出し、指定されたJSON形式で整理することです。
+
+            # 指示
+            - テキスト全体は、一人の技術者の情報です。複数の業務経歴が含まれていても、それらはすべてこの一人の技術者の経歴として要約してください。
+            - `document`フィールドには、技術者のスキル、経験、自己PRなどを総合的に要約した、検索しやすい自然な文章を作成してください。
+            - `document`の文章の先頭には、必ず技術者名を含めてください。例：「実務経験15年のTK氏。Java(SpringBoot)を主軸に...」
+
+            # JSON出力形式
+            {{
+              "engineers": [
+                {{
+                  "name": "技術者の氏名を抽出",
+                  "document": "技術者のスキルや経歴の詳細を、検索しやすいように要約",
+                  "nationality": "国籍を抽出",
+                  "availability_date": "稼働可能日（例: 即日、2025年12月上旬など）を抽出",
+                  "desired_location": "希望勤務地を抽出",
+                  "desired_salary": "希望単価を抽出",
+                  "main_skills": "主要なプログラミング言語、フレームワーク、DBなどのスキルをカンマ区切りで抽出"
+                }}
+              ]
+            }}
+
+            # 本番: 以下のスキルシートから情報を抽出してください
+            ---
+            {text_content}
+        """
+    elif doc_type == 'job':
+        # --- 案件情報抽出に特化したプロンプト ---
+        return f"""
+            あなたは、IT業界の「案件定義書」を読み解く専門家です。
+            あなたの仕事は、与えられたテキストから**案件情報**を抽出し、指定されたJSON形式で整理することです。
+            テキスト内に複数の案件情報が含まれている場合は、それぞれを個別のオブジェクトとしてリストにしてください。
+
+            # 指示
+            - `document`フィールドには、案件のスキルや業務内容の詳細を、後で検索しやすいように自然な文章で要約してください。
+            - `document`の文章の先頭には、必ずプロジェクト名を含めてください。例：「社内SEプロジェクトの増員案件。設計、テスト...」
+
+            # JSON出力形式
+            {{
+              "jobs": [
+                {{
+                  "project_name": "案件名を抽出",
+                  "document": "案件のスキルや業務内容の詳細を、検索しやすいように要約",
+                  "nationality_requirement": "国籍要件（例: 外国籍不可、日本語ネイティブなど）を抽出",
+                  "start_date": "開始時期（例: 即日、2025年11月〜など）を抽出",
+                  "location": "勤務地（例: フルリモート、渋谷など）を抽出",
+                  "unit_price": "単価や予算（例: 〜80万円/月、スキル見合いなど）を抽出",
+                  "required_skills": "必須スキルや歓迎スキルをカンマ区切りで抽出"
+                }}
+              ]
+            }}
+
+            # 本番: 以下の案件情報から情報を抽出してください
+            ---
+            {text_content}
+        """
+    return "" # 不明なタイプの場合は空のプロンプトを返す
