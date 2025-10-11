@@ -11,7 +11,7 @@ from datetime import datetime
 import imaplib
 import email
 from email.header import decode_header, make_header
-from email.utils import parsedate_to_datetime # ★ 日時変換のために追加
+from email.utils import parsedate_to_datetime
 import io
 import contextlib
 import toml
@@ -62,43 +62,31 @@ def get_db_connection():
     except Exception as e:
         st.error(f"データベース接続中に予期せぬエラーが発生しました: {e}"); st.stop()
 
-# ▼▼▼【ここが修正箇所 1/4】▼▼▼
 def init_database():
-    """
-    データベースを初期化し、必要なカラムがなければ追加する。
-    `received_at` カラムを追加。
-    """
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # received_at カラムを追加
             cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id SERIAL PRIMARY KEY, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT, assigned_user_id INTEGER, is_hidden INTEGER NOT NULL DEFAULT 0, received_at TIMESTAMP WITH TIME ZONE)')
             cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id SERIAL PRIMARY KEY, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT, assigned_user_id INTEGER, is_hidden INTEGER NOT NULL DEFAULT 0, received_at TIMESTAMP WITH TIME ZONE)')
-            
             cursor.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT NOT NULL UNIQUE, email TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);")
             cursor.execute('''CREATE TABLE IF NOT EXISTS matching_results (id SERIAL PRIMARY KEY, job_id INTEGER NOT NULL, engineer_id INTEGER NOT NULL, score REAL NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, is_hidden INTEGER DEFAULT 0, grade TEXT, positive_points TEXT, concern_points TEXT, proposal_text TEXT, status TEXT DEFAULT '新規', FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE, FOREIGN KEY (engineer_id) REFERENCES engineers (id) ON DELETE CASCADE, UNIQUE (job_id, engineer_id))''')
-            
             cursor.execute("SELECT COUNT(*) FROM users")
             if cursor.fetchone()[0] == 0:
                 print("初回起動のため、テストユーザーを追加します...")
                 users_to_add = [('熊崎', 'yamada@example.com'), ('岩本', 'suzuki@example.com'), ('小関', 'sato@example.com'), ('内山', 'sato@example.com'), ('島田', 'sato@example.com'), ('長谷川', 'sato@example.com'), ('北島', 'sato@example.com'), ('岩崎', 'sato@example.com'), ('根岸', 'sato@example.com'), ('添田', 'sato@example.com'), ('山浦', 'sato@example.com'), ('福田', 'sato@example.com')]
                 cursor.executemany("INSERT INTO users (username, email) VALUES (%s, %s)", users_to_add)
                 print(" -> テストユーザーを追加しました。")
-            
             def get_columns(table_name):
                 cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s", (table_name,))
                 return [row['column_name'] for row in cursor.fetchall()]
-
             job_columns = get_columns('jobs')
             if 'assigned_user_id' not in job_columns: cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
             if 'is_hidden' not in job_columns: cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
-            if 'received_at' not in job_columns: cursor.execute("ALTER TABLE jobs ADD COLUMN received_at TIMESTAMP WITH TIME ZONE") # カラム追加
-
+            if 'received_at' not in job_columns: cursor.execute("ALTER TABLE jobs ADD COLUMN received_at TIMESTAMP WITH TIME ZONE")
             engineer_columns = get_columns('engineers')
             if 'assigned_user_id' not in engineer_columns: cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
             if 'is_hidden' not in engineer_columns: cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
-            if 'received_at' not in engineer_columns: cursor.execute("ALTER TABLE engineers ADD COLUMN received_at TIMESTAMP WITH TIME ZONE") # カラム追加
-
+            if 'received_at' not in engineer_columns: cursor.execute("ALTER TABLE engineers ADD COLUMN received_at TIMESTAMP WITH TIME ZONE")
             match_columns = get_columns('matching_results')
             if 'positive_points' not in match_columns: cursor.execute("ALTER TABLE matching_results ADD COLUMN positive_points TEXT")
             if 'concern_points' not in match_columns: cursor.execute("ALTER TABLE matching_results ADD COLUMN concern_points TEXT")
@@ -108,8 +96,7 @@ def init_database():
     except (Exception, psycopg2.Error) as e:
         print(f"❌ データベース初期化中にエラーが発生しました: {e}"); conn.rollback()
     finally:
-        conn.close()
-# ▲▲▲【修正ここまで】▲▲▲
+        if conn: conn.close()
 
 def get_extraction_prompt(doc_type, text_content):
     if doc_type == 'engineer':
@@ -304,7 +291,7 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
         else:
             st.write(f"  - 候補: 『{candidate_name}』 -> LLM評価失敗のためスキップ")
 
-# ▼▼▼【ここが修正箇所 2/4】▼▼▼
+# ▼▼▼【ここが修正箇所】▼▼▼
 def process_single_content(source_data: dict):
     if not source_data: st.warning("処理するデータが空です。"); return False
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")]
@@ -321,14 +308,26 @@ def process_single_content(source_data: dict):
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            # 受信日時を取得（存在しない場合はNone）
-            received_at = source_data.get('received_at')
-            # DB保存用に、不要なキーを削除してからJSON化
+            
+            # --- JSON保存用の処理 ---
+            # 1. 元データからdatetimeオブジェクトを取得
+            received_at_dt = source_data.get('received_at')
+            
+            # 2. JSON保存用にデータをコピー
             json_data_to_store = source_data.copy()
+            
+            # 3. datetimeオブジェクトを文字列に変換（JSONシリアライズのため）
+            if isinstance(json_data_to_store.get('received_at'), datetime):
+                json_data_to_store['received_at'] = json_data_to_store['received_at'].isoformat()
+            
+            # 4. 大きなデータ（本文と添付ファイル）を削除
             json_data_to_store.pop('body', None)
             json_data_to_store.pop('attachments', None)
+            
+            # 5. JSON文字列を作成
             source_json_str = json.dumps(json_data_to_store, ensure_ascii=False, indent=2)
-
+            
+            # --- DB登録処理 ---
             newly_added_jobs, newly_added_engineers = [], []
             
             for item_data in new_jobs_data:
@@ -336,9 +335,9 @@ def process_single_content(source_data: dict):
                 project_name = item_data.get("project_name", "名称未定の案件")
                 meta_info = _build_meta_info_string('job', item_data)
                 full_document = meta_info + doc
-                # received_at をINSERT文に追加
+                # DBにはdatetimeオブジェクト(received_at_dt)を渡す
                 cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
-                               (project_name, full_document, source_json_str, now_str, received_at))
+                               (project_name, full_document, source_json_str, now_str, received_at_dt))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_jobs.append(item_data)
             
             for item_data in new_engineers_data:
@@ -346,9 +345,9 @@ def process_single_content(source_data: dict):
                 engineer_name = item_data.get("name", "名称不明の技術者")
                 meta_info = _build_meta_info_string('engineer', item_data)
                 full_document = meta_info + doc
-                # received_at をINSERT文に追加
+                # DBにはdatetimeオブジェクト(received_at_dt)を渡す
                 cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
-                               (engineer_name, full_document, source_json_str, now_str, received_at))
+                               (engineer_name, full_document, source_json_str, now_str, received_at_dt))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_engineers.append(item_data)
             
             st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
@@ -364,29 +363,10 @@ def process_single_content(source_data: dict):
     return True
 # ▲▲▲【修正ここまで】▲▲▲
 
-def extract_text_from_pdf(file_bytes):
-    try:
-        with fitz.open(stream=file_bytes, filetype="pdf") as doc: text = "".join(page.get_text() for page in doc)
-        return text if text.strip() else "[PDFテキスト抽出失敗: 内容が空または画像PDF]"
-    except Exception as e: return f"[PDFテキスト抽出エラー: {e}]"
-
-def extract_text_from_docx(file_bytes):
-    try:
-        doc = docx.Document(io.BytesIO(file_bytes)); text = "\n".join([para.text for para in doc.paragraphs])
-        return text if text.strip() else "[DOCXテキスト抽出失敗: 内容が空]"
-    except Exception as e: return f"[DOCXテキスト抽出エラー: {e}]"
-
-# ▼▼▼【ここが修正箇所 3/4】▼▼▼
 def get_email_contents(msg) -> dict:
-    """メールオブジェクトから、件名、差出人、受信日時、本文、添付ファイルを抽出する。"""
     subject = str(make_header(decode_header(msg["subject"]))) if msg["subject"] else ""
     from_ = str(make_header(decode_header(msg["from"]))) if msg["from"] else ""
-    
-    # 日時(Date)のデコードとフォーマット
-    received_at = None
-    date_tuple = parsedate_to_datetime(msg["Date"])
-    if date_tuple:
-        received_at = date_tuple
+    received_at = parsedate_to_datetime(msg["Date"]) if msg["Date"] else None
 
     body_text, attachments = "", []
     if msg.is_multipart():
@@ -410,9 +390,7 @@ def get_email_contents(msg) -> dict:
         except Exception: body_text = msg.get_payload(decode=True).decode('utf-8', errors='ignore')
     
     return {"subject": subject, "from": from_, "received_at": received_at, "body": body_text.strip(), "attachments": attachments}
-# ▲▲▲【修正ここまで】▲▲▲
 
-# ▼▼▼【ここが修正箇所 4/4】▼▼▼
 def fetch_and_process_emails():
     log_stream = io.StringIO()
     try:
@@ -436,16 +414,13 @@ def fetch_and_process_emails():
                                 if isinstance(response_part, tuple):
                                     msg = email.message_from_bytes(response_part[1])
                                     source_data = get_email_contents(msg)
-                                    
                                     if source_data['body'] or source_data['attachments']:
                                         st.write("---")
                                         st.write(f"✅ メールID {email_id.decode()} を処理します。")
-                                        # 受信日時をフォーマットして表示
                                         received_at_str = source_data['received_at'].strftime('%Y-%m-%d %H:%M:%S') if source_data.get('received_at') else '取得不可'
                                         st.write(f"   受信日時: {received_at_str}")
                                         st.write(f"   差出人: {source_data.get('from', '取得不可')}")
                                         st.write(f"   件名: {source_data.get('subject', '取得不可')}")
-                                        
                                         if process_single_content(source_data):
                                             total_processed_count += 1; mail.store(email_id, '+FLAGS', '\\Seen')
                                     else: st.write(f"✖️ メールID {email_id.decode()} は本文も添付ファイルも無いため、スキップします。")
@@ -459,7 +434,6 @@ def fetch_and_process_emails():
         return True, log_stream.getvalue()
     except Exception as e:
         st.error(f"予期せぬエラーが発生しました: {e}"); return False, log_stream.getvalue()
-# ▲▲▲【修正ここまで】▲▲▲
 
 # --- 残りの関数 (変更なし) ---
 def hide_match(result_id):
@@ -555,7 +529,7 @@ def save_match_grade(match_id, grade):
 
 def get_evaluation_html(grade, font_size='2.5em'):
     if not grade: return ""
-    color_map = {'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
+    color_map = {'S': '#00b894', 'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
     color = color_map.get(grade.upper(), '#6c757d') 
     style = f"color: {color}; font-size: {font_size}; font-weight: bold; text-align: center; line-height: 1; padding-top: 10px;"
     html_code = f"<div style='text-align: center; margin-bottom: 5px;'><span style='{style}'>{grade.upper()}</span></div><div style='text-align: center; font-size: 0.8em; color: #888;'>判定</div>"
