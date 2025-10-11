@@ -66,49 +66,21 @@ def init_database():
         with conn.cursor() as cursor:
             cursor.execute('CREATE TABLE IF NOT EXISTS jobs (id SERIAL PRIMARY KEY, project_name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT, assigned_user_id INTEGER, is_hidden INTEGER NOT NULL DEFAULT 0)')
             cursor.execute('CREATE TABLE IF NOT EXISTS engineers (id SERIAL PRIMARY KEY, name TEXT, document TEXT NOT NULL, source_data_json TEXT, created_at TEXT, assigned_user_id INTEGER, is_hidden INTEGER NOT NULL DEFAULT 0)')
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS users (
-                    id SERIAL PRIMARY KEY,
-                    username TEXT NOT NULL UNIQUE,
-                    email TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS matching_results (
-                    id SERIAL PRIMARY KEY,
-                    job_id INTEGER NOT NULL,
-                    engineer_id INTEGER NOT NULL,
-                    score REAL NOT NULL,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-                    is_hidden INTEGER DEFAULT 0,
-                    grade TEXT,
-                    positive_points TEXT,
-                    concern_points TEXT,
-                    proposal_text TEXT,
-                    status TEXT DEFAULT '新規',
-                    FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE,
-                    FOREIGN KEY (engineer_id) REFERENCES engineers (id) ON DELETE CASCADE,
-                    UNIQUE (job_id, engineer_id)
-                )
-            ''')
+            cursor.execute("CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username TEXT NOT NULL UNIQUE, email TEXT, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP);")
+            cursor.execute('''CREATE TABLE IF NOT EXISTS matching_results (id SERIAL PRIMARY KEY, job_id INTEGER NOT NULL, engineer_id INTEGER NOT NULL, score REAL NOT NULL, created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, is_hidden INTEGER DEFAULT 0, grade TEXT, positive_points TEXT, concern_points TEXT, proposal_text TEXT, status TEXT DEFAULT '新規', FOREIGN KEY (job_id) REFERENCES jobs (id) ON DELETE CASCADE, FOREIGN KEY (engineer_id) REFERENCES engineers (id) ON DELETE CASCADE, UNIQUE (job_id, engineer_id))''')
             cursor.execute("SELECT COUNT(*) FROM users")
             if cursor.fetchone()[0] == 0:
                 print("初回起動のため、テストユーザーを追加します...")
                 users_to_add = [('熊崎', 'yamada@example.com'), ('岩本', 'suzuki@example.com'), ('小関', 'sato@example.com'), ('内山', 'sato@example.com'), ('島田', 'sato@example.com'), ('長谷川', 'sato@example.com'), ('北島', 'sato@example.com'), ('岩崎', 'sato@example.com'), ('根岸', 'sato@example.com'), ('添田', 'sato@example.com'), ('山浦', 'sato@example.com'), ('福田', 'sato@example.com')]
                 cursor.executemany("INSERT INTO users (username, email) VALUES (%s, %s)", users_to_add)
                 print(" -> テストユーザーを追加しました。")
-
             def get_columns(table_name):
                 cursor.execute("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = %s", (table_name,))
                 return [row['column_name'] for row in cursor.fetchall()]
-
-            job_columns = get_columns('jobs')
-            if 'assigned_user_id' not in job_columns: cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-            if 'is_hidden' not in job_columns: cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
-            engineer_columns = get_columns('engineers')
-            if 'assigned_user_id' not in engineer_columns: cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
-            if 'is_hidden' not in engineer_columns: cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
+            if 'assigned_user_id' not in get_columns('jobs'): cursor.execute("ALTER TABLE jobs ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
+            if 'is_hidden' not in get_columns('jobs'): cursor.execute("ALTER TABLE jobs ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
+            if 'assigned_user_id' not in get_columns('engineers'): cursor.execute("ALTER TABLE engineers ADD COLUMN assigned_user_id INTEGER REFERENCES users(id)")
+            if 'is_hidden' not in get_columns('engineers'): cursor.execute("ALTER TABLE engineers ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0")
             match_columns = get_columns('matching_results')
             if 'positive_points' not in match_columns: cursor.execute("ALTER TABLE matching_results ADD COLUMN positive_points TEXT")
             if 'concern_points' not in match_columns: cursor.execute("ALTER TABLE matching_results ADD COLUMN concern_points TEXT")
@@ -120,113 +92,83 @@ def init_database():
     finally:
         conn.close()
 
-def update_job_source_json(job_id, new_json_str):
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            sql = "UPDATE jobs SET source_data_json = %s WHERE id = %s"
-            cur.execute(sql, (new_json_str, job_id))
-        conn.commit(); return True
-    except (Exception, psycopg2.Error) as e:
-        print(f"データベース更新エラー: {e}"); conn.rollback(); return False
-    finally:
-        if conn: conn.close()
+def get_extraction_prompt(doc_type, text_content):
+    """文書タイプに応じて、情報抽出用の専用プロンプトを生成する。"""
+    if doc_type == 'engineer':
+        return f"""
+            あなたは、IT人材の「スキルシート」や「職務経歴書」を読み解く専門家です。
+            あなたの仕事は、与えられたテキストから**単一の技術者情報**を抽出し、指定されたJSON形式で整理することです。
+            # 指示
+            - テキスト全体は、一人の技術者の情報です。複数の業務経歴が含まれていても、それらはすべてこの一人の技術者の経歴として要約してください。
+            - `document`フィールドには、技術者のスキル、経験、自己PRなどを総合的に要約した、検索しやすい自然な文章を作成してください。
+            - `document`の文章の先頭には、必ず技術者名を含めてください。例：「実務経験15年のTK氏。Java(SpringBoot)を主軸に...」
+            # JSON出力形式
+            {{"engineers": [{{"name": "技術者の氏名を抽出", "document": "技術者のスキルや経歴の詳細を、検索しやすいように要約", "nationality": "国籍を抽出", "availability_date": "稼働可能日を抽出", "desired_location": "希望勤務地を抽出", "desired_salary": "希望単価を抽出", "main_skills": "主要なスキルをカンマ区切りで抽出"}}]}}
+            # 本番: 以下のスキルシートから情報を抽出してください
+            ---
+            {text_content}
+        """
+    elif doc_type == 'job':
+        return f"""
+            あなたは、IT業界の「案件定義書」を読み解く専門家です。
+            あなたの仕事は、与えられたテキストから**案件情報**を抽出し、指定されたJSON形式で整理することです。
+            テキスト内に複数の案件情報が含まれている場合は、それぞれを個別のオブジェクトとしてリストにしてください。
+            # 指示
+            - `document`フィールドには、案件のスキルや業務内容の詳細を、後で検索しやすいように自然な文章で要約してください。
+            - `document`の文章の先頭には、必ずプロジェクト名を含めてください。例：「社内SEプロジェクトの増員案件。設計、テスト...」
+            # JSON出力形式
+            {{"jobs": [{{"project_name": "案件名を抽出", "document": "案件のスキルや業務内容の詳細を、検索しやすいように要約", "nationality_requirement": "国籍要件を抽出", "start_date": "開始時期を抽出", "location": "勤務地を抽出", "unit_price": "単価や予算を抽出", "required_skills": "必須スキルや歓迎スキルをカンマ区切りで抽出"}}]}}
+            # 本番: 以下の案件情報から情報を抽出してください
+            ---
+            {text_content}
+        """
+    return ""
 
 def split_text_with_llm(text_content):
-    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-    try:
-        with open('prompt.txt', 'r', encoding='utf-8') as f:
-            prompt_template = f.read()
-        prompt = prompt_template.replace('{text_content}', text_content)
-    except FileNotFoundError:
-        st.error("エラー: `prompt.txt` ファイルが見つかりません。"); return None
-    generation_config = {"response_mime_type": "application/json"}
-    safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
-    try:
-        with st.spinner("LLMがテキストを解析・構造化中..."):
-            response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
-        raw_text = response.text
-        start_index = raw_text.find('{'); end_index = raw_text.rfind('}')
-        if start_index != -1 and end_index != -1 and start_index < end_index:
-            json_str = raw_text[start_index : end_index + 1]
-            return json.loads(json_str)
-        else:
-            st.error("LLMの応答から有効なJSON形式を抽出できませんでした。"); st.code(raw_text, language='text'); return None
-    except Exception as e:
-        st.error(f"LLMによる構造化に失敗しました: {e}");
-        try: st.code(response.text, language='text')
-        except NameError: st.text("レスポンスの取得にも失敗しました。")
-        return None
-
-@st.cache_data
-
-def split_text_with_llm(text_content):
-    """
-    【二段階処理】
-    1. まず文書を「案件」か「技術者」か「その他」に分類する。
-    2. 分類結果に応じて、専用のプロンプトで情報抽出を行う。
-    """
-    # --- 第一段階：文書の分類 ---
+    """【二段階処理】1. 文書を分類し、2. 分類結果に応じて専用プロンプトで情報抽出を行う。"""
     classification_prompt = f"""
         あなたはテキスト分類の専門家です。以下のテキストが「案件情報」「技術者情報」「その他」のどれに最も当てはまるか判断し、指定された単語一つだけで回答してください。
-
         # 判断基準
         - 「スキルシート」「職務経歴書」「氏名」「年齢」といった単語が含まれていれば「技術者情報」の可能性が高い。
         - 「募集」「必須スキル」「歓迎スキル」「求める人物像」といった単語が含まれていれば「案件情報」の可能性が高い。
         - 上記のどちらでもない場合は「その他」と判断してください。
-
         # 回答形式
         - `案件情報`
         - `技術者情報`
         - `その他`
-
         # 分析対象テキスト
         ---
-        {text_content[:2000]} # テキストの先頭2000文字で判断
+        {text_content[:2000]}
         ---
     """
-
     try:
         model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         st.write("📄 文書タイプを分類中...")
         response = model.generate_content(classification_prompt)
         doc_type = response.text.strip()
         st.write(f"✅ AIによる分類結果: **{doc_type}**")
-
     except Exception as e:
-        st.error(f"文書の分類中にエラーが発生しました: {e}")
-        return None
+        st.error(f"文書の分類中にエラーが発生しました: {e}"); return None
 
-    # --- 第二段階：分類結果に応じた情報抽出 ---
     if "技術者情報" in doc_type:
-        # 技術者抽出用の専用プロンプトを使用
         extraction_prompt = get_extraction_prompt('engineer', text_content)
     elif "案件情報" in doc_type:
-        # 案件抽出用の専用プロンプトを使用
         extraction_prompt = get_extraction_prompt('job', text_content)
     else:
-        st.warning("このテキストは案件情報または技術者情報として分類されませんでした。処理をスキップします。")
-        return None
+        st.warning("このテキストは案件情報または技術者情報として分類されませんでした。処理をスキップします。"); return None
 
-    # 情報抽出の実行
     generation_config = {"response_mime_type": "application/json"}
     safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
-    
     try:
         with st.spinner("AIが情報を構造化中..."):
             response = model.generate_content(extraction_prompt, generation_config=generation_config, safety_settings=safety_settings)
-        
         raw_text = response.text
-        start_index = raw_text.find('{')
-        end_index = raw_text.rfind('}')
+        start_index = raw_text.find('{'); end_index = raw_text.rfind('}')
         if start_index != -1 and end_index != -1 and start_index < end_index:
             json_str = raw_text[start_index : end_index + 1]
             parsed_json = json.loads(json_str)
-            # 分類に応じて空のリストを補完する
-            if "技術者情報" in doc_type:
-                parsed_json["jobs"] = []
-            elif "案件情報" in doc_type:
-                parsed_json["engineers"] = []
+            if "技術者情報" in doc_type: parsed_json["jobs"] = []
+            elif "案件情報" in doc_type: parsed_json["engineers"] = []
             return parsed_json
         else:
             st.error("LLMの応答から有効なJSON形式を抽出できませんでした。"); st.code(raw_text, language='text'); return None
@@ -236,7 +178,50 @@ def split_text_with_llm(text_content):
         except NameError: st.text("レスポンスの取得にも失敗しました。")
         return None
 
-
+# ▼▼▼【ここが修正箇所】▼▼▼
+# 削除されていた get_match_summary_with_llm 関数を再追加
+@st.cache_data
+def get_match_summary_with_llm(job_doc, engineer_doc):
+    """案件と技術者のドキュメントを比較し、AIにマッチング評価を行わせる。"""
+    model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+    prompt = f"""
+        あなたは、経験豊富なIT人材紹介のエージェントです。
+        あなたの仕事は、提示された「案件情報」と「技術者情報」を比較し、客観的かつ具体的なマッチング評価を行うことです。
+        # 絶対的なルール
+        - `summary`は最も重要な項目です。絶対に省略せず、必ずS, A, B, C, Dのいずれかの文字列を返してください。
+        - ポジティブな点や懸念点が一つもない場合でも、その旨を正直に記載するか、空のリスト `[]` を返してください。
+        # 指示
+        以下の2つの情報を分析し、ポジティブな点と懸念点をリストアップしてください。最終的に、総合評価（summary）をS, A, B, C, Dの5段階で判定してください。
+        - S: 完璧なマッチ, A: 非常に良いマッチ, B: 良いマッチ, C: 検討の余地あり, D: ミスマッチ
+        # JSON出力形式
+        {{
+          "summary": "S, A, B, C, Dのいずれか",
+          "positive_points": ["スキル面での合致点"],
+          "concern_points": ["スキル面での懸念点"]
+        }}
+        ---
+        # 案件情報
+        {job_doc}
+        ---
+        # 技術者情報
+        {engineer_doc}
+        ---
+    """
+    generation_config = {"response_mime_type": "application/json"}
+    safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
+    try:
+        with st.spinner("AIがマッチング根拠を分析中..."):
+            response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
+        raw_text = response.text
+        start_index = raw_text.find('{'); end_index = raw_text.rfind('}')
+        if start_index != -1 and end_index != -1 and start_index < end_index:
+            json_str = raw_text[start_index : end_index + 1]
+            return json.loads(json_str)
+        else:
+            st.error("評価の分析中にLLMが有効なJSONを返しませんでした。"); st.code(raw_text); return None
+    except Exception as e:
+        st.error(f"根拠の分析中にエラー: {e}"); return None
+# ▲▲▲【修正ここまで】▲▲▲
 
 def update_index(index_path, items):
     embedding_model = load_embedding_model()
@@ -334,22 +319,11 @@ def process_single_content(source_data: dict):
                 full_document = meta_info + doc
                 cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at) VALUES (%s, %s, %s, %s) RETURNING id', (engineer_name, full_document, source_json_str, now_str))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_engineers.append(item_data)
-            
             st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
-
-            # ▼▼▼【ここが修正箇所】▼▼▼
-            # 誤: .execute(...).fetchall()
-            # 正: .execute(...) を実行し、その後 .fetchall()
-            cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0')
-            all_active_jobs = cursor.fetchall()
-            
-            cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0')
-            all_active_engineers = cursor.fetchall()
-            # ▲▲▲【修正ここまで】▲▲▲
-            
+            cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_active_jobs = cursor.fetchall()
+            cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0'); all_active_engineers = cursor.fetchall()
             if all_active_jobs: update_index(JOB_INDEX_FILE, all_active_jobs)
             if all_active_engineers: update_index(ENGINEER_INDEX_FILE, all_active_engineers)
-
             for new_job in newly_added_jobs: run_matching_for_item(new_job, 'job', cursor, now_str)
             for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', cursor, now_str)
         conn.commit()
@@ -482,29 +456,29 @@ def update_engineer_source_json(engineer_id, new_json_str):
 def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_name, project_name):
     if not all([job_summary, engineer_summary, engineer_name, project_name]): return "情報が不足しているため、提案メールを生成できませんでした。"
     prompt = f"""
-あなたは、クライアントに優秀な技術者を提案する、経験豊富なIT営業担当者です。
-以下の案件情報と技術者情報をもとに、クライアントの心に響く、丁寧で説得力のある提案メールの文面を作成してください。
-# 役割
-- 優秀なIT営業担当者
-# 指示
-- 最初に、提案する技術者名と案件名を記載した件名を作成してください (例: 件名: 【〇〇様のご提案】〇〇プロジェクトの件)。
-- 技術者のスキルや経験が、案件のどの要件に具体的にマッチしているかを明確に示してください。
-- ポジティブな点（適合スキル）を強調し、技術者の魅力を最大限に伝えてください。
-- 懸念点（スキルミスマッチや経験不足）がある場合は、正直に触れつつも、学習意欲や類似経験、ポテンシャルなどでどのようにカバーできるかを前向きに説明してください。
-- 全体として、プロフェッショナルかつ丁寧なビジネスメールのトーンを維持してください。
-- 最後に、ぜひ一度、オンラインでの面談の機会を設けていただけますようお願いする一文で締めくくってください。
-- 出力は、件名と本文を含んだメール形式のテキストのみとしてください。余計な解説は不要です。
-# 案件情報
-{job_summary}
-# 技術者情報
-{engineer_summary}
-# 提案する技術者の名前
-{engineer_name}
-# 案件名
-{project_name}
----
-それでは、上記の指示に基づいて、最適な提案メールを作成してください。
-"""
+        あなたは、クライアントに優秀な技術者を提案する、経験豊富なIT営業担当者です。
+        以下の案件情報と技術者情報をもとに、クライアントの心に響く、丁寧で説得力のある提案メールの文面を作成してください。
+        # 役割
+        - 優秀なIT営業担当者
+        # 指示
+        - 最初に、提案する技術者名と案件名を記載した件名を作成してください (例: 件名: 【〇〇様のご提案】〇〇プロジェクトの件)。
+        - 技術者のスキルや経験が、案件のどの要件に具体的にマッチしているかを明確に示してください。
+        - ポジティブな点（適合スキル）を強調し、技術者の魅力を最大限に伝えてください。
+        - 懸念点（スキルミスマッチや経験不足）がある場合は、正直に触れつつも、学習意欲や類似経験、ポテンシャルなどでどのようにカバーできるかを前向きに説明してください。
+        - 全体として、プロフェッショナルかつ丁寧なビジネスメールのトーンを維持してください。
+        - 最後に、ぜひ一度、オンラインでの面談の機会を設けていただけますようお願いする一文で締めくくってください。
+        - 出力は、件名と本文を含んだメール形式のテキストのみとしてください。余計な解説は不要です。
+        # 案件情報
+        {job_summary}
+        # 技術者情報
+        {engineer_summary}
+        # 提案する技術者の名前
+        {engineer_name}
+        # 案件名
+        {project_name}
+        ---
+        それでは、上記の指示に基づいて、最適な提案メールを作成してください。
+    """
     try:
         model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         response = model.generate_content(prompt)
@@ -547,10 +521,8 @@ def re_evaluate_and_match_single_engineer(engineer_id):
     with get_db_connection() as conn:
         try:
             with conn.cursor() as cursor:
-                # ▼▼▼【ここも修正箇所】▼▼▼
                 cursor.execute("SELECT * FROM engineers WHERE id = %s", (engineer_id,))
                 engineer_record = cursor.fetchone()
-                # ▲▲▲【修正ここまで】▲▲▲
                 if not engineer_record:
                     st.error(f"技術者ID:{engineer_id} が見つかりませんでした。"); return False
                 source_data = json.loads(engineer_record['source_data_json'])
@@ -566,14 +538,8 @@ def re_evaluate_and_match_single_engineer(engineer_id):
                 cursor.execute("DELETE FROM matching_results WHERE engineer_id = %s", (engineer_id,))
                 st.write(f"技術者ID:{engineer_id} の既存マッチング結果をクリアしました。")
                 st.write("ベクトルインデックスを更新し、再マッチング処理を開始します...")
-
-                # ▼▼▼【ここも修正箇所】▼▼▼
-                cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0')
-                all_jobs = cursor.fetchall()
-                cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0')
-                all_engineers = cursor.fetchall()
-                # ▲▲▲【修正ここまで】▲▲▲
-                
+                cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_jobs = cursor.fetchall()
+                cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0'); all_engineers = cursor.fetchall()
                 if all_jobs: update_index(JOB_INDEX_FILE, all_jobs)
                 if all_engineers: update_index(ENGINEER_INDEX_FILE, all_engineers)
                 now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -611,70 +577,3 @@ def update_match_status(match_id, new_status):
             conn.commit(); return True
         except (Exception, psycopg2.Error) as e:
             print(f"ステータスの更新エラー: {e}"); conn.rollback(); return False
-
-def get_extraction_prompt(doc_type, text_content):
-    """
-    文書タイプ（'job'または'engineer'）に応じて、
-    情報抽出用の専用プロンプトを生成する。
-    """
-    if doc_type == 'engineer':
-        # --- 技術者情報抽出に特化したプロンプト ---
-        return f"""
-            あなたは、IT人材の「スキルシート」や「職務経歴書」を読み解く専門家です。
-            あなたの仕事は、与えられたテキストから**単一の技術者情報**を抽出し、指定されたJSON形式で整理することです。
-
-            # 指示
-            - テキスト全体は、一人の技術者の情報です。複数の業務経歴が含まれていても、それらはすべてこの一人の技術者の経歴として要約してください。
-            - `document`フィールドには、技術者のスキル、経験、自己PRなどを総合的に要約した、検索しやすい自然な文章を作成してください。
-            - `document`の文章の先頭には、必ず技術者名を含めてください。例：「実務経験15年のTK氏。Java(SpringBoot)を主軸に...」
-
-            # JSON出力形式
-            {{
-              "engineers": [
-                {{
-                  "name": "技術者の氏名を抽出",
-                  "document": "技術者のスキルや経歴の詳細を、検索しやすいように要約",
-                  "nationality": "国籍を抽出",
-                  "availability_date": "稼働可能日（例: 即日、2025年12月上旬など）を抽出",
-                  "desired_location": "希望勤務地を抽出",
-                  "desired_salary": "希望単価を抽出",
-                  "main_skills": "主要なプログラミング言語、フレームワーク、DBなどのスキルをカンマ区切りで抽出"
-                }}
-              ]
-            }}
-
-            # 本番: 以下のスキルシートから情報を抽出してください
-            ---
-            {text_content}
-        """
-    elif doc_type == 'job':
-        # --- 案件情報抽出に特化したプロンプト ---
-        return f"""
-            あなたは、IT業界の「案件定義書」を読み解く専門家です。
-            あなたの仕事は、与えられたテキストから**案件情報**を抽出し、指定されたJSON形式で整理することです。
-            テキスト内に複数の案件情報が含まれている場合は、それぞれを個別のオブジェクトとしてリストにしてください。
-
-            # 指示
-            - `document`フィールドには、案件のスキルや業務内容の詳細を、後で検索しやすいように自然な文章で要約してください。
-            - `document`の文章の先頭には、必ずプロジェクト名を含めてください。例：「社内SEプロジェクトの増員案件。設計、テスト...」
-
-            # JSON出力形式
-            {{
-              "jobs": [
-                {{
-                  "project_name": "案件名を抽出",
-                  "document": "案件のスキルや業務内容の詳細を、検索しやすいように要約",
-                  "nationality_requirement": "国籍要件（例: 外国籍不可、日本語ネイティブなど）を抽出",
-                  "start_date": "開始時期（例: 即日、2025年11月〜など）を抽出",
-                  "location": "勤務地（例: フルリモート、渋谷など）を抽出",
-                  "unit_price": "単価や予算（例: 〜80万円/月、スキル見合いなど）を抽出",
-                  "required_skills": "必須スキルや歓迎スキルをカンマ区切りで抽出"
-                }}
-              ]
-            }}
-
-            # 本番: 以下の案件情報から情報を抽出してください
-            ---
-            {text_content}
-        """
-    return "" # 不明なタイプの場合は空のプロンプトを返す
