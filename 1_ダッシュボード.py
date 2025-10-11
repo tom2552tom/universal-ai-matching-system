@@ -87,7 +87,7 @@ selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, plac
 #st.sidebar.divider()
 keyword_filter = st.sidebar.text_input("キーワード検索 (担当者名も可)")
 #st.sidebar.divider()
-st.sidebar.header("その他フィルター")
+
 filter_nationality = st.sidebar.checkbox("「外国籍不可」の案件を除外する", value=False)
 show_hidden_filter = st.sidebar.checkbox("非表示も表示する", value=False)
 
