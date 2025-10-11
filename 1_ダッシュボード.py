@@ -75,13 +75,18 @@ user_names = [user['username'] for user in all_users]
 assignee_options = ["すべて"] + user_names 
 job_assignee_filter = st.sidebar.selectbox("案件担当者", options=assignee_options, key="job_assignee_filter")
 engineer_assignee_filter = st.sidebar.selectbox("技術者担当者", options=assignee_options, key="engineer_assignee_filter")
-#st.sidebar.divider()
-status_options = [
-    "新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", 
-    "採用", "見送り（自社都合）", "見送り（クライアント都合）", "見送り（技術者都合）", "クローズ"
-]
+
+# ▼▼▼【ここからが修正箇所】▼▼▼
+# --- ステータスフィルター ---
+# configからステータスの選択肢を読み込む
+options_config = config.get('options', {})
+status_options = options_config.get('status', [
+    "新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", "採用", "見送り", "クローズ"
+]) # configにない場合のデフォルト値を設定
+
 selected_statuses = st.sidebar.multiselect("進捗ステータス", options=status_options, placeholder="ステータスを選択して絞り込み")
-#st.sidebar.divider()
+# ▲▲▲【修正箇所ここまで】▲▲▲
+
 grade_options = ['S','A', 'B', 'C', 'D', 'E']
 selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, placeholder="評価を選択して絞り込み")
 #st.sidebar.divider()
