@@ -98,40 +98,86 @@ def init_database():
     finally:
         if conn: conn.close()
 
+# ▼▼▼【ここが修正箇所】▼▼▼
 def get_extraction_prompt(doc_type, text_content):
+    """文書タイプに応じて、情報抽出用の専用プロンプトを生成する。"""
     if doc_type == 'engineer':
+        # --- 技術者情報抽出に特化したプロンプト ---
         return f"""
             あなたは、IT人材の「スキルシート」や「職務経歴書」を読み解く専門家です。
             あなたの仕事は、与えられたテキストから**単一の技術者情報**を抽出し、指定されたJSON形式で整理することです。
+
             # 絶対的なルール
             - 出力は、指定されたJSON形式の文字列のみとし、前後に解説や```json ```のようなコードブロックの囲みを含めないでください。
+
             # 指示
             - テキスト全体は、一人の技術者の情報です。複数の業務経歴が含まれていても、それらはすべてこの一人の技術者の経歴として要約してください。
             - `document`フィールドには、技術者のスキル、経験、自己PRなどを総合的に要約した、検索しやすい自然な文章を作成してください。
             - `document`の文章の先頭には、必ず技術者名を含めてください。例：「実務経験15年のTK氏。Java(SpringBoot)を主軸に...」
+
+            # 具体例
+            ## 入力テキスト:
+            氏名: 山田 太郎
+            年齢: 35歳
+            得意技術: Java, Spring
+            自己PR: Webアプリ開発が得意です。
+            ## 出力JSON:
+            {{"engineers": [{{"name": "山田 太郎", "document": "35歳の山田太郎氏。Java, Springを用いたWebアプリ開発が得意。", "main_skills": "Java, Spring"}}]}}
+
             # JSON出力形式
-            {{"engineers": [{{"name": "技術者の氏名を抽出", "document": "技術者のスキルや経歴の詳細を、検索しやすいように要約", "nationality": "国籍を抽出", "availability_date": "稼働可能日を抽出", "desired_location": "希望勤務地を抽出", "desired_salary": "希望単価を抽出", "main_skills": "主要なスキルをカンマ区切りで抽出"}}]}}
+            {{
+              "engineers": [
+                {{
+                  "name": "技術者の氏名を抽出",
+                  "document": "技術者のスキルや経歴の詳細を、検索しやすいように要約",
+                  "nationality": "国籍を抽出",
+                  "availability_date": "稼働可能日（例: 即日、2025年12月上旬など）を抽出",
+                  "desired_location": "希望勤務地を抽出",
+                  "desired_salary": "希望単価を抽出",
+                  "main_skills": "主要なプログラミング言語、フレームワーク、DBなどのスキルをカンマ区切りで抽出"
+                }}
+              ]
+            }}
+
             # 本番: 以下のスキルシートから情報を抽出してください
             ---
             {text_content}
         """
     elif doc_type == 'job':
+        # --- 案件情報抽出に特化したプロンプト ---
         return f"""
             あなたは、IT業界の「案件定義書」を読み解く専門家です。
             あなたの仕事は、与えられたテキストから**案件情報**を抽出し、指定されたJSON形式で整理することです。
             テキスト内に複数の案件情報が含まれている場合は、それぞれを個別のオブジェクトとしてリストにしてください。
+
             # 絶対的なルール
             - 出力は、指定されたJSON形式の文字列のみとし、前後に解説や```json ```のようなコードブロックの囲みを含めないでください。
+
             # 指示
             - `document`フィールドには、案件のスキルや業務内容の詳細を、後で検索しやすいように自然な文章で要約してください。
             - `document`の文章の先頭には、必ずプロジェクト名を含めてください。例：「社内SEプロジェクトの増員案件。設計、テスト...」
+
             # JSON出力形式
-            {{"jobs": [{{"project_name": "案件名を抽出", "document": "案件のスキルや業務内容の詳細を、検索しやすいように要約", "nationality_requirement": "国籍要件を抽出", "start_date": "開始時期を抽出", "location": "勤務地を抽出", "unit_price": "単価や予算を抽出", "required_skills": "必須スキルや歓迎スキルをカンマ区切りで抽出"}}]}}
+            {{
+              "jobs": [
+                {{
+                  "project_name": "案件名を抽出",
+                  "document": "案件のスキルや業務内容の詳細を、検索しやすいように要約",
+                  "nationality_requirement": "国籍要件（例: 外国籍不可、日本語ネイティブなど）を抽出",
+                  "start_date": "開始時期（例: 即日、2025年11月〜など）を抽出",
+                  "location": "勤務地（例: フルリモート、渋谷など）を抽出",
+                  "unit_price": "単価や予算（例: 〜80万円/月、スキル見合いなど）を抽出",
+                  "required_skills": "必須スキルや歓迎スキルをカンマ区切りで抽出"
+                }}
+              ]
+            }}
+
             # 本番: 以下の案件情報から情報を抽出してください
             ---
             {text_content}
         """
     return ""
+# ▲▲▲【修正ここまで】▲▲▲
 
 def split_text_with_llm(text_content):
     classification_prompt = f"""
@@ -171,16 +217,24 @@ def split_text_with_llm(text_content):
         with st.spinner("AIが情報を構造化中..."):
             response = model.generate_content(extraction_prompt, generation_config=generation_config, safety_settings=safety_settings)
         raw_text = response.text
-        start_index = raw_text.find('{'); end_index = raw_text.rfind('}')
-        if start_index != -1 and end_index != -1 and start_index < end_index:
-            json_str = raw_text[start_index : end_index + 1]
+        # JSON部分のみを抽出するロジックをより堅牢にする
+        try:
+            # 最も一般的なケース: ```json ... ``` で囲まれている
+            json_str = raw_text.split('```json\n')[1].split('\n```')[0]
             parsed_json = json.loads(json_str)
-            if "技術者情報" in doc_type: parsed_json["jobs"] = []
-            elif "案件情報" in doc_type: parsed_json["engineers"] = []
-            return parsed_json
-        else:
-            st.error(f"LLMによる構造化に失敗しました。"); st.code(raw_text, language='text'); return None
-    except json.JSONDecodeError as e:
+        except (IndexError, json.JSONDecodeError):
+             # 上記が失敗した場合、最初と最後の波括弧で囲まれた部分を抽出
+            start_index = raw_text.find('{'); end_index = raw_text.rfind('}')
+            if start_index != -1 and end_index != -1 and start_index < end_index:
+                json_str = raw_text[start_index : end_index + 1]
+                parsed_json = json.loads(json_str)
+            else:
+                raise ValueError("有効なJSONブロックが見つかりません。")
+
+        if "技術者情報" in doc_type: parsed_json["jobs"] = []
+        elif "案件情報" in doc_type: parsed_json["engineers"] = []
+        return parsed_json
+    except (json.JSONDecodeError, ValueError) as e:
         st.error(f"LLMによる構造化に失敗しました: {e}"); st.code(raw_text, language='text'); return None
     except Exception as e:
         st.error(f"LLMによる構造化に失敗しました: {e}");
@@ -345,10 +399,7 @@ def process_single_content(source_data: dict):
         conn.commit()
     return True
 
-# ▼▼▼【ここが修正箇所】▼▼▼
-# 欠落していた関数を再追加
 def extract_text_from_pdf(file_bytes):
-    """PDFファイルのバイトデータからテキストを抽出する。"""
     try:
         with fitz.open(stream=file_bytes, filetype="pdf") as doc:
             text = "".join(page.get_text() for page in doc)
@@ -357,14 +408,12 @@ def extract_text_from_pdf(file_bytes):
         return f"[PDFテキスト抽出エラー: {e}]"
 
 def extract_text_from_docx(file_bytes):
-    """DOCXファイルのバイトデータからテキストを抽出する。"""
     try:
         doc = docx.Document(io.BytesIO(file_bytes))
         text = "\n".join([para.text for para in doc.paragraphs])
         return text if text.strip() else "[DOCXテキスト抽出失敗: 内容が空]"
     except Exception as e:
         return f"[DOCXテキスト抽出エラー: {e}]"
-# ▲▲▲【修正ここまで】▲▲▲
 
 def get_email_contents(msg) -> dict:
     subject = str(make_header(decode_header(msg["subject"]))) if msg["subject"] else ""
@@ -613,4 +662,3 @@ def update_match_status(match_id, new_status):
             conn.commit(); return True
         except (Exception, psycopg2.Error) as e:
             print(f"ステータスの更新エラー: {e}"); conn.rollback(); return False
-
