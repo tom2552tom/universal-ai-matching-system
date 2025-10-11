@@ -9,11 +9,9 @@ import os
 # --- ヘルパー関数 (変更なし) ---
 def get_evaluation_html(grade, font_size='2.5em'):
     if not grade: return ""
-    # Sランクの色を追加
     color_map = {'S': '#00b894', 'A': '#28a745', 'B': '#17a2b8', 'C': '#ffc107', 'D': '#fd7e14', 'E': '#dc3545'}
     color = color_map.get(grade.upper(), '#6c757d') 
     style = f"color: {color}; font-size: {font_size}; font-weight: bold; text-align: center; line-height: 1; padding-top: 10px;"
-    # HTML構造を他と合わせる
     html_code = f"<div style='text-align: center; margin-bottom: 5px;'><span style='{style}'>{grade.upper()}</span></div><div style='text-align: center; font-size: 0.8em; color: #888;'>判定</div>"
     return html_code
 
@@ -30,7 +28,6 @@ def get_status_badge(status):
     return f"<span style='{style}'>{status}</span>"
 
 # --- アプリケーションの初期化 ---
-# データベース接続がPostgreSQLになったため、ローカルファイルの存在チェックは不要
 init_database()
 load_embedding_model()
 
@@ -74,7 +71,7 @@ query = '''
     SELECT 
         r.id as res_id, r.job_id, j.document as job_doc, j.project_name, j.is_hidden as job_is_hidden,
         r.engineer_id, e.document as eng_doc, e.name as engineer_name, e.is_hidden as engineer_is_hidden,
-        r.score, r.created_at, r.is_hidden, r.grade, r.status,
+        r.score, r.created_at, r.is_hidden as match_is_hidden, r.grade, r.status,
         job_user.username as job_assignee, eng_user.username as engineer_assignee
     FROM matching_results r
     JOIN jobs j ON r.job_id = j.id
@@ -85,8 +82,6 @@ query = '''
 params = []
 where_clauses = []
 
-# ▼▼▼【ここからが修正箇所】▼▼▼
-# プレースホルダを '?' から '%s' に変更
 if job_assignee_filter != "すべて":
     where_clauses.append("job_user.username = %s")
     params.append(job_assignee_filter)
@@ -96,35 +91,31 @@ if engineer_assignee_filter != "すべて":
     params.append(engineer_assignee_filter)
 
 if selected_statuses:
-    # PostgreSQLではタプルを直接渡せる
     where_clauses.append("r.status = ANY(%s)")
     params.append(list(selected_statuses))
 
 if selected_grades:
-    # PostgreSQLではタプルを直接渡せる
     where_clauses.append("r.grade = ANY(%s)")
     params.append(list(selected_grades))
 
 if keyword_filter: 
     where_clauses.append("(j.document ILIKE %s OR e.document ILIKE %s OR j.project_name ILIKE %s OR e.name ILIKE %s OR job_user.username ILIKE %s OR eng_user.username ILIKE %s OR r.status ILIKE %s)")
-    # ILIKEで大文字小文字を区別しない検索に
     keyword_param = f'%{keyword_filter}%'
     params.extend([keyword_param] * 7)
 
+# 'is_hidden'のエイリアスを'match_is_hidden'に変更したため、クエリを修正
 if not show_hidden_filter:
-    where_clauses.append("((r.is_hidden = 0 OR r.is_hidden IS NULL) AND j.is_hidden = 0 AND e.is_hidden = 0)")
+    where_clauses.append("((r.match_is_hidden = 0 OR r.match_is_hidden IS NULL) AND j.is_hidden = 0 AND e.is_hidden = 0)")
 
 if where_clauses:
     query += " WHERE " + " AND ".join(where_clauses)
 
-# created_atがタイムゾーン付きの場合、正しくソートされる
 query += " ORDER BY r.created_at DESC, r.score DESC"
 
 with conn.cursor() as cursor:
     cursor.execute(query, tuple(params))
     results = cursor.fetchall()
 conn.close()
-# ▲▲▲【修正箇所ここまで】▲▲▲
 
 # --- 結果のフィルタリング (国籍) ---
 if not results:
@@ -135,9 +126,7 @@ else:
         for res in results:
             job_doc = res['job_doc'] or ""
             eng_doc = res['eng_doc'] or ""
-            # 「外国籍不可」または「日本人」が案件に含まれる場合
             if "外国籍不可" in job_doc or "日本人" in job_doc:
-                # 技術者の国籍が日本でない場合は除外
                 if "国籍: 日本" not in eng_doc:
                     continue
             results_to_display.append(res)
@@ -193,41 +182,58 @@ else:
 
         # --- マッチング結果の表示ループ ---
         for res in paginated_results:
-            with st.container(border=True):
-                header_col1, header_col2 = st.columns([5, 2])
-                with header_col1:
-                    # タイムゾーン情報を考慮してフォーマット
-                    created_at_dt = res['created_at']
-                    if created_at_dt:
-                        st.caption(f"マッチング日時: {created_at_dt.strftime('%Y-%m-%d %H:%M:%S')}")
-                with header_col2:
-                    st.markdown(f"<div style='text-align: right;'>{get_status_badge(res['status'])}</div>", unsafe_allow_html=True)
+            
+            # ▼▼▼【ここが修正箇所】▼▼▼
+            # マッチング結果自体が非表示か、関連する案件/技術者が非表示の場合にスタイルを適用
+            is_archived = res['match_is_hidden'] or res['job_is_hidden'] or res['engineer_is_hidden']
+            
+            # 非表示の場合はコンテナ全体をグレーアウトさせる
+            container_style = "opacity: 0.5; background-color: #262730;" if is_archived else ""
 
-                col1, col2, col3 = st.columns([5, 2, 5])
+            # st.container の代わりに st.markdown を使ってdivを生成し、スタイルを適用
+            st.markdown(f"<div style='{container_style} border: 1px solid #333; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;'>", unsafe_allow_html=True)
+            
+            # コンテナの中身は変更なし
+            header_col1, header_col2 = st.columns([5, 2])
+            with header_col1:
+                created_at_dt = res['created_at']
+                if created_at_dt:
+                    st.caption(f"マッチング日時: {created_at_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+            with header_col2:
+                status_html = get_status_badge(res['status'])
+                # 非表示の場合はバッジを追加
+                if is_archived:
+                    status_html += " <span style='background-color: #444; color: #aaa; padding: 0.2em 0.6em; border-radius: 0.8rem; font-size: 0.8em; font-weight: 600;'>非表示</span>"
+                st.markdown(f"<div style='text-align: right;'>{status_html}</div>", unsafe_allow_html=True)
+
+            col1, col2, col3 = st.columns([5, 2, 5])
+            
+            with col1:
+                project_name = res['project_name'] or f"案件(ID: {res['job_id']})"
+                if res['job_is_hidden']:
+                    project_name += " <span style='color: #888; font-size: 0.8em;'>(案件 非表示)</span>"
+                st.markdown(f"##### 💼 {project_name}", unsafe_allow_html=True)
+                if res['job_assignee']:
+                    st.caption(f"**担当:** {res['job_assignee']}")
+                job_doc_summary = (res['job_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
+                st.caption(f"{job_doc_summary}...")
                 
-                with col1:
-                    project_name = res['project_name'] or f"案件(ID: {res['job_id']})"
-                    if res['job_is_hidden']:
-                        project_name += " <span style='color: #888; font-size: 0.8em;'>(非表示)</span>"
-                    st.markdown(f"##### 💼 {project_name}", unsafe_allow_html=True)
-                    if res['job_assignee']:
-                        st.caption(f"**担当:** {res['job_assignee']}")
-                    job_doc_summary = (res['job_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
-                    st.caption(f"{job_doc_summary}...")
-                    
-                with col2:
-                    st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-                    button_style = "display: block; padding: 0.5rem; background-color: #ff4b4b; color: white; text-align: center; text-decoration: none; border-radius: 0.5rem; font-weight: 600; margin-top: 10px; border: 1px solid #ff4b4b;"
-                    link = f'<a href="/マッチング詳細?result_id={res["res_id"]}" target="_blank" style="{button_style}">詳細を見る</a>'
-                    st.markdown(link, unsafe_allow_html=True)
+            with col2:
+                st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
+                button_style = "display: block; padding: 0.5rem; background-color: #ff4b4b; color: white; text-align: center; text-decoration: none; border-radius: 0.5rem; font-weight: 600; margin-top: 10px; border: 1px solid #ff4b4b;"
+                link = f'<a href="/マッチング詳細?result_id={res["res_id"]}" target="_blank" style="{button_style}">詳細を見る</a>'
+                st.markdown(link, unsafe_allow_html=True)
 
-                with col3:
-                    engineer_name = res['engineer_name'] or f"技術者(ID: {res['engineer_id']})"
-                    if res['engineer_is_hidden']:
-                        engineer_name += " <span style='color: #888; font-size: 0.8em;'>(非表示)</span>"
-                    st.markdown(f"##### 👤 {engineer_name}", unsafe_allow_html=True)
-                    if res['engineer_assignee']:
-                        st.caption(f"**担当:** {res['engineer_assignee']}")
-                    eng_doc_summary = (res['eng_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
-                    st.caption(f"{eng_doc_summary}...")
-            st.empty()
+            with col3:
+                engineer_name = res['engineer_name'] or f"技術者(ID: {res['engineer_id']})"
+                if res['engineer_is_hidden']:
+                    engineer_name += " <span style='color: #888; font-size: 0.8em;'>(技術者 非表示)</span>"
+                st.markdown(f"##### 👤 {engineer_name}", unsafe_allow_html=True)
+                if res['engineer_assignee']:
+                    st.caption(f"**担当:** {res['engineer_assignee']}")
+                eng_doc_summary = (res['eng_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
+                st.caption(f"{eng_doc_summary}...")
+            
+            # コンテナを閉じるためのdivタグ
+            st.markdown("</div>", unsafe_allow_html=True)
+            # ▲▲▲【修正ここまで】▲▲▲
