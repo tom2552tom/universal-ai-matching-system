@@ -182,56 +182,50 @@ else:
         # --- マッチング結果の表示ループ ---
         for res in paginated_results:
             
-            is_archived = res['match_is_hidden'] or res['job_is_hidden'] or res['engineer_is_hidden']
-            
             # ▼▼▼【ここが修正箇所】▼▼▼
-            # スタイル定義を修正。margin-bottom を追加
-            container_style = "border: 1px solid #333; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;"
-            if is_archived:
-                container_style += " opacity: 0.5; background-color: #262730;"
-            
-            # st.container の代わりに st.markdown を使ってdivを生成し、スタイルを適用
-            st.markdown(f"<div style='{container_style}'>", unsafe_allow_html=True)
-            # ▲▲▲【修正ここまで】▲▲▲
-            
-            # コンテナの中身は変更なし
-            header_col1, header_col2 = st.columns([5, 2])
-            with header_col1:
-                created_at_dt = res['created_at']
-                if created_at_dt:
-                    st.caption(f"マッチング日時: {created_at_dt.strftime('%Y-%m-%d %H:%M:%S')}")
-            with header_col2:
-                status_html = get_status_badge(res['status'])
-                if is_archived:
-                    status_html += " <span style='background-color: #444; color: #aaa; padding: 0.2em 0.6em; border-radius: 0.8rem; font-size: 0.8em; font-weight: 600;'>非表示</span>"
-                st.markdown(f"<div style='text-align: right;'>{status_html}</div>", unsafe_allow_html=True)
-
-            col1, col2, col3 = st.columns([5, 2, 5])
-            
-            with col1:
-                project_name = res['project_name'] or f"案件(ID: {res['job_id']})"
-                if res['job_is_hidden']:
-                    project_name += " <span style='color: #888; font-size: 0.8em;'>(案件 非表示)</span>"
-                st.markdown(f"##### 💼 {project_name}", unsafe_allow_html=True)
-                if res['job_assignee']:
-                    st.caption(f"**担当:** {res['job_assignee']}")
-                job_doc_summary = (res['job_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
-                st.caption(f"{job_doc_summary}...")
+            # 1. 壊れたst.markdownのラッパーを、st.containerに戻す
+            with st.container(border=True):
+                is_archived = res['match_is_hidden'] or res['job_is_hidden'] or res['engineer_is_hidden']
                 
-            with col2:
-                st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-                button_style = "display: block; padding: 0.5rem; background-color: #ff4b4b; color: white; text-align: center; text-decoration: none; border-radius: 0.5rem; font-weight: 600; margin-top: 10px; border: 1px solid #ff4b4b;"
-                link = f'<a href="/マッチング詳細?result_id={res["res_id"]}" target="_blank" style="{button_style}">詳細を見る</a>'
-                st.markdown(link, unsafe_allow_html=True)
+                # 2. 非表示の場合、コンテナの先頭に警告メッセージを表示する
+                if is_archived:
+                    st.warning("このマッチングは、関連する案件・技術者、またはマッチング自体が非表示（アーカイブ済み）です。")
+                
+                header_col1, header_col2 = st.columns([5, 2])
+                with header_col1:
+                    created_at_dt = res['created_at']
+                    if created_at_dt:
+                        st.caption(f"マッチング日時: {created_at_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+                with header_col2:
+                    status_html = get_status_badge(res['status'])
+                    st.markdown(f"<div style='text-align: right;'>{status_html}</div>", unsafe_allow_html=True)
 
-            with col3:
-                engineer_name = res['engineer_name'] or f"技術者(ID: {res['engineer_id']})"
-                if res['engineer_is_hidden']:
-                    engineer_name += " <span style='color: #888; font-size: 0.8em;'>(技術者 非表示)</span>"
-                st.markdown(f"##### 👤 {engineer_name}", unsafe_allow_html=True)
-                if res['engineer_assignee']:
-                    st.caption(f"**担当:** {res['engineer_assignee']}")
-                eng_doc_summary = (res['eng_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
-                st.caption(f"{eng_doc_summary}...")
-            
-            st.markdown("</div>", unsafe_allow_html=True)
+                col1, col2, col3 = st.columns([5, 2, 5])
+                
+                with col1:
+                    project_name = res['project_name'] or f"案件(ID: {res['job_id']})"
+                    if res['job_is_hidden']:
+                        project_name += " <span style='color: #888; font-size: 0.8em;'>(案件 非表示)</span>"
+                    st.markdown(f"##### 💼 {project_name}", unsafe_allow_html=True)
+                    if res['job_assignee']:
+                        st.caption(f"**担当:** {res['job_assignee']}")
+                    job_doc_summary = (res['job_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
+                    st.caption(f"{job_doc_summary}...")
+                    
+                with col2:
+                    st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
+                    button_style = "display: block; padding: 0.5rem; background-color: #ff4b4b; color: white; text-align: center; text-decoration: none; border-radius: 0.5rem; font-weight: 600; margin-top: 10px; border: 1px solid #ff4b4b;"
+                    link = f'<a href="/マッチング詳細?result_id={res["res_id"]}" target="_blank" style="{button_style}">詳細を見る</a>'
+                    st.markdown(link, unsafe_allow_html=True)
+
+                with col3:
+                    engineer_name = res['engineer_name'] or f"技術者(ID: {res['engineer_id']})"
+                    if res['engineer_is_hidden']:
+                        engineer_name += " <span style='color: #888; font-size: 0.8em;'>(技術者 非表示)</span>"
+                    st.markdown(f"##### 👤 {engineer_name}", unsafe_allow_html=True)
+                    if res['engineer_assignee']:
+                        st.caption(f"**担当:** {res['engineer_assignee']}")
+                    eng_doc_summary = (res['eng_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
+                    st.caption(f"{eng_doc_summary}...")
+            # ▲▲▲【修正ここまで】▲▲▲
+
