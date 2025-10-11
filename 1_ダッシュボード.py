@@ -77,13 +77,12 @@ job_assignee_filter = st.sidebar.selectbox("案件担当者", options=assignee_o
 engineer_assignee_filter = st.sidebar.selectbox("技術者担当者", options=assignee_options, key="engineer_assignee_filter")
 
 
-options_config = config.get('options', {})
-status_options = options_config.get('status', [
-    
-]) # configにない場合のデフォルト値を設定
-
+status_options = [
+    "新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", 
+    "採用", "見送り（自社都合）", "見送り（クライアント都合）", "見送り（技術者都合）", "クローズ"
+]
 selected_statuses = st.sidebar.multiselect("進捗ステータス", options=status_options, placeholder="ステータスを選択して絞り込み")
-
+#st.sidebar.divider()
 grade_options = ['S','A', 'B', 'C', 'D', 'E']
 selected_grades = st.sidebar.multiselect("AI評価", options=grade_options, placeholder="評価を選択して絞り込み")
 #st.sidebar.divider()
