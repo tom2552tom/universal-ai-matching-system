@@ -50,17 +50,17 @@ st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wi
 # ▲▲▲【変更点2ここまで】▲▲▲
 
 
-sales_staff_notice = """
-<div style="background-color: #ffcccc; color: #cc0000; padding: 10px; border-radius: 5px; border: 2px solid #cc0000; font-weight: bold; text-align: center; margin-bottom: 20px;">
-    🚨 営業スタッフへ: メール読み込み後、案件管理、技術者管理メニューより、担当をアサインしてください。<br>
-    マッチング不要な案件、技術者はアーカイブするようにしてください。マッチング処理から除外されます。<br>
-    特にS, A, B評価の技術者は優先的にアプローチしましょう！
-</div>
-"""
-if sales_staff_notice:
-    st.markdown(sales_staff_notice, unsafe_allow_html=True)
-
-st.divider()
+#sales_staff_notice = """
+#<div style="background-color: #ffcccc; color: #cc0000; padding: 10px; border-radius: 5px; border: 2px solid #cc0000; font-weight: bold; text-align: center; margin-bottom: 20px;">
+#    🚨 営業スタッフへ: メール読み込み後、案件管理、技術者管理メニューより、担当をアサインしてください。<br>
+#    マッチング不要な案件、技術者はアーカイブするようにしてください。マッチング処理から除外されます。<br>
+#    特にS, A, B評価の技術者は優先的にアプローチしましょう！
+#</div>
+#"""
+#if sales_staff_notice:
+#    st.markdown(sales_staff_notice, unsafe_allow_html=True)
+#
+#st.divider()
 
 # --- ページング設定の初期化 ---
 if 'current_page' not in st.session_state:
