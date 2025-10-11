@@ -25,7 +25,7 @@ except (KeyError, Exception):
     st.error("`secrets.toml` に `GOOGLE_API_KEY` が設定されていません。")
     st.stop()
 
-# Faissインデックスファイルのパス (SQLiteのDB_FILEは不要)
+# Faissインデックスファイルのパス
 JOB_INDEX_FILE = "backend_job_index.faiss"
 ENGINEER_INDEX_FILE = "backend_engineer_index.faiss"
 MODEL_NAME = 'intfloat/multilingual-e5-large'
@@ -128,7 +128,6 @@ def init_database():
             print("Database initialized and schema verified for PostgreSQL successfully.")
     except Exception as e:
         print(f"❌ データベース初期化中にエラーが発生しました: {e}")
-        # conn.rollback() は with ブロックが自動で処理
 
 # --- 5. LLM & AI関連 ---
 
@@ -225,7 +224,6 @@ def get_match_summary_with_llm(_job_doc, _engineer_doc):
         return None
 
 def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_name, project_name):
-    """LLMを使用して、クライアントへの技術者提案メール文案を生成します。"""
     if not all([job_summary, engineer_summary, engineer_name, project_name]):
         return "情報が不足しているため、提案メールを生成できませんでした。"
     model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
@@ -288,6 +286,7 @@ def get_records_by_ids(table_name, ids):
     if not ids: return []
     with get_db_connection() as conn:
         with conn.cursor(cursor_factory=DictCursor) as cursor:
+            # IN句のプレースホルダーはタプルにする
             query = f"SELECT * FROM {table_name} WHERE id IN %s"
             cursor.execute(query, (tuple(ids),))
             results = cursor.fetchall()
@@ -325,7 +324,7 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
         
         if llm_result and 'summary' in llm_result:
             grade = llm_result.get('summary')
-            if grade in ['S', 'A', 'B', 'C']: # C評価も保存対象に
+            if grade in ['S', 'A', 'B', 'C']:
                 cursor.execute(
                     'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade) VALUES (%s, %s, %s, %s, %s)',
                     (job_id, engineer_id, score, now_str, grade)
@@ -337,19 +336,25 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
             print(f"  - 候補: 『{candidate_name}』(ID:{candidate_id}) -> LLM評価失敗のためスキップ")
 
 def process_single_content(source_data: dict):
-    if not source_data: return False
+    if not source_data:
+        print("処理するデータが空です。")
+        return False
     
     attachments = source_data.get('attachments', [])
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att['content']}" for att in attachments if att.get('content') and not att['content'].startswith("[")]
     full_text_for_llm = source_data.get('body', '') + "".join(valid_attachments_content)
-    if not full_text_for_llm.strip(): return False
+    if not full_text_for_llm.strip():
+        print("解析対象のテキストがありません。")
+        return False
     
     parsed_data = split_text_with_llm(full_text_for_llm)
     if not parsed_data: return False
     
     new_jobs_data = parsed_data.get("jobs", [])
     new_engineers_data = parsed_data.get("engineers", [])
-    if not new_jobs_data and not new_engineers_data: return False
+    if not new_jobs_data and not new_engineers_data:
+        print("LLMはテキストから案件情報または技術者情報を抽出できませんでした。")
+        return False
 
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
@@ -407,8 +412,7 @@ def extract_text_from_docx(file_bytes):
     except Exception as e: return f"[DOCXテキスト抽出エラー: {e}]"
 
 def get_email_contents(msg):
-    body_text = ""
-    attachments = []
+    body_text, attachments = "", []
     if msg.is_multipart():
         for part in msg.walk():
             content_type = part.get_content_type()
@@ -488,13 +492,18 @@ def fetch_and_process_emails():
 
 def _update_single_field(table, field, value, record_id):
     """汎用的な単一フィールド更新関数"""
-    with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            # SQLインジェクションを防ぐため、テーブル名とフィールド名は安全なリストから検証するなどの対策が望ましい
-            query = f"UPDATE {table} SET {field} = %s WHERE id = %s"
-            cursor.execute(query, (value, record_id))
-        conn.commit()
-    return True
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                # SQLインジェクションを防ぐため、テーブル名とフィールド名はプログラム側で固定
+                # 動的にする場合は、ホワイトリストで厳密に検証する必要がある
+                query = f"UPDATE {table} SET {field} = %s WHERE id = %s"
+                cursor.execute(query, (value, record_id))
+            conn.commit()
+        return True
+    except Exception as e:
+        print(f"DB更新エラー ({table}.{field}): {e}")
+        return False
 
 def update_job_source_json(job_id, new_json_str):
     return _update_single_field('jobs', 'source_data_json', new_json_str, job_id)
@@ -573,11 +582,11 @@ def re_evaluate_and_match_single_item(item_type, item_id):
             full_text_for_llm = source_data.get('body', '')
             
             parsed_data = split_text_with_llm(full_text_for_llm)
-            if not parsed_data or not parsed_data.get(f"{table_name}"):
+            if not parsed_data or not parsed_data.get(f"{table_name}s"): # 'jobs' or 'engineers'
                 print(f"LLMによる再評価で、{item_type}情報の抽出に失敗しました。")
                 return False
 
-            item_data = parsed_data[f"{table_name}"][0]
+            item_data = parsed_data[f"{table_name}s"][0]
             doc = item_data.get("document") or full_text_for_llm
             meta_info = _build_meta_info_string(item_type, item_data)
             new_full_document = meta_info + doc
