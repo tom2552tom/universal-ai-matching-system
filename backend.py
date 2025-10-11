@@ -291,7 +291,6 @@ def run_matching_for_item(item_data, item_type, cursor, now_str):
         else:
             st.write(f"  - 候補: 『{candidate_name}』 -> LLM評価失敗のためスキップ")
 
-# ▼▼▼【ここが修正箇所】▼▼▼
 def process_single_content(source_data: dict):
     if not source_data: st.warning("処理するデータが空です。"); return False
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")]
@@ -308,26 +307,14 @@ def process_single_content(source_data: dict):
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            
-            # --- JSON保存用の処理 ---
-            # 1. 元データからdatetimeオブジェクトを取得
             received_at_dt = source_data.get('received_at')
-            
-            # 2. JSON保存用にデータをコピー
             json_data_to_store = source_data.copy()
-            
-            # 3. datetimeオブジェクトを文字列に変換（JSONシリアライズのため）
             if isinstance(json_data_to_store.get('received_at'), datetime):
                 json_data_to_store['received_at'] = json_data_to_store['received_at'].isoformat()
-            
-            # 4. 大きなデータ（本文と添付ファイル）を削除
             json_data_to_store.pop('body', None)
             json_data_to_store.pop('attachments', None)
-            
-            # 5. JSON文字列を作成
             source_json_str = json.dumps(json_data_to_store, ensure_ascii=False, indent=2)
-            
-            # --- DB登録処理 ---
+
             newly_added_jobs, newly_added_engineers = [], []
             
             for item_data in new_jobs_data:
@@ -335,9 +322,7 @@ def process_single_content(source_data: dict):
                 project_name = item_data.get("project_name", "名称未定の案件")
                 meta_info = _build_meta_info_string('job', item_data)
                 full_document = meta_info + doc
-                # DBにはdatetimeオブジェクト(received_at_dt)を渡す
-                cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
-                               (project_name, full_document, source_json_str, now_str, received_at_dt))
+                cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (project_name, full_document, source_json_str, now_str, received_at_dt))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_jobs.append(item_data)
             
             for item_data in new_engineers_data:
@@ -345,9 +330,7 @@ def process_single_content(source_data: dict):
                 engineer_name = item_data.get("name", "名称不明の技術者")
                 meta_info = _build_meta_info_string('engineer', item_data)
                 full_document = meta_info + doc
-                # DBにはdatetimeオブジェクト(received_at_dt)を渡す
-                cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', 
-                               (engineer_name, full_document, source_json_str, now_str, received_at_dt))
+                cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (engineer_name, full_document, source_json_str, now_str, received_at_dt))
                 item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_engineers.append(item_data)
             
             st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
@@ -361,6 +344,26 @@ def process_single_content(source_data: dict):
             for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', cursor, now_str)
         conn.commit()
     return True
+
+# ▼▼▼【ここが修正箇所】▼▼▼
+# 欠落していた関数を再追加
+def extract_text_from_pdf(file_bytes):
+    """PDFファイルのバイトデータからテキストを抽出する。"""
+    try:
+        with fitz.open(stream=file_bytes, filetype="pdf") as doc:
+            text = "".join(page.get_text() for page in doc)
+        return text if text.strip() else "[PDFテキスト抽出失敗: 内容が空または画像PDF]"
+    except Exception as e:
+        return f"[PDFテキスト抽出エラー: {e}]"
+
+def extract_text_from_docx(file_bytes):
+    """DOCXファイルのバイトデータからテキストを抽出する。"""
+    try:
+        doc = docx.Document(io.BytesIO(file_bytes))
+        text = "\n".join([para.text for para in doc.paragraphs])
+        return text if text.strip() else "[DOCXテキスト抽出失敗: 内容が空]"
+    except Exception as e:
+        return f"[DOCXテキスト抽出エラー: {e}]"
 # ▲▲▲【修正ここまで】▲▲▲
 
 def get_email_contents(msg) -> dict:
@@ -610,3 +613,4 @@ def update_match_status(match_id, new_status):
             conn.commit(); return True
         except (Exception, psycopg2.Error) as e:
             print(f"ステータスの更新エラー: {e}"); conn.rollback(); return False
+
