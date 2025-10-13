@@ -343,7 +343,7 @@ def _extract_skills_from_document(document: str, item_type: str) -> set:
     skills = {skill.strip().lower() for skill in re.split(r'[,、，\s]+', skills_str) if skill.strip()}
     return skills
 
-# backend.py の run_matching_for_item 関数を修正
+# backend.py の run_matching_for_item 関数をこちらに置き換えてください
 
 def run_matching_for_item(item_data, item_type, conn, now_str):
     # ▼▼▼【この関数全体を置き換えてください】▼▼▼
@@ -353,75 +353,90 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
             query_text, index_path = item_data['document'], ENGINEER_INDEX_FILE
             target_table_name = 'engineers'
             source_name = item_data.get('project_name', f"案件ID:{item_data['id']}")
-        else:
+        else: # item_type == 'engineer'
             query_text, index_path = item_data['document'], JOB_INDEX_FILE
             target_table_name = 'jobs'
             source_name = item_data.get('name', f"技術者ID:{item_data['id']}")
 
+        # TOP_K_CANDIDATESはAI評価の上限数なので、ベクトル検索時は少し多めに取得する
         search_limit = TOP_K_CANDIDATES * 2
 
         # 2. Faissによる類似度検索を実行
         similarities, ids = search(query_text, index_path, top_k=search_limit)
         if not ids:
-            st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) の類似候補は見つかりませんでした。")
+            st.write(f"▶ 『{source_name}』(ID:{item_data['id']}) の類似候補は見つかりませんでした。")
             return
 
         # 3. 検索結果の候補データをDBから一括取得
         candidate_records = get_records_by_ids(target_table_name, ids)
         candidate_map = {record['id']: record for record in candidate_records}
 
-        # ▼▼▼ 変更点 1: 最初のログメッセージを修正 ▼▼▼
-        st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) の類似候補 **{len(ids)}件** を発見。スキルセットでフィルタリングします...")
-        # ▲▲▲ 変更点 1 ここまで ▲▲▲
+        st.write(f"▶ 『{source_name}』(ID:{item_data['id']}) の類似候補 **{len(ids)}件** を発見。")
+        
+        # ▼▼▼【ここからがスキルフィルタリングの修正箇所です】▼▼▼
 
-        source_skills = _extract_skills_from_document(item_data['document'], item_type)
-        if not source_skills:
-            st.write(f"  - 検索元『{source_name}』のスキル情報が抽出できなかったため、事前フィルタリングはスキップします。")
-
-        # ステップA: スキルフィルタリングを行い、有効な候補リストを作成する
+        # --- スキルフィルタリングを一時的に無効化 ---
+        st.info("ℹ️ 現在、スキルによる事前フィルタリングは無効化されています。すべての類似候補をAI評価の対象とします。")
+        
         valid_candidates = []
         for sim, candidate_id in zip(similarities, ids):
+            # AI評価の対象を TOP_K_CANDIDATES 件に絞る
             if len(valid_candidates) >= TOP_K_CANDIDATES:
                 break
-
-            candidate_record = candidate_map.get(candidate_id)
-            if not candidate_record:
-                continue
             
-            candidate_name = candidate_record.get('project_name') or candidate_record.get('name') or f"ID:{candidate_id}"
-
-            if source_skills:
-                candidate_item_type = 'engineer' if item_type == 'job' else 'job'
-                candidate_skills = _extract_skills_from_document(candidate_record['document'], candidate_item_type)
-                
-                if not source_skills.intersection(candidate_skills):
-                    # このログは詳細すぎる場合はコメントアウトしても良い
-                    # st.write(f"  - 候補: 『{candidate_name}』 -> スキル不一致のため事前除外。")
-                    continue
+            candidate_record = candidate_map.get(candidate_id)
+            if not candidate_record: continue
             
             valid_candidates.append({
                 'sim': sim,
                 'id': candidate_id,
                 'record': candidate_record,
-                'name': candidate_name
+                'name': candidate_record.get('project_name') or candidate_record.get('name') or f"ID:{candidate_id}"
             })
         
-        # ▼▼▼ 変更点 2: フィルタリング後の結果ログを修正 ▼▼▼
+        # --- 将来的に再度有効化するための元コード（コメントアウト） ---
+        #
+        # source_skills = _extract_skills_from_document(item_data['document'], item_type)
+        # if not source_skills:
+        #     st.write(f"  - 検索元『{source_name}』のスキル情報が抽出できず、フィルタリングはスキップします。")
+        #     for sim, candidate_id in zip(similarities, ids):
+        #         if len(valid_candidates) >= TOP_K_CANDIDATES: break
+        #         candidate_record = candidate_map.get(candidate_id)
+        #         if not candidate_record: continue
+        #         valid_candidates.append({
+        #             'sim': sim, 'id': candidate_id, 'record': candidate_record,
+        #             'name': candidate_record.get('project_name') or candidate_record.get('name') or f"ID:{candidate_id}"
+        #         })
+        # else:
+        #     SKILL_MATCH_RATIO_THRESHOLD = 0.5  # 例: 50%
+        #     st.write(f"  - スキルフィルタリング条件: 一致率が {SKILL_MATCH_RATIO_THRESHOLD*100:.0f}% 以上の候補を対象とします。")
+        #     for sim, candidate_id in zip(similarities, ids):
+        #         if len(valid_candidates) >= TOP_K_CANDIDATES: break
+        #         candidate_record = candidate_map.get(candidate_id)
+        #         if not candidate_record: continue
+        #         candidate_item_type = 'engineer' if item_type == 'job' else 'job'
+        #         candidate_skills = _extract_skills_from_document(candidate_record['document'], candidate_item_type)
+        #         intersection_count = len(source_skills.intersection(candidate_skills))
+        #         match_ratio = intersection_count / len(source_skills) if len(source_skills) > 0 else 0
+        #         if match_ratio >= SKILL_MATCH_RATIO_THRESHOLD:
+        #             valid_candidates.append({
+        #                 'sim': sim, 'id': candidate_id, 'record': candidate_record,
+        #                 'name': candidate_record.get('project_name') or candidate_record.get('name') or f"ID:{candidate_id}"
+        #             })
+        
+        # ▲▲▲【スキルフィルタリングの修正ここまで】▲▲▲
+
         if not valid_candidates:
-            st.write(f"✅ スキルが一致する有効な候補は見つかりませんでした。処理を終了します。")
+            st.write(f"✅ 類似候補は見つかりましたが、有効なレコードがありませんでした。処理を終了します。")
             return
 
-        st.write(f"✅ スキルが一致した有効な候補 **{len(valid_candidates)}件** に絞り込みました。AI評価を開始します...")
-        # ▲▲▲ 変更点 2 ここまで ▲▲▲
+        st.write(f"✅ AI評価対象の候補を **{len(valid_candidates)}件** に絞り込みました。AI評価を開始します...")
 
-        # ステップB: 有効な候補リストに対してAI評価とDB保存を行う
+        # 5. 有効な候補リストに対してAI評価とDB保存を行う
         for candidate_info in valid_candidates:
             score = float(candidate_info['sim']) * 100
+            if score < MIN_SCORE_THRESHOLD: continue
 
-            if score < MIN_SCORE_THRESHOLD:
-                continue
-
-            # 5. LLM評価のための案件・技術者情報を準備
             if item_type == 'job':
                 job_doc, engineer_doc = item_data['document'], candidate_info['record']['document']
                 job_id, engineer_id = item_data['id'], candidate_info['id']
@@ -429,10 +444,8 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
                 job_doc, engineer_doc = candidate_info['record']['document'], item_data['document']
                 job_id, engineer_id = candidate_info['id'], item_data['id']
 
-            # 6. LLMによるマッチング評価を実行
             llm_result = get_match_summary_with_llm(job_doc, engineer_doc)
 
-            # 7. LLMの評価結果に基づいてDBへの保存を判断
             if llm_result and 'summary' in llm_result:
                 grade = llm_result.get('summary')
                 positive_points = json.dumps(llm_result.get('positive_points', []), ensure_ascii=False)
@@ -454,7 +467,6 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
 
 
 
-# backend.py
 
 def process_single_content(source_data: dict, progress_bar, base_progress: float, progress_per_email: float):
     """
@@ -1122,20 +1134,43 @@ def save_proposal_text(match_id, text):
             conn.rollback()
             return False
 
+# backend.py の get_dashboard_data 関数をこちらに置き換えてください
+
 def get_dashboard_data():
     """ダッシュボード表示に必要なデータをDBから取得・集計する"""
     conn = get_db_connection()
     try:
-        @st.cache_data(ttl=300) # 5分間キャッシュ
+        #@st.cache_data(ttl=300) # 5分間キャッシュ
         def fetch_data_from_db():
-            jobs_df = pd.read_sql("SELECT id, created_at FROM jobs", conn)
-            engineers_df = pd.read_sql("SELECT id, created_at FROM engineers", conn)
-            matches_df = pd.read_sql("SELECT id, created_at, grade FROM matching_results", conn)
+            # 【変更点1】 users テーブルも読み込む
+            # 【変更点2】 SQLでJOINして担当者名(username)を取得する
+            jobs_sql = """
+                SELECT j.id, j.created_at, u.username as assignee_name
+                FROM jobs j
+                LEFT JOIN users u ON j.assigned_user_id = u.id
+            """
+            engineers_sql = """
+                SELECT e.id, e.created_at, u.username as assignee_name
+                FROM engineers e
+                LEFT JOIN users u ON e.assigned_user_id = u.id
+            """
+            matches_sql = """
+                SELECT m.id, m.created_at, m.grade, u_job.username as job_assignee, u_eng.username as engineer_assignee
+                FROM matching_results m
+                LEFT JOIN jobs j ON m.job_id = j.id
+                LEFT JOIN engineers e ON m.engineer_id = e.id
+                LEFT JOIN users u_job ON j.assigned_user_id = u_job.id
+                LEFT JOIN users u_eng ON e.assigned_user_id = u_eng.id
+            """
+            jobs_df = pd.read_sql(jobs_sql, conn)
+            engineers_df = pd.read_sql(engineers_sql, conn)
+            matches_df = pd.read_sql(matches_sql, conn)
+            
             return jobs_df, engineers_df, matches_df
 
         jobs_df, engineers_df, matches_df = fetch_data_from_db()
 
-        # --- 1. サマリー指標の計算 ---
+        # --- 1. サマリー指標 (変更なし) ---
         total_jobs = len(jobs_df)
         total_engineers = len(engineers_df)
         total_matches = len(matches_df)
@@ -1155,30 +1190,45 @@ def get_dashboard_data():
             "engineers_this_month": engineers_this_month,
         }
 
-        # --- 2. AI評価ランクの割合を計算 ---
+        # --- 2. AI評価ランクの割合 (変更なし) ---
         if not matches_df.empty:
             rank_counts = matches_df['grade'].value_counts().reindex(['S', 'A', 'B', 'C', 'D'], fill_value=0)
         else:
             rank_counts = pd.Series([0, 0, 0, 0, 0], index=['S', 'A', 'B', 'C', 'D'])
 
-        # --- 3. 時系列データの作成 (★ここからが新しいコード) ---
+        # --- 3. 時系列データ (変更なし) ---
         matches_df['created_at'] = pd.to_datetime(matches_df['created_at'], errors='coerce')
-
-        # 日付をインデックスに設定
         jobs_ts = jobs_df.dropna(subset=['created_at']).set_index('created_at')
         engineers_ts = engineers_df.dropna(subset=['created_at']).set_index('created_at')
         matches_ts = matches_df.dropna(subset=['created_at']).set_index('created_at')
-
-        # 日別(Day)でリサンプリングして件数をカウント
         daily_jobs = jobs_ts.resample('D').size().rename('案件登録数')
         daily_engineers = engineers_ts.resample('D').size().rename('技術者登録数')
         daily_matches = matches_ts.resample('D').size().rename('マッチング生成数')
-
-        # 3つの時系列データを1つのDataFrameに結合
         time_series_df = pd.concat([daily_jobs, daily_engineers, daily_matches], axis=1).fillna(0).astype(int)
         
-        # 戻り値に時系列データを追加
-        return summary_metrics, rank_counts, time_series_df
+        # --- 4. 担当者別分析データ (★ここからが新しいコード) ---
+        # 担当者が未割り当て(None)の場合を「未担当」に置き換える
+        jobs_df['assignee_name'].fillna('未担当', inplace=True)
+        engineers_df['assignee_name'].fillna('未担当', inplace=True)
+        
+        # 担当者ごとの担当件数を集計
+        job_counts_by_assignee = jobs_df['assignee_name'].value_counts().rename('案件担当数')
+        engineer_counts_by_assignee = engineers_df['assignee_name'].value_counts().rename('技術者担当数')
+        assignee_counts_df = pd.concat([job_counts_by_assignee, engineer_counts_by_assignee], axis=1).fillna(0).astype(int)
+        
+        # 担当者ごとのマッチングランク分布を集計
+        # 案件担当者と技術者担当者のどちらかが設定されていれば、その担当者の成果とみなす（coalesce的な処理）
+        matches_df['responsible_person'] = matches_df['job_assignee'].fillna(matches_df['engineer_assignee']).fillna('未担当')
+        match_rank_by_assignee = pd.crosstab(
+            index=matches_df['responsible_person'],
+            columns=matches_df['grade']
+        )
+        # S,A,B,C,Dカラムが必ず存在するようにreindex
+        all_ranks = ['S', 'A', 'B', 'C', 'D']
+        match_rank_by_assignee = match_rank_by_assignee.reindex(columns=all_ranks, fill_value=0)
+
+        # 戻り値に担当者別データを追加
+        return summary_metrics, rank_counts, time_series_df, assignee_counts_df, match_rank_by_assignee
 
     finally:
         if conn:
