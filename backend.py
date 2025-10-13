@@ -17,6 +17,8 @@ import contextlib
 import toml
 import fitz
 import docx
+import re # スキル抽出のために re モジュールをインポート
+
 
 # --- 1. 初期設定と定数 (変更なし) ---
 try:
@@ -289,50 +291,145 @@ def get_records_by_ids(table_name, ids):
             results_map = {res['id']: res for res in results}
             return [results_map[id] for id in ids if id in results_map]
 
-def run_matching_for_item(item_data, item_type, cursor, now_str):
-    if item_type == 'job':
-        query_text, index_path, candidate_table = item_data['document'], ENGINEER_INDEX_FILE, 'engineers'
-        source_name = item_data.get('project_name', f"案件ID:{item_data['id']}")
-    else:
-        query_text, index_path, candidate_table = item_data['document'], JOB_INDEX_FILE, 'jobs'
-        source_name = item_data.get('name', f"技術者ID:{item_data['id']}")
-    similarities, ids = search(query_text, index_path, top_k=TOP_K_CANDIDATES)
-    if not ids:
-        st.write(f"▶ 『{source_name}』(ID:{item_data['id']}) の類似候補は見つかりませんでした。"); return
-    candidate_records = get_records_by_ids(candidate_table, ids)
-    candidate_map = {record['id']: record for record in candidate_records}
-    st.write(f"▶ 『{source_name}』(ID:{item_data['id']}) との類似候補 {len(ids)}件を評価します。")
-    for sim, candidate_id in zip(similarities, ids):
-        score = float(sim) * 100
-        if score < MIN_SCORE_THRESHOLD: continue
-        candidate_record = candidate_map.get(candidate_id)
-        if not candidate_record: continue
-        candidate_name = candidate_record.get('project_name') or candidate_record.get('name') or f"ID:{candidate_id}"
-        job_doc, engineer_doc = (item_data['document'], candidate_record['document']) if item_type == 'job' else (candidate_record['document'], item_data['document'])
-        job_id, engineer_id = (item_data['id'], candidate_record['id']) if item_type == 'job' else (candidate_record['id'], item_data['id'])
-        llm_result = get_match_summary_with_llm(job_doc, engineer_doc)
-        if llm_result and 'summary' in llm_result:
-            grade = llm_result.get('summary')
-            if grade in ['S', 'A', 'B']:
-                cursor.execute('INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade) VALUES (%s, %s, %s, %s, %s) ON CONFLICT (job_id, engineer_id) DO NOTHING', (job_id, engineer_id, score, now_str, grade))
-                st.write(f"  - 候補: 『{candidate_name}』 -> 評価: {grade} (スコア: {score:.2f}) ... ✅ DBに保存")
-            else:
-                st.write(f"  - 候補: 『{candidate_name}』 -> 評価: {grade} (スコア: {score:.2f}) ... ❌ スキップ")
+
+def _extract_skills_from_document(document: str, item_type: str) -> set:
+    """
+    documentのメタ情報からスキルセットを抽出するヘルパー関数。
+    """
+    if not document:
+        return set()
+
+    # 案件の場合は「必須スキル」、技術者の場合は「主要スキル」をターゲットにする
+    key = "必須スキル" if item_type == 'job' else "主要スキル"
+    
+    # [キー: 値] の形式でメタ情報を正規表現で検索
+    match = re.search(rf"\[{key}:\s*([^\]]+)\]", document)
+    if not match:
+        return set()
+
+    # 抽出したスキル文字列を整形
+    skills_str = match.group(1).strip()
+    if not skills_str or skills_str.lower() in ['不明', 'none']:
+        return set()
+    
+    # カンマや全角スペースで区切り、各スキルを小文字化・空白除去してセットに格納
+    skills = {skill.strip().lower() for skill in re.split(r'[,、，\s]+', skills_str) if skill.strip()}
+    return skills
+
+
+# backend.py
+
+
+
+# backend.py
+# backend.py
+
+def run_matching_for_item(item_data, item_type, conn, now_str):
+    # ▼▼▼【この関数全体を置き換えてください】▼▼▼
+    with conn.cursor() as cursor:
+        # 1. 検索対象のインデックス、テーブル、名称を決定
+        if item_type == 'job':
+            query_text, index_path = item_data['document'], ENGINEER_INDEX_FILE
+            target_table_name = 'engineers'
+            source_name = item_data.get('project_name', f"案件ID:{item_data['id']}")
         else:
-            st.write(f"  - 候補: 『{candidate_name}』 -> LLM評価失敗のためスキップ")
+            query_text, index_path = item_data['document'], JOB_INDEX_FILE
+            target_table_name = 'jobs'
+            source_name = item_data.get('name', f"技術者ID:{item_data['id']}")
+
+        # 2. Faissによる類似度検索を実行
+        similarities, ids = search(query_text, index_path, top_k=TOP_K_CANDIDATES)
+        if not ids:
+            st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) の類似候補は見つかりませんでした。")
+            return
+
+        # 3. 検索結果の候補データをDBから一括取得
+        candidate_records = get_records_by_ids(target_table_name, ids)
+        candidate_map = {record['id']: record for record in candidate_records}
+
+        st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) との類似候補 {len(ids)}件を評価します。")
+
+        source_skills = _extract_skills_from_document(item_data['document'], item_type)
+        if not source_skills:
+            st.write(f"  - 検索元『{source_name}』のスキル情報が抽出できなかったため、事前フィルタリングはスキップします。")
+
+        # 4. 各候補をループして評価と保存処理
+        for sim, candidate_id in zip(similarities, ids):
+            score = float(sim) * 100
+
+            if score < MIN_SCORE_THRESHOLD:
+                continue
+
+            candidate_record = candidate_map.get(candidate_id)
+            if not candidate_record:
+                continue
+
+            candidate_name = candidate_record.get('project_name') or candidate_record.get('name') or f"ID:{candidate_id}"
+
+            if source_skills:
+                candidate_item_type = 'engineer' if item_type == 'job' else 'job'
+                candidate_skills = _extract_skills_from_document(candidate_record['document'], candidate_item_type)
+                
+                if not source_skills.intersection(candidate_skills):
+                    st.write(f"  - 候補: 『{candidate_name}』 -> スキル不一致のため事前除外。")
+                    continue
+
+            # 5. LLM評価のための案件・技術者情報を準備
+            if item_type == 'job':
+                job_doc, engineer_doc = item_data['document'], candidate_record['document']
+                job_id, engineer_id = item_data['id'], candidate_record['id']
+            else:
+                job_doc, engineer_doc = candidate_record['document'], item_data['document']
+                job_id, engineer_id = candidate_record['id'], item_data['id']
+
+            # 6. LLMによるマッチング評価を実行
+            # get_match_summary_with_llm は st.spinner を含むので、UIにスピナーが表示される
+            llm_result = get_match_summary_with_llm(job_doc, engineer_doc)
+
+            # 7. LLMの評価結果に基づいてDBへの保存を判断
+            if llm_result and 'summary' in llm_result:
+                grade = llm_result.get('summary')
+                positive_points = json.dumps(llm_result.get('positive_points', []), ensure_ascii=False)
+                concern_points = json.dumps(llm_result.get('concern_points', []), ensure_ascii=False)
+
+                if grade in ['S', 'A', 'B']:
+                    try:
+                        cursor.execute(
+                            'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (job_id, engineer_id) DO NOTHING',
+                            (job_id, engineer_id, score, now_str, grade, positive_points, concern_points)
+                        )
+                        st.write(f"  - 候補: 『{candidate_name}』 -> マッチング評価: {grade} (スコア: {score:.2f}) ... ✅ DBに保存しました。")
+                    except Exception as e:
+                        st.write(f"  - DB保存中にエラー: {e}")
+                else:
+                    st.write(f"  - 候補: 『{candidate_name}』 -> マッチング評価: {grade} (スコア: {score:.2f}) ... ❌ スキップしました。")
+            else:
+                st.write(f"  - 候補: 『{candidate_name}』 -> LLM評価に失敗したためスキップします。")
+
+
 
 def process_single_content(source_data: dict):
-    if not source_data: st.warning("処理するデータが空です。"); return False
+    if not source_data: 
+        st.warning("処理するデータが空です。")
+        return False
+    
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")]
-    if valid_attachments_content: st.write(f"ℹ️ {len(valid_attachments_content)}件の添付ファイルの内容を解析に含めます。")
+    if valid_attachments_content: 
+        st.write(f"ℹ️ {len(valid_attachments_content)}件の添付ファイルの内容を解析に含めます。")
+    
     full_text_for_llm = source_data.get('body', '') + "".join(valid_attachments_content)
-    if not full_text_for_llm.strip(): st.warning("解析対象のテキストがありません。"); return False
+    if not full_text_for_llm.strip(): 
+        st.warning("解析対象のテキストがありません。")
+        return False
     
     parsed_data = split_text_with_llm(full_text_for_llm)
-    if not parsed_data: return False
+    if not parsed_data: 
+        return False
     
     new_jobs_data, new_engineers_data = parsed_data.get("jobs", []), parsed_data.get("engineers", [])
-    if not new_jobs_data and not new_engineers_data: st.warning("LLMはテキストから案件情報または技術者情報を抽出できませんでした。"); return False
+    if not new_jobs_data and not new_engineers_data: 
+        st.warning("LLMはテキストから案件情報または技術者情報を抽出できませんでした。")
+        return False
     
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
@@ -351,7 +448,9 @@ def process_single_content(source_data: dict):
                 meta_info = _build_meta_info_string('job', item_data)
                 full_document = meta_info + doc
                 cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (project_name, full_document, source_json_str, now_str, received_at_dt))
-                item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_jobs.append(item_data)
+                item_data['id'] = cursor.fetchone()[0]
+                item_data['document'] = full_document
+                newly_added_jobs.append(item_data)
             
             for item_data in new_engineers_data:
                 doc = item_data.get("document") or full_text_for_llm
@@ -359,7 +458,9 @@ def process_single_content(source_data: dict):
                 meta_info = _build_meta_info_string('engineer', item_data)
                 full_document = meta_info + doc
                 cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (engineer_name, full_document, source_json_str, now_str, received_at_dt))
-                item_data['id'] = cursor.fetchone()[0]; item_data['document'] = full_document; newly_added_engineers.append(item_data)
+                item_data['id'] = cursor.fetchone()[0]
+                item_data['document'] = full_document
+                newly_added_engineers.append(item_data)
             
             st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
             cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_active_jobs = cursor.fetchall()
@@ -368,10 +469,16 @@ def process_single_content(source_data: dict):
             if all_active_jobs: update_index(JOB_INDEX_FILE, all_active_jobs)
             if all_active_engineers: update_index(ENGINEER_INDEX_FILE, all_active_engineers)
             
-            for new_job in newly_added_jobs: run_matching_for_item(new_job, 'job', cursor, now_str)
-            for new_engineer in newly_added_engineers: run_matching_for_item(new_engineer, 'engineer', cursor, now_str)
+            # ▼▼▼ 修正点: run_matching_for_item に conn を渡す ▼▼▼
+            for new_job in newly_added_jobs:
+                run_matching_for_item(new_job, 'job', conn, now_str)
+            for new_engineer in newly_added_engineers:
+                run_matching_for_item(new_engineer, 'engineer', conn, now_str)
+            # ▲▲▲ 修正点 ここまで ▲▲▲
         conn.commit()
     return True
+
+
 
 def extract_text_from_pdf(file_bytes):
     try:
