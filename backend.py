@@ -575,19 +575,37 @@ def fetch_and_process_emails():
     log_stream = io.StringIO()
     try:
         with contextlib.redirect_stdout(log_stream):
-            try: SERVER, USER, PASSWORD = st.secrets["EMAIL_SERVER"], st.secrets["EMAIL_USER"], st.secrets["EMAIL_PASSWORD"]
-            except KeyError as e: st.error(f"メールサーバーの接続情報がSecretsに設定されていません: {e}"); return False, log_stream.getvalue()
-            try: mail = imaplib.IMAP4_SSL(SERVER); mail.login(USER, PASSWORD); mail.select('inbox')
-            except Exception as e: st.error(f"メールサーバーへの接続またはログインに失敗しました: {e}"); return False, log_stream.getvalue()
+            try:
+                SERVER, USER, PASSWORD = st.secrets["EMAIL_SERVER"], st.secrets["EMAIL_USER"], st.secrets["EMAIL_PASSWORD"]
+            except KeyError as e:
+                st.error(f"メールサーバーの接続情報がSecretsに設定されていません: {e}")
+                return False, log_stream.getvalue()
+            
+            try:
+                mail = imaplib.IMAP4_SSL(SERVER)
+                mail.login(USER, PASSWORD)
+                mail.select('inbox')
+            except Exception as e:
+                st.error(f"メールサーバーへの接続またはログインに失敗しました: {e}")
+                return False, log_stream.getvalue()
+            
             total_processed_count, checked_count = 0, 0
             try:
                 with st.status("最新の未読メールを取得・処理中...", expanded=True) as status:
                     _, messages = mail.search(None, 'UNSEEN')
                     email_ids = messages[0].split()
-                    if not email_ids: st.write("処理対象の未読メールは見つかりませんでした。")
+                    
+                    if not email_ids:
+                        st.write("処理対象の未読メールは見つかりませんでした。")
                     else:
-                        latest_ids = email_ids[::-1][:10]; checked_count = len(latest_ids)
+                        latest_ids = email_ids[::-1][:10]
+                        checked_count = len(latest_ids)
                         st.write(f"最新の未読メール {checked_count}件をチェックします。")
+
+                        # ▼▼▼ 変更点 1: プログレスバーの初期化 ▼▼▼
+                        progress_bar = st.progress(0, text="メール処理の進捗")
+                        # ▲▲▲ 変更点 1 ここまで ▲▲▲
+
                         for i, email_id in enumerate(latest_ids):
                             _, msg_data = mail.fetch(email_id, '(RFC822)')
                             for response_part in msg_data:
@@ -602,18 +620,39 @@ def fetch_and_process_emails():
                                         st.write(f"   差出人: {source_data.get('from', '取得不可')}")
                                         st.write(f"   件名: {source_data.get('subject', '取得不可')}")
                                         if process_single_content(source_data):
-                                            total_processed_count += 1; mail.store(email_id, '+FLAGS', '\\Seen')
-                                    else: st.write(f"✖️ メールID {email_id.decode()} は本文も添付ファイルも無いため、スキップします。")
-                            st.write(f"({i+1}/{checked_count}) チェック完了")
+                                            total_processed_count += 1
+                                            mail.store(email_id, '+FLAGS', '\\Seen')
+                                    else:
+                                        st.write(f"✖️ メールID {email_id.decode()} は本文も添付ファイルも無いため、スキップします。")
+                            
+                            # ▼▼▼ 変更点 2: プログレスバーの更新 ▼▼▼
+                            # 進捗を計算 (i+1) / checked_count
+                            progress_value = (i + 1) / checked_count
+                            progress_text = f"ステータス: {i+1}/{checked_count} 件完了"
+                            progress_bar.progress(progress_value, text=progress_text)
+                            # ▲▲▲ 変更点 2 ここまで ▲▲▲
+                    
                     status.update(label="メールチェック完了", state="complete")
-            finally: mail.close(); mail.logout()
+            finally:
+                mail.close()
+                mail.logout()
+        
+        # 処理完了後のメッセージ (変更なし)
         if checked_count > 0:
-            if total_processed_count > 0: st.success(f"チェックした {checked_count} 件のメールのうち、{total_processed_count} 件からデータを抽出し、保存しました。"); st.balloons()
-            else: st.warning(f"メールを {checked_count} 件チェックしましたが、データベースに保存できる情報は見つかりませんでした。")
-        else: st.info("処理対象となる新しい未読メールはありませんでした。")
+            if total_processed_count > 0:
+                st.success(f"チェックした {checked_count} 件のメールのうち、{total_processed_count} 件からデータを抽出し、保存しました。")
+                st.balloons()
+            else:
+                st.warning(f"メールを {checked_count} 件チェックしましたが、データベースに保存できる情報は見つかりませんでした。")
+        else:
+            st.info("処理対象となる新しい未読メールはありませんでした。")
+            
         return True, log_stream.getvalue()
     except Exception as e:
-        st.error(f"予期せぬエラーが発生しました: {e}"); return False, log_stream.getvalue()
+        st.error(f"予期せぬエラーが発生しました: {e}")
+        return False, log_stream.getvalue()
+    
+
 
 # --- 残りの関数 (変更なし) ---
 def hide_match(result_id):
