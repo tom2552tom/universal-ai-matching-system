@@ -186,29 +186,36 @@ def split_text_with_llm(text_content):
         
         raw_text = response.text
         
-        # --- JSON抽出ロジックの強化 ---
+        # ▼▼▼【ここからがJSON抽出ロジックの修正箇所です】▼▼▼
+        json_str = None
         try:
             # 1. ```json ... ``` 形式のコードブロックを探す
-            if '```json' in raw_text:
-                json_str = raw_text.split('```json\n')[1].split('\n```')[0]
-            # 2. コードブロックがない場合、最初と最後の波括弧を探す
+            match = re.search(r'```json\s*(\{.*?\})\s*```', raw_text, re.DOTALL)
+            if match:
+                json_str = match.group(1)
             else:
+                # 2. コードブロックがない場合、最も大きな波括弧のペアを探す
+                #    最初に見つかった '{' から、最後に見つかった '}' までを抽出
                 start_index = raw_text.find('{')
                 end_index = raw_text.rfind('}')
                 if start_index != -1 and end_index != -1 and start_index < end_index:
                     json_str = raw_text[start_index : end_index + 1]
                 else:
-                    # どちらも見つからない場合は、テキスト全体を試す
-                    json_str = raw_text
+                    # それでも見つからない場合は、エラーとして処理
+                    st.error("LLMの応答から有効なJSON構造を抽出できませんでした。")
+                    st.code(raw_text, language='text')
+                    return None
             
+            # 抽出した文字列をパース
             parsed_json = json.loads(json_str)
 
         except (IndexError, json.JSONDecodeError) as e:
-            # 上記の処理で失敗した場合は、エラーとして元のテキストを表示
+            # パースに失敗した場合
             st.error(f"LLMによる構造化に失敗しました: {e}")
-            st.code(raw_text, language='text')
+            st.write("抽出を試みたJSON文字列:")
+            st.code(json_str or raw_text, language='text') # 抽出できた文字列、または生テキストを表示
             return None
-        # --- 強化ロジックここまで ---
+        # ▲▲▲【JSON抽出ロジックの修正ここまで】▲▲▲
 
         if "技術者情報" in doc_type: parsed_json["jobs"] = []
         elif "案件情報" in doc_type: parsed_json["engineers"] = []
@@ -219,7 +226,8 @@ def split_text_with_llm(text_content):
         try: st.code(response.text, language='text')
         except NameError: st.text("レスポンスの取得にも失敗しました。")
         return None
-# ▲▲▲【修正ここまで】▲▲▲
+    
+    
 
 @st.cache_data
 def get_match_summary_with_llm(job_doc, engineer_doc):
@@ -780,7 +788,7 @@ def re_evaluate_existing_matches_for_engineer(engineer_id):
             conn.close()
 
 
-            
+
 def update_engineer_name(engineer_id, new_name):
     if not new_name or not new_name.strip(): return False
     with get_db_connection() as conn:
