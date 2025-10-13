@@ -3,6 +3,7 @@ import backend as be
 import json
 import html
 import time
+from datetime import datetime
 
 try:
     from backend import get_evaluation_html
@@ -37,6 +38,7 @@ job_data = None
 matched_engineers = []
 try:
     with conn.cursor() as cursor:
+        # 案件データの取得
         job_query = """
         SELECT 
             j.id, j.project_name, j.document, j.source_data_json, j.assigned_user_id, j.is_hidden,
@@ -49,6 +51,7 @@ try:
         job_data = cursor.fetchone()
 
         if job_data:
+            # マッチング済み技術者データの取得
             matched_engineers_query = """
                 SELECT 
                     e.id as engineer_id, e.name, e.document, 
@@ -66,6 +69,7 @@ finally:
     if conn:
         conn.close()
 
+
 if job_data:
     # --- タイトル表示 ---
     is_currently_hidden = job_data['is_hidden'] == 1
@@ -75,6 +79,7 @@ if job_data:
         title_display += " `非表示`"
     st.title(title_display)
     st.caption(f"ID: {selected_id}")
+    st.divider()
 
     # --- 担当者情報セクション ---
     st.subheader("👤 担当者情報")
@@ -108,20 +113,16 @@ if job_data:
                 if be.set_job_visibility(selected_id, 1): st.success("案件を非表示にしました。"); st.rerun()
                 else: st.error("更新に失敗しました。")
         
-        # ▼▼▼ 変更点: 削除機能のUIを修正 ▼▼▼
         st.markdown("---")
-
-        # 各案件IDに固有のセッションステートキーを定義
+        
         delete_confirmation_key = f"confirm_delete_job_{selected_id}"
 
         if delete_confirmation_key not in st.session_state:
             st.session_state[delete_confirmation_key] = False
 
         if st.button("🚨 この案件を完全に削除する", type="secondary", use_container_width=True, key=f"delete_job_main_btn_{selected_id}"):
-            # トグル（押すたびにTrue/Falseが切り替わる）
             st.session_state[delete_confirmation_key] = not st.session_state[delete_confirmation_key]
 
-        # 固有キーを使って確認UIの表示を判断
         if st.session_state[delete_confirmation_key]:
             st.warning("**本当にこの案件を削除しますか？**\n\nこの操作は取り消せません。関連するマッチング結果もすべて削除されます。")
             
@@ -133,13 +134,12 @@ if job_data:
                     if be.delete_job(selected_id):
                         st.success(f"案件 (ID: {selected_id}) を完全に削除しました。案件管理ページに戻ります。")
                         time.sleep(2)
-                        # 関連するセッションステートをクリア
                         del st.session_state['selected_job_id']
-                        del st.session_state[delete_confirmation_key]
+                        if delete_confirmation_key in st.session_state:
+                            del st.session_state[delete_confirmation_key]
                         st.switch_page("pages/4_案件管理.py")
                     else:
                         st.error("案件の削除に失敗しました。")
-        # ▲▲▲ 変更点 ここまで ▲▲▲
             
     st.divider()
 
@@ -157,44 +157,62 @@ if job_data:
 
     # --- 元のメール・添付ファイル内容 ---
     st.header("📄 元の情報ソース（編集可能）")
-    source_json_str = job_data['source_data_json']
+    source_json_str = job_data.get('source_data_json')
     if source_json_str:
         try:
             source_data = json.loads(source_json_str)
-            st.subheader("情報ソース（メール本文・添付ファイル内容）")
-            initial_text_parts = [source_data.get("body", "")]
-            attachments = source_data.get("attachments", [])
-            if attachments:
-                for att in attachments:
-                    filename = att.get("filename", "名称不明")
-                    content = att.get("content", "")
-                    if content:
-                        initial_text_parts.append(f"\n\n--- 添付ファイル: {filename} ---\n{content}")
-            full_source_text = "".join(initial_text_parts)
 
-            edited_text = st.text_area("情報ソースを編集", value=full_source_text, height=400, label_visibility="collapsed", key=f"job_source_editor_{selected_id}")
+            # ▼▼▼ 変更点: UIを「受信元」「本文」「添付」に分割 ▼▼▼
+            st.subheader("✉️ 受信元情報")
+            received_at_iso = source_data.get('received_at')
+            from_address = source_data.get('from', '取得不可')
+            if received_at_iso:
+                dt_obj = datetime.fromisoformat(received_at_iso)
+                formatted_date = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                formatted_date = '取得不可'
             
-            if st.button("情報ソースを更新する", type="primary"):
-                source_data['body'] = edited_text
-                if 'attachments' in source_data:
-                    for att in source_data['attachments']:
-                        if 'content' in att: att['content'] = ''
-                
+            with st.container(border=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("**受信日時**"); st.write(formatted_date)
+                with col2:
+                    st.markdown("**差出人**"); st.write(from_address)
+            
+            st.subheader("📝 メール本文（編集可能）")
+            edited_body = st.text_area("メール本文を編集", value=source_data.get("body", ""), height=300, label_visibility="collapsed", key=f"job_body_editor_{selected_id}")
+            
+            if st.button("メール本文を更新する", type="primary"):
+                # 本文のみを更新し、添付ファイルには触れない
+                source_data['body'] = edited_body
                 new_json_str = json.dumps(source_data, ensure_ascii=False, indent=2)
                 if be.update_job_source_json(selected_id, new_json_str):
-                    st.success("情報ソースを更新しました。今後、この案件の再評価を行う際にこの内容が使用されます。")
-                    time.sleep(2); st.rerun()
-                else: st.error("データベースの更新に失敗しました。")
+                    st.success("メール本文を更新しました。")
+                    time.sleep(1); st.rerun()
+                else:
+                    st.error("データベースの更新に失敗しました。")
 
-        except json.JSONDecodeError: st.error("元のデータの解析に失敗しました。")
+            st.subheader("📎 添付ファイル内容（読み取り専用）")
+            attachments = source_data.get("attachments", [])
+            if attachments:
+                for i, att in enumerate(attachments):
+                    with st.container(border=True):
+                        st.markdown(f"**ファイル名:** `{att.get('filename', '名称不明')}`")
+                        content = att.get('content', '（内容なし）')
+                        st.text_area(f"att_content_{i}", value=content, height=200, disabled=True, label_visibility="collapsed")
+            else:
+                st.info("このメールには解析可能な添付ファイルはありませんでした。")
+            # ▲▲▲ 変更点 ここまで ▲▲▲
+
+
+        except (json.JSONDecodeError, TypeError, ValueError):
+            st.error("元のデータの解析に失敗しました。")
     else: st.warning("このデータには元のテキストが保存されていません。")
     st.divider()
 
     # --- マッチング済みの技術者一覧 ---
     st.header("🤝 マッチング済みの技術者一覧")
 
-    # (DBアクセスはページ上部に移動済み)
-    
     if not matched_engineers:
         st.info("この案件にマッチング済みの技術者はいません。")
     else:

@@ -4,6 +4,7 @@ import json
 import html
 import base64
 import time
+from datetime import datetime
 
 # backend から get_evaluation_html をインポート
 try:
@@ -80,6 +81,7 @@ if engineer_data:
     
     st.title(title_display)
     st.caption(f"ID: {selected_id}")
+    st.divider()
 
     # --- 基本情報セクション ---
     st.subheader("👤 基本情報")
@@ -114,9 +116,6 @@ if engineer_data:
     st.divider()
 
     # --- 技術者の操作（表示/非表示/削除）セクション ---
-    # pages/5_技術者詳細.py の該当箇所
-
-    # --- 技術者の操作（表示/非表示/削除）セクション ---
     with st.expander("技術者の操作", expanded=False):
         if is_currently_hidden:
             if st.button("✅ この技術者を再表示する", use_container_width=True):
@@ -127,20 +126,16 @@ if engineer_data:
                 if be.set_engineer_visibility(selected_id, 1): st.success("技術者を非表示にしました。"); st.rerun()
                 else: st.error("更新に失敗しました。")
         
-        # ▼▼▼ 変更点: 削除機能のUIを修正 ▼▼▼
         st.markdown("---")
         
-        # 各技術者IDに固有のセッションステートキーを定義
         delete_confirmation_key = f"confirm_delete_engineer_{selected_id}"
 
         if delete_confirmation_key not in st.session_state:
             st.session_state[delete_confirmation_key] = False
 
         if st.button("🚨 この技術者を完全に削除する", type="secondary", use_container_width=True, key=f"delete_eng_main_btn_{selected_id}"):
-            # トグル（押すたびにTrue/Falseが切り替わる）
             st.session_state[delete_confirmation_key] = not st.session_state[delete_confirmation_key]
 
-        # 固有キーを使って確認UIの表示を判断
         if st.session_state[delete_confirmation_key]:
             st.warning("**本当にこの技術者を削除しますか？**\n\nこの操作は取り消せません。関連するマッチング結果もすべて削除されます。")
             
@@ -152,19 +147,15 @@ if engineer_data:
                     if be.delete_engineer(selected_id):
                         st.success(f"技術者 (ID: {selected_id}) を完全に削除しました。技術者管理ページに戻ります。")
                         time.sleep(2)
-                        # 関連するセッションステートをクリア
                         del st.session_state['selected_engineer_id']
-                        del st.session_state[delete_confirmation_key]
+                        if delete_confirmation_key in st.session_state:
+                            del st.session_state[delete_confirmation_key]
                         st.switch_page("pages/3_技術者管理.py")
                     else:
                         st.error("技術者の削除に失敗しました。")
-        # ▲▲▲ 変更点 ここまで ▲▲▲
-
-
-
     st.divider()
 
-    # --- AIによる要約情報の表示 --- (変更なし)
+    # --- AIによる要約情報の表示 ---
     st.header("🤖 AIによる要約情報")
     doc_parts = engineer_data['document'].split('\n---\n', 1)
     meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", engineer_data['document'])
@@ -173,13 +164,36 @@ if engineer_data:
     st.markdown(f'<div class="text-container">{sanitized_main_doc}</div>', unsafe_allow_html=True)
     st.divider()
 
-    # --- 元の情報の表示 --- (変更なし)
+    # --- 元の情報の表示 ---
     st.header("📄 元の情報ソース（編集可能）")
-    source_json_str = engineer_data['source_data_json']
+    source_json_str = engineer_data.get('source_data_json')
     
     if source_json_str:
         try:
             source_data = json.loads(source_json_str)
+
+            # ▼▼▼ 変更点: 受信元情報をこのセクションに移動 ▼▼▼
+            st.subheader("✉️ 受信元情報")
+            received_at_iso = source_data.get('received_at')
+            from_address = source_data.get('from', '取得不可')
+
+            if received_at_iso:
+                dt_obj = datetime.fromisoformat(received_at_iso)
+                formatted_date = dt_obj.strftime('%Y-%m-%d %H:%M:%S')
+            else:
+                formatted_date = '取得不可'
+            
+            with st.container(border=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.markdown("**受信日時**")
+                    st.write(formatted_date)
+                with col2:
+                    st.markdown("**差出人**")
+                    st.write(from_address)
+            # ▲▲▲ 変更点 ここまで ▲▲▲
+
+            st.subheader("📝 ソーステキスト")
             initial_text_parts = [source_data.get("body", "")]
             attachments = source_data.get("attachments", [])
             if attachments:
@@ -216,7 +230,7 @@ if engineer_data:
                 st.subheader("原本ファイルのダウンロード")
                 st.info("この機能は現在実装されていません。")
 
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, TypeError, ValueError):
             st.error("元のデータの解析に失敗しました。"); st.text(source_json_str)
     else: st.warning("このデータには元のテキストが保存されていません。")
     st.divider()
@@ -224,8 +238,6 @@ if engineer_data:
     # --- マッチング済みの案件一覧 ---
     st.header("🤝 マッチング済みの案件一覧")
     
-    # (DBアクセスはページ上部に移動済み)
-
     if not matched_jobs:
         st.info("この技術者にマッチング済みの案件はありません。")
     else:
@@ -278,3 +290,4 @@ st.divider()
 if st.button("一覧に戻る"):
     if 'selected_engineer_id' in st.session_state: del st.session_state['selected_engineer_id']
     st.switch_page("pages/3_技術者管理.py")
+
