@@ -19,6 +19,7 @@ import fitz
 import docx
 import re # スキル抽出のために re モジュールをインポート
 import json
+import pandas as pd
 
 
 # --- 1. 初期設定と定数 (変更なし) ---
@@ -1120,4 +1121,56 @@ def save_proposal_text(match_id, text):
             print(f"Error saving proposal text for match_id {match_id}: {e}")
             conn.rollback()
             return False
+
+def get_dashboard_data():
+    """ダッシュボード表示に必要なデータをDBから取得・集計する"""
+    conn = get_db_connection()
+    try:
+        # st.cache_data を使って結果をキャッシュする
+        # ttlを短くして、データ更新が反映されやすくします (例: 5分)
+        @st.cache_data(ttl=300)
+        def fetch_data_from_db():
+            # 【修正点1】テーブル名を 'jobs' に修正
+            jobs_df = pd.read_sql("SELECT * FROM jobs", conn)
+            engineers_df = pd.read_sql("SELECT * FROM engineers", conn)
+            matches_df = pd.read_sql("SELECT * FROM matching_results", conn)
+            return jobs_df, engineers_df, matches_df
+
+        jobs_df, engineers_df, matches_df = fetch_data_from_db()
+
+        # 1. サマリー指標の計算
+        # 【修正点2】DataFrame名を jobs_df に修正
+        total_jobs = len(jobs_df)
+        total_engineers = len(engineers_df)
+        total_matches = len(matches_df)
+
+        # created_atがテキスト形式なので、エラーを無視してdatetimeに変換
+        jobs_df['created_at'] = pd.to_datetime(jobs_df['created_at'], errors='coerce')
+        engineers_df['created_at'] = pd.to_datetime(engineers_df['created_at'], errors='coerce')
         
+        # NaT (Not a Time) を除外して計算
+        now = pd.Timestamp.now()
+        jobs_this_month = len(jobs_df.dropna(subset=['created_at'])[jobs_df['created_at'].dt.month == now.month])
+        engineers_this_month = len(engineers_df.dropna(subset=['created_at'])[engineers_df['created_at'].dt.month == now.month])
+
+        summary_metrics = {
+            # 【修正点3】キー名を 'total_jobs', 'jobs_this_month' に修正
+            "total_jobs": total_jobs,
+            "total_engineers": total_engineers,
+            "total_matches": total_matches,
+            "jobs_this_month": jobs_this_month,
+            "engineers_this_month": engineers_this_month,
+        }
+
+        # 2. AI評価ランクの割合を計算
+        if not matches_df.empty:
+            # 【修正点4】カラム名を 'grade' に修正
+            rank_counts = matches_df['grade'].value_counts().reindex(['S', 'A', 'B', 'C', 'D'], fill_value=0)
+        else:
+            rank_counts = pd.Series([0, 0, 0, 0, 0], index=['S', 'A', 'B', 'C', 'D'])
+
+        return summary_metrics, rank_counts
+
+    finally:
+        if conn:
+            conn.close()
