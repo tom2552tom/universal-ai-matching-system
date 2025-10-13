@@ -1099,3 +1099,25 @@ def re_evaluate_and_match_single_engineer(engineer_id):
             st.error(f"再評価・再マッチング中にエラーが発生しました: {e}")
             return False
         
+
+def save_proposal_text(match_id, text):
+    """
+    指定されたマッチングIDに対して、生成された提案メールのテキストを保存します。
+    """
+    if not match_id or text is None:
+        return False
+        
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE matching_results SET proposal_text = %s WHERE id = %s",
+                    (text, match_id)
+                )
+            conn.commit()
+            return True
+        except (Exception, psycopg2.Error) as e:
+            print(f"Error saving proposal text for match_id {match_id}: {e}")
+            conn.rollback()
+            return False
+        

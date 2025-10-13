@@ -240,32 +240,55 @@ st.divider()
 
 # --- AIによる提案メール案生成セクション ---
 st.header("✉️ AIによる提案メール案")
-with st.spinner("AIが技術者のセールスポイントを盛り込んだ提案メールを作成中です..."):
-    project_name_for_prompt = job_data['project_name'] or f"ID:{job_data['id']}の案件"
-    engineer_name_for_prompt = engineer_data['name'] or f"ID:{engineer_data['id']}の技術者"
 
-    proposal_text = be.generate_proposal_reply_with_llm(
-        job_data['document'],
-        engineer_data['document'],
-        engineer_name_for_prompt,
-        project_name_for_prompt
-    )
 
-with st.container(border=True):
-    st.info("以下の文面はAIによって生成されたものです。提案前に必ず内容を確認・修正してください。")
-    st.text_area(
-        label="生成されたメール文面",
-        value=proposal_text,
-        height=500,
-        label_visibility="collapsed"
-    )
+# DBから保存済みの提案テキストを取得
+proposal_text = match_data.get('proposal_text')
+
+# 「再作成」ボタンを配置
+regenerate_clicked = st.button("🔄 内容を再作成する", key="regenerate_proposal")
+
+
+# テキストがDBにない、または再作成ボタンが押された場合にAIで生成
+if not proposal_text or regenerate_clicked:
+    if regenerate_clicked:
+        st.info("AIが提案内容を再作成しています...")
     
-    #if st.button("文面をクリップボードにコピー", use_container_width=True):
-    #    st.toast("コピーしました！")
-    #st.code(proposal_text, language="text")
-    #st.caption("▲ 上のボックス内をクリックすると全文をコピーできます。")
+    with st.spinner("AIが技術者のセールスポイントを盛り込んだ提案メールを作成中です..."):
+        project_name_for_prompt = job_data['project_name'] or f"ID:{job_data['id']}の案件"
+        engineer_name_for_prompt = engineer_data['name'] or f"ID:{engineer_data['id']}の技術者"
+
+        new_proposal_text = be.generate_proposal_reply_with_llm(
+            job_data['document'], engineer_data['document'], engineer_name_for_prompt, project_name_for_prompt
+        )
+        
+        if new_proposal_text and "エラーが発生しました" not in new_proposal_text:
+            if be.save_proposal_text(selected_match_id, new_proposal_text):
+                proposal_text = new_proposal_text # 表示用に変数を更新
+                if regenerate_clicked:
+                    st.success("提案メールの再作成が完了しました。")
+                    st.rerun()
+            else:
+                st.error("生成されたテキストのデータベースへの保存に失敗しました。")
+                proposal_text = "DB保存エラー"
+        else:
+            st.error("提案メールの生成に失敗しました。")
+            proposal_text = new_proposal_text
+
+# テキスト表示用のコンテナ
+with st.container(border=True):
+    if proposal_text:
+        st.info("以下の文面はAIによって生成されたものです。提案前に必ず内容を確認・修正してください。")
+        st.text_area("生成されたメール文面", value=proposal_text, height=500, label_visibility="collapsed")
+       # st.code(proposal_text, language="text")
+        st.caption("▲ 上のボックス内をクリックすると全文をコピーできます。")
+    else:
+        st.warning("提案メールのテキストがまだ生成されていません。")
 
 st.divider()
+
+
+
 
 
 # --- 元情報（タブ）セクション ---
