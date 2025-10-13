@@ -18,6 +18,7 @@ import toml
 import fitz
 import docx
 import re # スキル抽出のために re モジュールをインポート
+import json
 
 
 # --- 1. 初期設定と定数 (変更なし) ---
@@ -223,14 +224,21 @@ def split_text_with_llm(text_content):
 @st.cache_data
 def get_match_summary_with_llm(job_doc, engineer_doc):
     model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+     # ▼▼▼ 変更点 1: プロンプトの強化 ▼▼▼
     prompt = f"""
         あなたは、経験豊富なIT人材紹介のエージェントです。
         あなたの仕事は、提示された「案件情報」と「技術者情報」を比較し、客観的かつ具体的なマッチング評価を行うことです。
+        
         # 絶対的なルール
+        - 出力は、必ず指定されたJSON形式の文字列のみとしてください。解説や ```json ``` のような囲みは絶対に含めないでください。
+        - JSON内のすべての文字列は、必ずダブルクォーテーション `"` で囲ってください。
+        - 文字列の途中で改行しないでください。改行が必要な場合は `\\n` を使用してください。
         - `summary`は最も重要な項目です。絶対に省略せず、必ずS, A, B, C, Dのいずれかの文字列を返してください。
+        
         # 指示
         以下の2つの情報を分析し、ポジティブな点と懸念点をリストアップしてください。最終的に、総合評価（summary）をS, A, B, C, Dの5段階で判定してください。
         - S: 完璧なマッチ, A: 非常に良いマッチ, B: 良いマッチ, C: 検討の余地あり, D: ミスマッチ
+        
         # JSON出力形式
         {{"summary": "S, A, B, C, Dのいずれか", "positive_points": ["スキル面での合致点"], "concern_points": ["スキル面での懸念点"]}}
         ---
@@ -241,6 +249,8 @@ def get_match_summary_with_llm(job_doc, engineer_doc):
         {engineer_doc}
         ---
     """
+    # ▲▲▲ 変更点 1 ここまで ▲▲▲
+
     generation_config = {"response_mime_type": "application/json"}
     safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
     try:
@@ -316,13 +326,7 @@ def _extract_skills_from_document(document: str, item_type: str) -> set:
     skills = {skill.strip().lower() for skill in re.split(r'[,、，\s]+', skills_str) if skill.strip()}
     return skills
 
-
-# backend.py
-
-
-
-# backend.py
-# backend.py
+# backend.py の run_matching_for_item 関数を修正
 
 def run_matching_for_item(item_data, item_type, conn, now_str):
     # ▼▼▼【この関数全体を置き換えてください】▼▼▼
@@ -337,8 +341,10 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
             target_table_name = 'jobs'
             source_name = item_data.get('name', f"技術者ID:{item_data['id']}")
 
+        search_limit = TOP_K_CANDIDATES * 2
+
         # 2. Faissによる類似度検索を実行
-        similarities, ids = search(query_text, index_path, top_k=TOP_K_CANDIDATES)
+        similarities, ids = search(query_text, index_path, top_k=search_limit)
         if not ids:
             st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) の類似候補は見つかりませんでした。")
             return
@@ -347,23 +353,24 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
         candidate_records = get_records_by_ids(target_table_name, ids)
         candidate_map = {record['id']: record for record in candidate_records}
 
-        st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) との類似候補 {len(ids)}件を評価します。")
+        # ▼▼▼ 変更点 1: 最初のログメッセージを修正 ▼▼▼
+        st.write(f"▶ 『{source_name}』(ID:{item_data['id']}, {item_type}) の類似候補 **{len(ids)}件** を発見。スキルセットでフィルタリングします...")
+        # ▲▲▲ 変更点 1 ここまで ▲▲▲
 
         source_skills = _extract_skills_from_document(item_data['document'], item_type)
         if not source_skills:
             st.write(f"  - 検索元『{source_name}』のスキル情報が抽出できなかったため、事前フィルタリングはスキップします。")
 
-        # 4. 各候補をループして評価と保存処理
+        # ステップA: スキルフィルタリングを行い、有効な候補リストを作成する
+        valid_candidates = []
         for sim, candidate_id in zip(similarities, ids):
-            score = float(sim) * 100
-
-            if score < MIN_SCORE_THRESHOLD:
-                continue
+            if len(valid_candidates) >= TOP_K_CANDIDATES:
+                break
 
             candidate_record = candidate_map.get(candidate_id)
             if not candidate_record:
                 continue
-
+            
             candidate_name = candidate_record.get('project_name') or candidate_record.get('name') or f"ID:{candidate_id}"
 
             if source_skills:
@@ -371,19 +378,41 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
                 candidate_skills = _extract_skills_from_document(candidate_record['document'], candidate_item_type)
                 
                 if not source_skills.intersection(candidate_skills):
-                    st.write(f"  - 候補: 『{candidate_name}』 -> スキル不一致のため事前除外。")
+                    # このログは詳細すぎる場合はコメントアウトしても良い
+                    # st.write(f"  - 候補: 『{candidate_name}』 -> スキル不一致のため事前除外。")
                     continue
+            
+            valid_candidates.append({
+                'sim': sim,
+                'id': candidate_id,
+                'record': candidate_record,
+                'name': candidate_name
+            })
+        
+        # ▼▼▼ 変更点 2: フィルタリング後の結果ログを修正 ▼▼▼
+        if not valid_candidates:
+            st.write(f"✅ スキルが一致する有効な候補は見つかりませんでした。処理を終了します。")
+            return
+
+        st.write(f"✅ スキルが一致した有効な候補 **{len(valid_candidates)}件** に絞り込みました。AI評価を開始します...")
+        # ▲▲▲ 変更点 2 ここまで ▲▲▲
+
+        # ステップB: 有効な候補リストに対してAI評価とDB保存を行う
+        for candidate_info in valid_candidates:
+            score = float(candidate_info['sim']) * 100
+
+            if score < MIN_SCORE_THRESHOLD:
+                continue
 
             # 5. LLM評価のための案件・技術者情報を準備
             if item_type == 'job':
-                job_doc, engineer_doc = item_data['document'], candidate_record['document']
-                job_id, engineer_id = item_data['id'], candidate_record['id']
+                job_doc, engineer_doc = item_data['document'], candidate_info['record']['document']
+                job_id, engineer_id = item_data['id'], candidate_info['id']
             else:
-                job_doc, engineer_doc = candidate_record['document'], item_data['document']
-                job_id, engineer_id = candidate_record['id'], item_data['id']
+                job_doc, engineer_doc = candidate_info['record']['document'], item_data['document']
+                job_id, engineer_id = candidate_info['id'], item_data['id']
 
             # 6. LLMによるマッチング評価を実行
-            # get_match_summary_with_llm は st.spinner を含むので、UIにスピナーが表示される
             llm_result = get_match_summary_with_llm(job_doc, engineer_doc)
 
             # 7. LLMの評価結果に基づいてDBへの保存を判断
@@ -398,13 +427,15 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
                             'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (job_id, engineer_id) DO NOTHING',
                             (job_id, engineer_id, score, now_str, grade, positive_points, concern_points)
                         )
-                        st.write(f"  - 候補: 『{candidate_name}』 -> マッチング評価: {grade} (スコア: {score:.2f}) ... ✅ DBに保存しました。")
+                        st.write(f"  - 候補: 『{candidate_info['name']}』 -> マッチング評価: **{grade}** (スコア: {score:.2f}) ... ✅ DBに保存")
                     except Exception as e:
                         st.write(f"  - DB保存中にエラー: {e}")
                 else:
-                    st.write(f"  - 候補: 『{candidate_name}』 -> マッチング評価: {grade} (スコア: {score:.2f}) ... ❌ スキップしました。")
+                    st.write(f"  - 候補: 『{candidate_info['name']}』 -> マッチング評価: **{grade}** (スコア: {score:.2f}) ... ❌ スキップ")
             else:
-                st.write(f"  - 候補: 『{candidate_name}』 -> LLM評価に失敗したためスキップします。")
+                st.write(f"  - 候補: 『{candidate_info['name']}』 -> LLM評価失敗のためスキップ")
+
+
 
 
 
@@ -683,39 +714,73 @@ def get_matching_result_details(result_id):
         except (Exception, psycopg2.Error) as e:
             print(f"マッチング詳細取得エラー: {e}"); return None
 
-def re_evaluate_and_match_single_engineer(engineer_id):
-    with get_db_connection() as conn:
-        try:
-            with conn.cursor() as cursor:
-                cursor.execute("SELECT * FROM engineers WHERE id = %s", (engineer_id,))
-                engineer_record = cursor.fetchone()
-                if not engineer_record:
-                    st.error(f"技術者ID:{engineer_id} が見つかりませんでした。"); return False
-                source_data = json.loads(engineer_record['source_data_json'])
-                full_text_for_llm = source_data.get('body', '') + "".join([f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")])
-                parsed_data = split_text_with_llm(full_text_for_llm)
-                if not parsed_data or not parsed_data.get("engineers"):
-                    st.error("LLMによる再評価で、技術者情報の抽出に失敗しました。"); return False
-                item_data = parsed_data["engineers"][0]
-                doc = item_data.get("document") or full_text_for_llm
-                meta_info = _build_meta_info_string('engineer', item_data)
-                new_full_document = meta_info + doc
-                cursor.execute("UPDATE engineers SET document = %s WHERE id = %s", (new_full_document, engineer_id))
-                cursor.execute("DELETE FROM matching_results WHERE engineer_id = %s", (engineer_id,))
-                st.write(f"技術者ID:{engineer_id} の既存マッチング結果をクリアしました。")
-                st.write("ベクトルインデックスを更新し、再マッチング処理を開始します...")
-                cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_jobs = cursor.fetchall()
-                cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0'); all_engineers = cursor.fetchall()
-                if all_jobs: update_index(JOB_INDEX_FILE, all_jobs)
-                if all_engineers: update_index(ENGINEER_INDEX_FILE, all_engineers)
-                now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                engineer_data_for_matching = {'id': engineer_id, 'document': new_full_document, 'name': engineer_record['name']}
-                run_matching_for_item(engineer_data_for_matching, 'engineer', cursor, now_str)
-            conn.commit()
-            return True
-        except (Exception, psycopg2.Error) as e:
-            conn.rollback(); st.error(f"再評価・再マッチング中にエラーが発生しました: {e}"); return False
 
+def re_evaluate_existing_matches_for_engineer(engineer_id):
+    """
+    【パターンA】
+    指定された技術者の既存のマッチング結果すべてに対して、AI評価のみを再実行し、DBを更新する。
+    新しいマッチングは行わない。
+    """
+    if not engineer_id:
+        st.error("技術者IDが指定されていません。")
+        return False
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # 1. 技術者の最新ドキュメントを取得
+            cursor.execute("SELECT document FROM engineers WHERE id = %s", (engineer_id,))
+            engineer_record = cursor.fetchone()
+            if not engineer_record:
+                st.error(f"技術者ID:{engineer_id} が見つかりませんでした。")
+                return False
+            engineer_doc = engineer_record['document']
+
+            # 2. この技術者に関連する、表示中のマッチング結果を取得
+            cursor.execute(
+                """
+                SELECT r.id as match_id, j.id as job_id, j.document as job_document, j.project_name
+                FROM matching_results r
+                JOIN jobs j ON r.job_id = j.id
+                WHERE r.engineer_id = %s AND r.is_hidden = 0 AND j.is_hidden = 0
+                """,
+                (engineer_id,)
+            )
+            existing_matches = cursor.fetchall()
+
+            if not existing_matches:
+                st.info("この技術者には再評価対象のマッチング結果がありません。")
+                return True # 処理対象がないので成功とみなす
+
+            st.write(f"{len(existing_matches)}件の既存マッチングに対して再評価を実行します。")
+            
+            # 3. 各マッチングに対してAI評価を再実行
+            success_count = 0
+            for match in existing_matches:
+                st.write(f"  - 案件『{match['project_name']}』とのマッチングを再評価中...")
+                
+                # AI評価を呼び出し
+                llm_result = get_match_summary_with_llm(match['job_document'], engineer_doc)
+                
+                # DBを更新
+                if update_match_evaluation(match['match_id'], llm_result):
+                    st.write(f"    -> 新しい評価: **{llm_result.get('summary')}** ... ✅ 更新完了")
+                    success_count += 1
+                else:
+                    st.write(f"    -> 評価または更新に失敗しました。")
+        
+        # この関数はDBの変更を伴わないので、conn.commit()は不要 (update_match_evaluation内で完結)
+        return success_count == len(existing_matches)
+
+    except (Exception, psycopg2.Error) as e:
+        st.error(f"再評価処理中にエラーが発生しました: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+            
 def update_engineer_name(engineer_id, new_name):
     if not new_name or not new_name.strip(): return False
     with get_db_connection() as conn:
@@ -832,3 +897,29 @@ def update_job_source_json(job_id, new_json_str):
             conn.rollback()
             return False
         
+
+def update_match_evaluation(match_id, llm_result):
+    """
+    指定されたマッチングIDの評価結果を更新するヘルパー関数。
+    """
+    if not llm_result or 'summary' not in llm_result:
+        return False
+        
+    grade = llm_result.get('summary')
+    positive_points = json.dumps(llm_result.get('positive_points', []), ensure_ascii=False)
+    concern_points = json.dumps(llm_result.get('concern_points', []), ensure_ascii=False)
+    
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "UPDATE matching_results SET grade = %s, positive_points = %s, concern_points = %s WHERE id = %s",
+                    (grade, positive_points, concern_points, match_id)
+                )
+            conn.commit()
+            return True
+        except (Exception, psycopg2.Error) as e:
+            print(f"マッチング評価の更新エラー (ID: {match_id}): {e}")
+            conn.rollback()
+            return False
+

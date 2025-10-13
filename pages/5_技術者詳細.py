@@ -262,28 +262,30 @@ else:
 
 st.divider()
 
-st.header("⚙️ AI再評価＋マッチング")
-if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True):
-    with st.status("再評価と再マッチングを実行中...", expanded=True) as status:
+# ▼▼▼ 変更点: ボタンのテキストと呼び出す関数を変更 ▼▼▼
+st.header("⚙️ AI再評価")
+st.info("「情報ソースを更新する」ボタンでスキル情報を変更した場合、このボタンを押すことで、既存のマッチングに対するAI評価（ランクや根拠）を最新の状態に更新できます。")
+if st.button("🤖 既存マッチングのAI再評価を実行する", type="primary", use_container_width=True):
+    with st.status("既存マッチングの再評価を実行中...", expanded=True) as status:
         log_container = st.container(height=300, border=True)
-        log_container.write(f"技術者ID: {selected_id} の情報を最新化し、再マッチングを開始します。")
+        log_container.write(f"技術者ID: {selected_id} の既存マッチング結果を再評価します。")
         
-        import io, contextlib
-        log_stream = io.StringIO()
-        with contextlib.redirect_stdout(log_stream):
-            success = be.re_evaluate_and_match_single_engineer(selected_id)
+        # 新しい関数を呼び出す
+        success = be.re_evaluate_existing_matches_for_engineer(selected_id)
         
-        log_container.code(log_stream.getvalue())
+        # ログ表示は不要（st.writeが直接UIに出力するため）
 
         if success:
             status.update(label="処理が完了しました！", state="complete")
-            st.success("AIによる再評価と再マッチングが完了しました。画面を自動で更新します。")
+            st.success("AIによる再評価が完了しました。画面を自動で更新します。")
             st.balloons()
             time.sleep(2)
             st.rerun()
         else:
             status.update(label="処理に失敗しました", state="error")
             st.error("処理中にエラーが発生しました。詳細はログを確認してください。")
+# ▲▲▲ 変更点 ここまで ▲▲▲
+
 
 st.divider()
 
