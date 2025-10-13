@@ -1126,35 +1126,28 @@ def get_dashboard_data():
     """ダッシュボード表示に必要なデータをDBから取得・集計する"""
     conn = get_db_connection()
     try:
-        # st.cache_data を使って結果をキャッシュする
-        # ttlを短くして、データ更新が反映されやすくします (例: 5分)
-        @st.cache_data(ttl=300)
+        @st.cache_data(ttl=300) # 5分間キャッシュ
         def fetch_data_from_db():
-            # 【修正点1】テーブル名を 'jobs' に修正
-            jobs_df = pd.read_sql("SELECT * FROM jobs", conn)
-            engineers_df = pd.read_sql("SELECT * FROM engineers", conn)
-            matches_df = pd.read_sql("SELECT * FROM matching_results", conn)
+            jobs_df = pd.read_sql("SELECT id, created_at FROM jobs", conn)
+            engineers_df = pd.read_sql("SELECT id, created_at FROM engineers", conn)
+            matches_df = pd.read_sql("SELECT id, created_at, grade FROM matching_results", conn)
             return jobs_df, engineers_df, matches_df
 
         jobs_df, engineers_df, matches_df = fetch_data_from_db()
 
-        # 1. サマリー指標の計算
-        # 【修正点2】DataFrame名を jobs_df に修正
+        # --- 1. サマリー指標の計算 ---
         total_jobs = len(jobs_df)
         total_engineers = len(engineers_df)
         total_matches = len(matches_df)
 
-        # created_atがテキスト形式なので、エラーを無視してdatetimeに変換
         jobs_df['created_at'] = pd.to_datetime(jobs_df['created_at'], errors='coerce')
         engineers_df['created_at'] = pd.to_datetime(engineers_df['created_at'], errors='coerce')
         
-        # NaT (Not a Time) を除外して計算
         now = pd.Timestamp.now()
         jobs_this_month = len(jobs_df.dropna(subset=['created_at'])[jobs_df['created_at'].dt.month == now.month])
         engineers_this_month = len(engineers_df.dropna(subset=['created_at'])[engineers_df['created_at'].dt.month == now.month])
 
         summary_metrics = {
-            # 【修正点3】キー名を 'total_jobs', 'jobs_this_month' に修正
             "total_jobs": total_jobs,
             "total_engineers": total_engineers,
             "total_matches": total_matches,
@@ -1162,14 +1155,30 @@ def get_dashboard_data():
             "engineers_this_month": engineers_this_month,
         }
 
-        # 2. AI評価ランクの割合を計算
+        # --- 2. AI評価ランクの割合を計算 ---
         if not matches_df.empty:
-            # 【修正点4】カラム名を 'grade' に修正
             rank_counts = matches_df['grade'].value_counts().reindex(['S', 'A', 'B', 'C', 'D'], fill_value=0)
         else:
             rank_counts = pd.Series([0, 0, 0, 0, 0], index=['S', 'A', 'B', 'C', 'D'])
 
-        return summary_metrics, rank_counts
+        # --- 3. 時系列データの作成 (★ここからが新しいコード) ---
+        matches_df['created_at'] = pd.to_datetime(matches_df['created_at'], errors='coerce')
+
+        # 日付をインデックスに設定
+        jobs_ts = jobs_df.dropna(subset=['created_at']).set_index('created_at')
+        engineers_ts = engineers_df.dropna(subset=['created_at']).set_index('created_at')
+        matches_ts = matches_df.dropna(subset=['created_at']).set_index('created_at')
+
+        # 日別(Day)でリサンプリングして件数をカウント
+        daily_jobs = jobs_ts.resample('D').size().rename('案件登録数')
+        daily_engineers = engineers_ts.resample('D').size().rename('技術者登録数')
+        daily_matches = matches_ts.resample('D').size().rename('マッチング生成数')
+
+        # 3つの時系列データを1つのDataFrameに結合
+        time_series_df = pd.concat([daily_jobs, daily_engineers, daily_matches], axis=1).fillna(0).astype(int)
+        
+        # 戻り値に時系列データを追加
+        return summary_metrics, rank_counts, time_series_df
 
     finally:
         if conn:
