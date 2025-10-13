@@ -186,7 +186,7 @@ def split_text_with_llm(text_content):
         
         raw_text = response.text
         
-        # ▼▼▼【ここからがJSON抽出ロジックの修正箇所です】▼▼▼
+        # ▼▼▼【ここからがJSON抽出・修復ロジックです】▼▼▼
         json_str = None
         try:
             # 1. ```json ... ``` 形式のコードブロックを探す
@@ -195,13 +195,11 @@ def split_text_with_llm(text_content):
                 json_str = match.group(1)
             else:
                 # 2. コードブロックがない場合、最も大きな波括弧のペアを探す
-                #    最初に見つかった '{' から、最後に見つかった '}' までを抽出
                 start_index = raw_text.find('{')
                 end_index = raw_text.rfind('}')
                 if start_index != -1 and end_index != -1 and start_index < end_index:
                     json_str = raw_text[start_index : end_index + 1]
                 else:
-                    # それでも見つからない場合は、エラーとして処理
                     st.error("LLMの応答から有効なJSON構造を抽出できませんでした。")
                     st.code(raw_text, language='text')
                     return None
@@ -209,13 +207,24 @@ def split_text_with_llm(text_content):
             # 抽出した文字列をパース
             parsed_json = json.loads(json_str)
 
-        except (IndexError, json.JSONDecodeError) as e:
-            # パースに失敗した場合
-            st.error(f"LLMによる構造化に失敗しました: {e}")
-            st.write("抽出を試みたJSON文字列:")
-            st.code(json_str or raw_text, language='text') # 抽出できた文字列、または生テキストを表示
-            return None
-        # ▲▲▲【JSON抽出ロジックの修正ここまで】▲▲▲
+        except json.JSONDecodeError as e:
+            # パースに失敗した場合、修復を試みる
+            print(f"WARN: JSONのパースに失敗。修復を試みます。エラー: {e}")
+            
+            repaired_text = json_str or raw_text
+            # 文字列内の不正な改行を置換
+            repaired_text = re.sub(r'(?<!\\)\n', r'\\n', repaired_text)
+            
+            try:
+                # 修復したテキストで再度パースを試みる
+                print("INFO: 修復後のJSONで再パースを試みます。")
+                parsed_json = json.loads(repaired_text)
+            except json.JSONDecodeError as final_e:
+                st.error(f"JSONの修復後もパースに失敗しました: {final_e}")
+                st.write("修復を試みたJSON文字列:")
+                st.code(repaired_text, language='json')
+                return None
+        # ▲▲▲【JSON抽出・修復ロジックここまで】▲▲▲
 
         if "技術者情報" in doc_type: parsed_json["jobs"] = []
         elif "案件情報" in doc_type: parsed_json["engineers"] = []
@@ -227,7 +236,6 @@ def split_text_with_llm(text_content):
         except NameError: st.text("レスポンスの取得にも失敗しました。")
         return None
     
-
 
 @st.cache_data
 def get_match_summary_with_llm(job_doc, engineer_doc):

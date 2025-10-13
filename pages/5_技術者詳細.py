@@ -209,7 +209,7 @@ if engineer_data:
                 "情報ソースを編集", value=full_source_text, height=600,
                 label_visibility="collapsed", key=f"eng_source_editor_{selected_id}"
             )
-            st.warning("アピールしたいポイントやスキルなどを追加・修正し、「情報ソースを更新する」ボタンを押した後、「AI再評価」を実行することで、新たな案件がマッチする可能性があります。")
+            #st.warning("アピールしたいポイントやスキルなどを追加・修正し、「情報ソースを更新する」ボタンを押した後、「AI再評価」を実行することで、新たな案件がマッチする可能性があります。")
 
             if st.button("情報ソースを更新する", type="primary"):
                 source_data['body'] = edited_source_text
