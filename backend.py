@@ -453,23 +453,39 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
 
 
 
+# backend.py
 
-
-def process_single_content(source_data: dict):
+def process_single_content(source_data: dict, progress_bar, base_progress: float, progress_per_email: float):
+    """
+    単一のメールコンテンツを処理し、進捗バーを更新する。
+    
+    Args:
+        source_data (dict): メールから抽出されたデータ。
+        progress_bar: Streamlitのプログレスバーオブジェクト。
+        base_progress (float): このメール処理開始前の進捗値。
+        progress_per_email (float): このメール1件あたりの進捗の重み。
+    """
     if not source_data: 
         st.warning("処理するデータが空です。")
         return False
-    
+
+    # ステップ1: コンテンツ解析 (LLM) - このメール処理の50%を占めると仮定
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")]
     if valid_attachments_content: 
         st.write(f"ℹ️ {len(valid_attachments_content)}件の添付ファイルの内容を解析に含めます。")
-    
     full_text_for_llm = source_data.get('body', '') + "".join(valid_attachments_content)
     if not full_text_for_llm.strip(): 
         st.warning("解析対象のテキストがありません。")
         return False
     
+    # split_text_with_llm は内部でスピナーやログを表示する
     parsed_data = split_text_with_llm(full_text_for_llm)
+    
+    # 進捗バーを更新 (コンテンツ解析完了)
+    # このメールに割り当てられた進捗のうち、50%が完了したとみなす
+    current_progress = base_progress + (progress_per_email * 0.5)
+    progress_bar.progress(current_progress, text="コンテンツ解析完了")
+
     if not parsed_data: 
         return False
     
@@ -478,6 +494,8 @@ def process_single_content(source_data: dict):
         st.warning("LLMはテキストから案件情報または技術者情報を抽出できませんでした。")
         return False
     
+    # ステップ2: マッチング処理 - このメール処理の残りの50%
+    st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -509,21 +527,26 @@ def process_single_content(source_data: dict):
                 item_data['document'] = full_document
                 newly_added_engineers.append(item_data)
             
-            st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
+            # インデックス更新
             cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_active_jobs = cursor.fetchall()
             cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0'); all_active_engineers = cursor.fetchall()
-            
             if all_active_jobs: update_index(JOB_INDEX_FILE, all_active_jobs)
             if all_active_engineers: update_index(ENGINEER_INDEX_FILE, all_active_engineers)
             
-            # ▼▼▼ 修正点: run_matching_for_item に conn を渡す ▼▼▼
+            # 再マッチング (run_matching_for_item は内部でログを出力する)
             for new_job in newly_added_jobs:
                 run_matching_for_item(new_job, 'job', conn, now_str)
             for new_engineer in newly_added_engineers:
                 run_matching_for_item(new_engineer, 'engineer', conn, now_str)
-            # ▲▲▲ 修正点 ここまで ▲▲▲
         conn.commit()
+
+    # 進捗バーを更新 (このメールの処理が100%完了)
+    current_progress = base_progress + progress_per_email
+    progress_bar.progress(current_progress, text="マッチング処理完了")
+    
     return True
+
+
 
 
 
@@ -571,73 +594,101 @@ def get_email_contents(msg) -> dict:
     
     return {"subject": subject, "from": from_, "received_at": received_at, "body": body_text.strip(), "attachments": attachments}
 
+
+
+
+# backend.py
+
 def fetch_and_process_emails():
-    log_stream = io.StringIO()
     try:
-        with contextlib.redirect_stdout(log_stream):
-            try:
-                SERVER, USER, PASSWORD = st.secrets["EMAIL_SERVER"], st.secrets["EMAIL_USER"], st.secrets["EMAIL_PASSWORD"]
-            except KeyError as e:
-                st.error(f"メールサーバーの接続情報がSecretsに設定されていません: {e}")
-                return False, log_stream.getvalue()
-            
-            try:
-                mail = imaplib.IMAP4_SSL(SERVER)
-                mail.login(USER, PASSWORD)
-                mail.select('inbox')
-            except Exception as e:
-                st.error(f"メールサーバーへの接続またはログインに失敗しました: {e}")
-                return False, log_stream.getvalue()
-            
-            total_processed_count, checked_count = 0, 0
-            try:
-                with st.status("最新の未読メールを取得・処理中...", expanded=True) as status:
-                    _, messages = mail.search(None, 'UNSEEN')
-                    email_ids = messages[0].split()
-                    
-                    if not email_ids:
-                        st.write("処理対象の未読メールは見つかりませんでした。")
-                    else:
-                        latest_ids = email_ids[::-1][:10]
-                        checked_count = len(latest_ids)
-                        st.write(f"最新の未読メール {checked_count}件をチェックします。")
-
-                        # ▼▼▼ 変更点 1: プログレスバーの初期化 ▼▼▼
-                        progress_bar = st.progress(0, text="メール処理の進捗")
-                        # ▲▲▲ 変更点 1 ここまで ▲▲▲
-
-                        for i, email_id in enumerate(latest_ids):
-                            _, msg_data = mail.fetch(email_id, '(RFC822)')
-                            for response_part in msg_data:
-                                if isinstance(response_part, tuple):
-                                    msg = email.message_from_bytes(response_part[1])
-                                    source_data = get_email_contents(msg)
-                                    if source_data['body'] or source_data['attachments']:
-                                        st.write("---")
-                                        st.write(f"✅ メールID {email_id.decode()} を処理します。")
-                                        received_at_str = source_data['received_at'].strftime('%Y-%m-%d %H:%M:%S') if source_data.get('received_at') else '取得不可'
-                                        st.write(f"   受信日時: {received_at_str}")
-                                        st.write(f"   差出人: {source_data.get('from', '取得不可')}")
-                                        st.write(f"   件名: {source_data.get('subject', '取得不可')}")
-                                        if process_single_content(source_data):
-                                            total_processed_count += 1
-                                            mail.store(email_id, '+FLAGS', '\\Seen')
-                                    else:
-                                        st.write(f"✖️ メールID {email_id.decode()} は本文も添付ファイルも無いため、スキップします。")
-                            
-                            # ▼▼▼ 変更点 2: プログレスバーの更新 ▼▼▼
-                            # 進捗を計算 (i+1) / checked_count
-                            progress_value = (i + 1) / checked_count
-                            progress_text = f"ステータス: {i+1}/{checked_count} 件完了"
-                            progress_bar.progress(progress_value, text=progress_text)
-                            # ▲▲▲ 変更点 2 ここまで ▲▲▲
-                    
-                    status.update(label="メールチェック完了", state="complete")
-            finally:
-                mail.close()
-                mail.logout()
+        # プログレスバーの初期化と重み付け定義
+        progress_bar = st.progress(0, text="処理を開始します...")
         
-        # 処理完了後のメッセージ (変更なし)
+        WEIGHT_CONNECT = 0.05  # サーバー接続に5%
+        WEIGHT_FETCH_IDS = 0.05 # メールIDリスト取得に5%
+        WEIGHT_LOOP = 0.90     # メールごとのループ処理全体で90%
+
+        # メールサーバー接続
+        try:
+            SERVER, USER, PASSWORD = st.secrets["EMAIL_SERVER"], st.secrets["EMAIL_USER"], st.secrets["EMAIL_PASSWORD"]
+        except KeyError as e:
+            st.error(f"メールサーバーの接続情報がSecretsに設定されていません: {e}")
+            return False, ""
+        
+        try:
+            mail = imaplib.IMAP4_SSL(SERVER)
+            mail.login(USER, PASSWORD)
+            mail.select('inbox')
+            progress_bar.progress(WEIGHT_CONNECT, text="メールサーバー接続完了")
+        except Exception as e:
+            st.error(f"メールサーバーへの接続またはログインに失敗しました: {e}")
+            return False, ""
+        
+        total_processed_count, checked_count = 0, 0
+        try:
+            with st.status("最新の未読メールを取得・処理中...", expanded=True) as status:
+                _, messages = mail.search(None, 'UNSEEN')
+                email_ids = messages[0].split()
+                
+                progress_bar.progress(WEIGHT_CONNECT + WEIGHT_FETCH_IDS, text="未読メールIDリスト取得完了")
+                
+                if not email_ids:
+                    st.write("処理対象の未読メールは見つかりませんでした。")
+                else:
+                    latest_ids = email_ids[::-1][:10]
+                    checked_count = len(latest_ids)
+                    st.write(f"最新の未読メール {checked_count}件をチェックします。")
+
+                    # メール1件あたりの進捗の割合を計算
+                    progress_per_email = WEIGHT_LOOP / checked_count if checked_count > 0 else 0
+                    
+                    for i, email_id in enumerate(latest_ids):
+                        # このループ開始時点でのベースとなる進捗
+                        base_progress_for_this_email = (WEIGHT_CONNECT + WEIGHT_FETCH_IDS) + (i * progress_per_email)
+                        
+                        # メール内容取得の進捗
+                        progress_bar.progress(base_progress_for_this_email, text=f"メール({i+1}/{checked_count})の内容を取得中...")
+                        
+                        _, msg_data = mail.fetch(email_id, '(RFC822)')
+                        for response_part in msg_data:
+                            if isinstance(response_part, tuple):
+                                msg = email.message_from_bytes(response_part[1])
+                                source_data = get_email_contents(msg)
+                                
+                                # メール内容取得完了後の進捗 (メール1件の処理の20%を割り当て)
+                                fetch_complete_progress = base_progress_for_this_email + (progress_per_email * 0.2)
+                                progress_bar.progress(fetch_complete_progress, text=f"メール({i+1}/{checked_count})の内容取得完了")
+
+                                if source_data['body'] or source_data['attachments']:
+                                    st.write("---")
+                                    st.write(f"✅ メールID {email_id.decode()} を処理します。")
+                                    received_at_str = source_data['received_at'].strftime('%Y-%m-%d %H:%M:%S') if source_data.get('received_at') else '取得不可'
+                                    st.write(f"   受信日時: {received_at_str}")
+                                    st.write(f"   差出人: {source_data.get('from', '取得不可')}")
+                                    st.write(f"   件名: {source_data.get('subject', '取得不可')}")
+                                    
+                                    # process_single_content に進捗管理情報を渡す
+                                    # 残りの80%の進捗をこの関数に委ねる
+                                    if process_single_content(source_data, progress_bar, fetch_complete_progress, progress_per_email * 0.8):
+                                        total_processed_count += 1
+                                        mail.store(email_id, '+FLAGS', '\\Seen')
+                                else:
+                                    st.write(f"✖️ メールID {email_id.decode()} は本文も添付ファイルも無いため、スキップします。")
+                                    # スキップした場合でも、このメールの進捗は完了したことにする
+                                    final_progress_for_this_email = base_progress_for_this_email + progress_per_email
+                                    progress_bar.progress(final_progress_for_this_email, text=f"メール({i+1}/{checked_count}) スキップ完了")
+                        
+                        st.write(f"({i+1}/{checked_count}) チェック完了")
+                
+                status.update(label="メールチェック完了", state="complete")
+        finally:
+            mail.close()
+            mail.logout()
+    
+        # 最終的にプログレスバーを100%にする
+        progress_bar.progress(1.0, text="全処理完了！")
+        
+        # 処理完了後のメッセージ
         if checked_count > 0:
             if total_processed_count > 0:
                 st.success(f"チェックした {checked_count} 件のメールのうち、{total_processed_count} 件からデータを抽出し、保存しました。")
@@ -647,11 +698,13 @@ def fetch_and_process_emails():
         else:
             st.info("処理対象となる新しい未読メールはありませんでした。")
             
-        return True, log_stream.getvalue()
+        return True, "" # ログストリームは使わないので空文字列を返す
     except Exception as e:
         st.error(f"予期せぬエラーが発生しました: {e}")
-        return False, log_stream.getvalue()
-    
+        return False, ""
+
+
+
 
 
 # --- 残りの関数 (変更なし) ---
