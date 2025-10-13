@@ -11,3 +11,4 @@ venv/
 # Streamlit secrets file
 .streamlit/
 *.faiss
+*.faiss
