@@ -1031,3 +1031,71 @@ def update_match_evaluation(match_id, llm_result):
             conn.rollback()
             return False
 
+
+def re_evaluate_and_match_single_engineer(engineer_id):
+    """
+    【クリア＆再マッチング】
+    指定された技術者のdocumentを最新化し、既存のマッチングをクリア後、
+    再度すべての案件とマッチングを実行する。
+    """
+    if not engineer_id:
+        st.error("技術者IDが指定されていません。")
+        return False
+
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cursor:
+                # 1. 技術者の最新のsource_data_jsonを取得
+                cursor.execute("SELECT source_data_json, name FROM engineers WHERE id = %s", (engineer_id,))
+                engineer_record = cursor.fetchone()
+                if not engineer_record or not engineer_record['source_data_json']:
+                    st.error(f"技術者ID:{engineer_id} の元情報が見つかりませんでした。")
+                    return False
+                
+                st.write("📄 元情報から最新のドキュメントを生成します...")
+                source_data = json.loads(engineer_record['source_data_json'])
+                full_text_for_llm = source_data.get('body', '') + "".join([f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")])
+                
+                # 2. split_text_with_llmでdocumentを再生成
+                parsed_data = split_text_with_llm(full_text_for_llm)
+                if not parsed_data or not parsed_data.get("engineers"):
+                    st.error("LLMによる情報抽出（再評価）に失敗しました。")
+                    return False
+                
+                item_data = parsed_data["engineers"][0]
+                doc = item_data.get("document") or full_text_for_llm
+                meta_info = _build_meta_info_string('engineer', item_data)
+                new_full_document = meta_info + doc
+                
+                # 3. engineersテーブルのdocumentを更新
+                cursor.execute("UPDATE engineers SET document = %s WHERE id = %s", (new_full_document, engineer_id))
+                st.write("✅ 技術者のAI要約情報を更新しました。")
+
+                # 4. 既存のマッチング結果を削除
+                # ON DELETE CASCADEが設定されていれば不要だが、安全のため明示的に実行
+                cursor.execute("DELETE FROM matching_results WHERE engineer_id = %s", (engineer_id,))
+                st.write(f"🗑️ 技術者ID:{engineer_id} の既存マッチング結果をクリアしました。")
+
+                # 5. インデックスを再構築
+                st.write("🔄 ベクトルインデックスを更新し、再マッチング処理を開始します...")
+                cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_active_jobs = cursor.fetchall()
+                cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0'); all_active_engineers = cursor.fetchall()
+                if all_active_jobs: update_index(JOB_INDEX_FILE, all_active_jobs)
+                if all_active_engineers: update_index(ENGINEER_INDEX_FILE, all_active_engineers)
+                
+                # 6. 再マッチングを実行
+                now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                engineer_data_for_matching = {
+                    'id': engineer_id, 
+                    'document': new_full_document, 
+                    'name': engineer_record['name']
+                }
+                run_matching_for_item(engineer_data_for_matching, 'engineer', conn, now_str) # cursorではなくconnを渡す
+
+            conn.commit()
+            return True
+        except (Exception, psycopg2.Error) as e:
+            conn.rollback()
+            st.error(f"再評価・再マッチング中にエラーが発生しました: {e}")
+            return False
+        

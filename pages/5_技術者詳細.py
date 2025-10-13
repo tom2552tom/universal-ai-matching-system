@@ -261,35 +261,56 @@ else:
     st.error("指定されたIDの技術者情報が見つかりませんでした。")
 
 st.divider()
+st.header("⚙️ AI再評価＋マッチング")
+st.info("「情報ソースを更新する」ボタンでスキル情報を変更した場合、このボタンを押すことで、最新の情報ですべての案件とのマッチングを再実行します。")
 
-# ▼▼▼ 変更点: ボタンのテキストと呼び出す関数を変更 ▼▼▼
-st.header("⚙️ AI再評価")
-st.info("「情報ソースを更新する」ボタンでスキル情報を変更した場合、このボタンを押すことで、既存のマッチングに対するAI評価（ランクや根拠）を最新の状態に更新できます。")
-if st.button("🤖 既存マッチングのAI再評価を実行する", type="primary", use_container_width=True):
-    with st.status("既存マッチングの再評価を実行中...", expanded=True) as status:
-        log_container = st.container(height=300, border=True)
-        log_container.write(f"技術者ID: {selected_id} の既存マッチング結果を再評価します。")
-        
-        # 新しい関数を呼び出す
-        success = be.re_evaluate_existing_matches_for_engineer(selected_id)
-        
-        # ログ表示は不要（st.writeが直接UIに出力するため）
+# 各技術者IDに固有のセッションステートキーを定義
+re_eval_confirmation_key = f"confirm_re_evaluate_{selected_id}"
 
-        if success:
-            status.update(label="処理が完了しました！", state="complete")
-            st.success("AIによる再評価が完了しました。画面を自動で更新します。")
-            st.balloons()
-            time.sleep(2)
-            st.rerun()
-        else:
-            status.update(label="処理に失敗しました", state="error")
-            st.error("処理中にエラーが発生しました。詳細はログを確認してください。")
+if re_eval_confirmation_key not in st.session_state:
+    st.session_state[re_eval_confirmation_key] = False
+
+# 確認UIの表示/非表示を切り替えるボタン
+if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True, key=f"re_eval_main_btn_{selected_id}"):
+    st.session_state[re_eval_confirmation_key] = not st.session_state[re_eval_confirmation_key]
+    st.rerun()
+
+# 確認UIの表示
+if st.session_state[re_eval_confirmation_key]:
+    with st.container(border=True):
+        st.warning("**本当に再評価と再マッチングを実行しますか？**\n\nこの技術者に関する既存のマッチング結果（ステータス情報などを含む）は**すべて削除**され、最新の情報で再計算されます。この操作は取り消せません。")
+        
+        confirm_check = st.checkbox("はい、すべての既存マッチング結果の削除を承認し、再実行します。", key=f"re_eval_confirm_checkbox_{selected_id}")
+        
+        col_run, col_cancel, _ = st.columns([1, 1, 3])
+        with col_run:
+            execute_button_clicked = st.button("再評価実行", disabled=not confirm_check, use_container_width=True, key=f"re_eval_execute_btn_{selected_id}")
+        with col_cancel:
+            if st.button("キャンセル", use_container_width=True):
+                st.session_state[re_eval_confirmation_key] = False
+                st.rerun()
+
+        # 「再評価実行」ボタンが押された後の処理
+        if execute_button_clicked:
+            # ログ表示用のプレースホルダーをボタンの下に作成
+            log_placeholder = st.container()
+            with log_placeholder:
+                with st.spinner("再評価と再マッチングを実行中..."):
+                    success = be.re_evaluate_and_match_single_engineer(selected_id)
+                
+                if success:
+                    st.success("AIによる再評価と再マッチングが完了しました。")
+                    st.balloons()
+                    st.info("2秒後に画面を自動で更新します...")
+                    time.sleep(2)
+                    st.session_state[re_eval_confirmation_key] = False # 確認UIを閉じる
+                    st.rerun()
+                else:
+                    st.error("処理中にエラーが発生しました。詳細は上記のログを確認してください。")
 # ▲▲▲ 変更点 ここまで ▲▲▲
-
 
 st.divider()
 
 if st.button("一覧に戻る"):
     if 'selected_engineer_id' in st.session_state: del st.session_state['selected_engineer_id']
     st.switch_page("pages/3_技術者管理.py")
-
