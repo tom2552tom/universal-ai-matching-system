@@ -636,3 +636,73 @@ def update_match_status(match_id, new_status):
             conn.commit(); return True
         except (Exception, psycopg2.Error) as e:
             print(f"ステータスの更新エラー: {e}"); conn.rollback(); return False
+
+
+def delete_job(job_id):
+    """
+    指定された案件IDのレコードを jobs テーブルから削除する。
+    ON DELETE CASCADE 制約により、関連する matching_results のレコードも自動的に削除される。
+    
+    Args:
+        job_id (int): 削除対象の案件ID。
+        
+    Returns:
+        bool: 削除が成功した場合はTrue、失敗した場合はFalse。
+    """
+    if not job_id:
+        print("削除対象の案件IDが指定されていません。")
+        return False
+        
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cursor:
+                # 案件自体を削除する (ON DELETE CASCADE により関連データも削除される)
+                cursor.execute("DELETE FROM jobs WHERE id = %s", (job_id,))
+                deleted_rows = cursor.rowcount
+                print(f"Deleted {deleted_rows} job record with id {job_id}.")
+            
+            conn.commit()
+            
+            # 案件が1件以上削除されたら成功とみなす
+            return deleted_rows > 0
+            
+        except (Exception, psycopg2.Error) as e:
+            print(f"案件削除中にデータベースエラーが発生しました: {e}")
+            conn.rollback() # エラーが発生した場合は変更を元に戻す
+            return False
+        
+
+# backend.py の末尾あたりに追加
+
+def delete_engineer(engineer_id):
+    """
+    指定された技術者IDのレコードを engineers テーブルから削除する。
+    ON DELETE CASCADE 制約により、関連する matching_results のレコードも自動的に削除される。
+    
+    Args:
+        engineer_id (int): 削除対象の技術者ID。
+        
+    Returns:
+        bool: 削除が成功した場合はTrue、失敗した場合はFalse。
+    """
+    if not engineer_id:
+        print("削除対象の技術者IDが指定されていません。")
+        return False
+        
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cursor:
+                # 技術者自体を削除する (ON DELETE CASCADE により関連データも削除される)
+                cursor.execute("DELETE FROM engineers WHERE id = %s", (engineer_id,))
+                deleted_rows = cursor.rowcount
+                print(f"Deleted {deleted_rows} engineer record with id {engineer_id}.")
+            
+            conn.commit()
+            
+            # 技術者が1件以上削除されたら成功とみなす
+            return deleted_rows > 0
+            
+        except (Exception, psycopg2.Error) as e:
+            print(f"技術者削除中にデータベースエラーが発生しました: {e}")
+            conn.rollback() # エラーが発生した場合は変更を元に戻す
+            return False

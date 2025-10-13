@@ -36,18 +36,38 @@ if selected_id is None:
 
 # --- DBから全データを取得 ---
 conn = be.get_db_connection()
-cursor = conn.cursor()
+engineer_data = None
+matched_jobs = []
+try:
+    with conn.cursor() as cursor:
+        engineer_query = """
+        SELECT 
+            e.id, e.name, e.document, e.source_data_json, e.assigned_user_id, e.is_hidden,
+            u.username as assigned_username
+        FROM engineers e
+        LEFT JOIN users u ON e.assigned_user_id = u.id
+        WHERE e.id = %s
+        """
+        cursor.execute(engineer_query, (selected_id,))
+        engineer_data = cursor.fetchone()
 
-query = """
-SELECT 
-    e.id, e.name, e.document, e.source_data_json, e.assigned_user_id, e.is_hidden,
-    u.username as assigned_username
-FROM engineers e
-LEFT JOIN users u ON e.assigned_user_id = u.id
-WHERE e.id = %s
-"""
-cursor.execute(query, (selected_id,))
-engineer_data = cursor.fetchone()
+        if engineer_data:
+            matched_jobs_query = """
+                SELECT 
+                    j.id as job_id, j.project_name, j.document, 
+                    r.score, r.id as match_id, r.grade
+                FROM matching_results r
+                JOIN jobs j ON r.job_id = j.id
+                WHERE r.engineer_id = %s 
+                  AND j.is_hidden = 0
+                  AND r.is_hidden = 0
+                ORDER BY r.score DESC
+            """
+            cursor.execute(matched_jobs_query, (selected_id,))
+            matched_jobs = cursor.fetchall()
+finally:
+    if conn:
+        conn.close()
 
 if engineer_data:
     # --- タイトル表示 ---
@@ -84,7 +104,7 @@ if engineer_data:
             option_names = list(user_options.keys())
             default_index = option_names.index(current_username)
             selected_username = st.selectbox("担当者を変更/割り当て", options=option_names, index=default_index, key=f"eng_user_assign_{selected_id}")
-            if st.button("担当者を更新", use_container_width=True):
+            if st.button("担当者を更新", use_container_width=True, key="assign_user_btn"):
                 selected_user_id = user_options[selected_username]
                 if be.assign_user_to_engineer(selected_id, selected_user_id):
                     st.success(f"担当者を「{selected_username}」に更新しました。")
@@ -93,7 +113,10 @@ if engineer_data:
                     st.error("担当者の更新に失敗しました。")
     st.divider()
 
-    # --- 技術者の操作（表示/非表示）セクション ---
+    # --- 技術者の操作（表示/非表示/削除）セクション ---
+    # pages/5_技術者詳細.py の該当箇所
+
+    # --- 技術者の操作（表示/非表示/削除）セクション ---
     with st.expander("技術者の操作", expanded=False):
         if is_currently_hidden:
             if st.button("✅ この技術者を再表示する", use_container_width=True):
@@ -103,9 +126,45 @@ if engineer_data:
             if st.button("🙈 この技術者を非表示にする (アーカイブ)", type="secondary", use_container_width=True):
                 if be.set_engineer_visibility(selected_id, 1): st.success("技術者を非表示にしました。"); st.rerun()
                 else: st.error("更新に失敗しました。")
+        
+        # ▼▼▼ 変更点: 削除機能のUIを修正 ▼▼▼
+        st.markdown("---")
+        
+        # 各技術者IDに固有のセッションステートキーを定義
+        delete_confirmation_key = f"confirm_delete_engineer_{selected_id}"
+
+        if delete_confirmation_key not in st.session_state:
+            st.session_state[delete_confirmation_key] = False
+
+        if st.button("🚨 この技術者を完全に削除する", type="secondary", use_container_width=True, key=f"delete_eng_main_btn_{selected_id}"):
+            # トグル（押すたびにTrue/Falseが切り替わる）
+            st.session_state[delete_confirmation_key] = not st.session_state[delete_confirmation_key]
+
+        # 固有キーを使って確認UIの表示を判断
+        if st.session_state[delete_confirmation_key]:
+            st.warning("**本当にこの技術者を削除しますか？**\n\nこの操作は取り消せません。関連するマッチング結果もすべて削除されます。")
+            
+            col_check, col_btn = st.columns([3,1])
+            with col_check:
+                confirm_check = st.checkbox("はい、削除を承認します。", key=f"delete_eng_confirm_checkbox_{selected_id}")
+            with col_btn:
+                if st.button("削除実行", disabled=not confirm_check, use_container_width=True, key=f"delete_eng_execute_btn_{selected_id}"):
+                    if be.delete_engineer(selected_id):
+                        st.success(f"技術者 (ID: {selected_id}) を完全に削除しました。技術者管理ページに戻ります。")
+                        time.sleep(2)
+                        # 関連するセッションステートをクリア
+                        del st.session_state['selected_engineer_id']
+                        del st.session_state[delete_confirmation_key]
+                        st.switch_page("pages/3_技術者管理.py")
+                    else:
+                        st.error("技術者の削除に失敗しました。")
+        # ▲▲▲ 変更点 ここまで ▲▲▲
+
+
+
     st.divider()
 
-    # --- AIによる要約情報の表示 ---
+    # --- AIによる要約情報の表示 --- (変更なし)
     st.header("🤖 AIによる要約情報")
     doc_parts = engineer_data['document'].split('\n---\n', 1)
     meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", engineer_data['document'])
@@ -114,7 +173,7 @@ if engineer_data:
     st.markdown(f'<div class="text-container">{sanitized_main_doc}</div>', unsafe_allow_html=True)
     st.divider()
 
-    # --- 元の情報の表示 ---
+    # --- 元の情報の表示 --- (変更なし)
     st.header("📄 元の情報ソース（編集可能）")
     source_json_str = engineer_data['source_data_json']
     
@@ -165,19 +224,7 @@ if engineer_data:
     # --- マッチング済みの案件一覧 ---
     st.header("🤝 マッチング済みの案件一覧")
     
-    matched_jobs_query = """
-        SELECT 
-            j.id as job_id, j.project_name, j.document, 
-            r.score, r.id as match_id, r.grade
-        FROM matching_results r
-        JOIN jobs j ON r.job_id = j.id
-        WHERE r.engineer_id = %s 
-          AND j.is_hidden = 0
-          AND r.is_hidden = 0
-        ORDER BY r.score DESC
-    """
-    cursor.execute(matched_jobs_query, (selected_id,))
-    matched_jobs = cursor.fetchall()
+    # (DBアクセスはページ上部に移動済み)
 
     if not matched_jobs:
         st.info("この技術者にマッチング済みの案件はありません。")
@@ -201,7 +248,6 @@ if engineer_data:
 else:
     st.error("指定されたIDの技術者情報が見つかりませんでした。")
 
-conn.close()
 st.divider()
 
 st.header("⚙️ AI再評価＋マッチング")
@@ -217,17 +263,15 @@ if st.button("🤖 AI再評価と再マッチングを実行する", type="prima
         
         log_container.code(log_stream.getvalue())
 
-        # ▼▼▼【ここが修正箇所】▼▼▼
         if success:
             status.update(label="処理が完了しました！", state="complete")
             st.success("AIによる再評価と再マッチングが完了しました。画面を自動で更新します。")
             st.balloons()
-            time.sleep(2) # メッセージを2秒間表示
-            st.rerun() # ページを自動でリフレッシュ
+            time.sleep(2)
+            st.rerun()
         else:
             status.update(label="処理に失敗しました", state="error")
             st.error("処理中にエラーが発生しました。詳細はログを確認してください。")
-        # ▲▲▲【修正ここまで】▲▲▲
 
 st.divider()
 

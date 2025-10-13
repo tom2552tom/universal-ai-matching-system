@@ -33,21 +33,38 @@ if selected_id is None:
 
 # --- DBから全データを取得 ---
 conn = be.get_db_connection()
-cursor = conn.cursor()
+job_data = None
+matched_engineers = []
+try:
+    with conn.cursor() as cursor:
+        job_query = """
+        SELECT 
+            j.id, j.project_name, j.document, j.source_data_json, j.assigned_user_id, j.is_hidden,
+            u.username as assigned_username
+        FROM jobs j
+        LEFT JOIN users u ON j.assigned_user_id = u.id
+        WHERE j.id = %s
+        """
+        cursor.execute(job_query, (selected_id,))
+        job_data = cursor.fetchone()
 
-# ▼▼▼【ここが修正箇所】▼▼▼
-# プレースホルダを %s に変更し、executeとfetchoneを分離
-query = """
-SELECT 
-    j.id, j.project_name, j.document, j.source_data_json, j.assigned_user_id, j.is_hidden,
-    u.username as assigned_username
-FROM jobs j
-LEFT JOIN users u ON j.assigned_user_id = u.id
-WHERE j.id = %s
-"""
-cursor.execute(query, (selected_id,))
-job_data = cursor.fetchone()
-# ▲▲▲【修正ここまで】▲▲▲
+        if job_data:
+            matched_engineers_query = """
+                SELECT 
+                    e.id as engineer_id, e.name, e.document, 
+                    r.score, r.id as match_id, r.grade
+                FROM matching_results r
+                JOIN engineers e ON r.engineer_id = e.id
+                WHERE r.job_id = %s 
+                  AND e.is_hidden = 0
+                  AND r.is_hidden = 0
+                ORDER BY r.score DESC
+            """
+            cursor.execute(matched_engineers_query, (selected_id,))
+            matched_engineers = cursor.fetchall()
+finally:
+    if conn:
+        conn.close()
 
 if job_data:
     # --- タイトル表示 ---
@@ -80,7 +97,7 @@ if job_data:
             else: st.error("担当者の更新に失敗しました。")
     st.divider()
 
-    # --- 案件の操作（表示/非表示）セクション ---
+    # --- 案件の操作（表示/非表示/削除）セクション ---
     with st.expander("案件の操作", expanded=False):
         if is_currently_hidden:
             if st.button("✅ この案件を再表示する", use_container_width=True, type="primary"):
@@ -90,6 +107,40 @@ if job_data:
             if st.button("🙈 この案件を非表示にする (アーカイブ)", type="secondary", use_container_width=True):
                 if be.set_job_visibility(selected_id, 1): st.success("案件を非表示にしました。"); st.rerun()
                 else: st.error("更新に失敗しました。")
+        
+        # ▼▼▼ 変更点: 削除機能のUIを修正 ▼▼▼
+        st.markdown("---")
+
+        # 各案件IDに固有のセッションステートキーを定義
+        delete_confirmation_key = f"confirm_delete_job_{selected_id}"
+
+        if delete_confirmation_key not in st.session_state:
+            st.session_state[delete_confirmation_key] = False
+
+        if st.button("🚨 この案件を完全に削除する", type="secondary", use_container_width=True, key=f"delete_job_main_btn_{selected_id}"):
+            # トグル（押すたびにTrue/Falseが切り替わる）
+            st.session_state[delete_confirmation_key] = not st.session_state[delete_confirmation_key]
+
+        # 固有キーを使って確認UIの表示を判断
+        if st.session_state[delete_confirmation_key]:
+            st.warning("**本当にこの案件を削除しますか？**\n\nこの操作は取り消せません。関連するマッチング結果もすべて削除されます。")
+            
+            col_check, col_btn = st.columns([3,1])
+            with col_check:
+                confirm_check = st.checkbox("はい、削除を承認します。", key=f"delete_job_confirm_checkbox_{selected_id}")
+            with col_btn:
+                if st.button("削除実行", disabled=not confirm_check, use_container_width=True, key=f"delete_job_execute_btn_{selected_id}"):
+                    if be.delete_job(selected_id):
+                        st.success(f"案件 (ID: {selected_id}) を完全に削除しました。案件管理ページに戻ります。")
+                        time.sleep(2)
+                        # 関連するセッションステートをクリア
+                        del st.session_state['selected_job_id']
+                        del st.session_state[delete_confirmation_key]
+                        st.switch_page("pages/4_案件管理.py")
+                    else:
+                        st.error("案件の削除に失敗しました。")
+        # ▲▲▲ 変更点 ここまで ▲▲▲
+            
     st.divider()
 
     # --- AIによる要約情報 ---
@@ -111,7 +162,6 @@ if job_data:
         try:
             source_data = json.loads(source_json_str)
             st.subheader("情報ソース（メール本文・添付ファイル内容）")
-            # 技術者詳細と同様に、本文と添付ファイル内容を統合して表示
             initial_text_parts = [source_data.get("body", "")]
             attachments = source_data.get("attachments", [])
             if attachments:
@@ -143,23 +193,8 @@ if job_data:
     # --- マッチング済みの技術者一覧 ---
     st.header("🤝 マッチング済みの技術者一覧")
 
-    # ▼▼▼【ここも修正箇所】▼▼▼
-    # プレースホルダを %s に変更し、executeとfetchallを分離
-    matched_engineers_query = """
-        SELECT 
-            e.id as engineer_id, e.name, e.document, 
-            r.score, r.id as match_id, r.grade
-        FROM matching_results r
-        JOIN engineers e ON r.engineer_id = e.id
-        WHERE r.job_id = %s 
-          AND e.is_hidden = 0
-          AND r.is_hidden = 0
-        ORDER BY r.score DESC
-    """
-    cursor.execute(matched_engineers_query, (selected_id,))
-    matched_engineers = cursor.fetchall()
-    # ▲▲▲【修正ここまで】▲▲▲
-
+    # (DBアクセスはページ上部に移動済み)
+    
     if not matched_engineers:
         st.info("この案件にマッチング済みの技術者はいません。")
     else:
@@ -183,7 +218,6 @@ if job_data:
 else:
     st.error("指定されたIDの案件情報が見つかりませんでした。")
 
-conn.close()
 st.divider()
 if st.button("一覧に戻る"):
     if 'selected_job_id' in st.session_state: del st.session_state['selected_job_id']
