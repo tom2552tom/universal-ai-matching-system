@@ -706,3 +706,22 @@ def delete_engineer(engineer_id):
             print(f"技術者削除中にデータベースエラーが発生しました: {e}")
             conn.rollback() # エラーが発生した場合は変更を元に戻す
             return False
+
+def update_job_source_json(job_id, new_json_str):
+    """
+    案件のsource_data_jsonを更新する。
+    """
+    if not job_id or not new_json_str:
+        return False
+        
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE jobs SET source_data_json = %s WHERE id = %s", (new_json_str, job_id))
+            conn.commit()
+            return True
+        except (Exception, psycopg2.Error) as e:
+            print(f"案件のJSONデータ更新エラー: {e}")
+            conn.rollback()
+            return False
+        
