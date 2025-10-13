@@ -227,12 +227,12 @@ def split_text_with_llm(text_content):
         except NameError: st.text("レスポンスの取得にも失敗しました。")
         return None
     
-    
+
 
 @st.cache_data
 def get_match_summary_with_llm(job_doc, engineer_doc):
     model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-     # ▼▼▼ 変更点 1: プロンプトの強化 ▼▼▼
+    # ▼▼▼ 変更点 1: プロンプトの強化 ▼▼▼
     prompt = f"""
         あなたは、経験豊富なIT人材紹介のエージェントです。
         あなたの仕事は、提示された「案件情報」と「技術者情報」を比較し、客観的かつ具体的なマッチング評価を行うことです。
