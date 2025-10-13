@@ -1233,3 +1233,64 @@ def get_dashboard_data():
     finally:
         if conn:
             conn.close()
+
+
+
+
+
+def save_match_feedback(match_id, feedback_status, feedback_comment, user_id):
+    """マッチング結果に対する担当者のフィードバックを保存する"""
+    if not all([match_id, feedback_status, user_id]):
+        st.error("必須項目が不足しているため、フィードバックを保存できません。")
+        return False
+    
+    feedback_at = datetime.now()
+    
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE matching_results 
+                    SET feedback_status = %s, 
+                        feedback_comment = %s, 
+                        feedback_user_id = %s, 
+                        feedback_at = %s
+                    WHERE id = %s
+                    """,
+                    (feedback_status, feedback_comment, user_id, feedback_at, match_id)
+                )
+            conn.commit()
+            return True
+        except (Exception, psycopg2.Error) as e:
+            st.error(f"フィードバックの保存中にエラーが発生しました: {e}")
+            conn.rollback()
+            return False
+        
+
+def get_matching_result_details(result_id):
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cursor:
+                # 【修正点】 usersテーブルをJOINしてフィードバック担当者名を取得
+                sql = """
+                    SELECT r.*, u.username as feedback_username
+                    FROM matching_results r
+                    LEFT JOIN users u ON r.feedback_user_id = u.id
+                    WHERE r.id = %s
+                """
+                cursor.execute(sql, (result_id,))
+                match_result = cursor.fetchone()
+                
+                if not match_result: return None
+                
+                cursor.execute("SELECT j.*, u.username as assignee_name FROM jobs j LEFT JOIN users u ON j.assigned_user_id = u.id WHERE j.id = %s", (match_result['job_id'],))
+                job_data = cursor.fetchone()
+                
+                cursor.execute("SELECT e.*, u.username as assignee_name FROM engineers e LEFT JOIN users u ON e.assigned_user_id = u.id WHERE e.id = %s", (match_result['engineer_id'],))
+                engineer_data = cursor.fetchone()
+                
+                return {"match_result": dict(match_result), "job_data": dict(job_data) if job_data else None, "engineer_data": dict(engineer_data) if engineer_data else None}
+        except (Exception, psycopg2.Error) as e:
+            print(f"マッチング詳細取得エラー: {e}"); return None
+            

@@ -4,6 +4,8 @@ import os
 import json
 import html
 import time # timeモジュールを追加
+from backend import get_matching_result_details, save_match_feedback, get_all_users
+
 
 
 # プロジェクトルートをパスに追加
@@ -314,6 +316,67 @@ with st.expander("マッチングの操作"):
         st.info("このマッチングは非表示に設定されています。")
 st.divider()
 
+
+
+# --- 担当者フィードバック機能 ---
+with st.expander("担当者フィードバック", expanded=True):
+    # 現在のフィードバック情報を表示
+    if details["match_result"].get("feedback_at"):
+        feedback_time = details["match_result"]["feedback_at"].strftime('%Y-%m-%d %H:%M')
+        # backendで取得した担当者名を表示
+        feedback_user = details["match_result"].get("feedback_username", "不明") 
+        st.info(f"最終フィードバック: {feedback_time} by **{feedback_user}**")
+        st.write(f"評価: **{details['match_result']['feedback_status']}**")
+        st.caption("コメント:")
+        st.text(details['match_result']['feedback_comment'])
+        st.write("---")
+
+    st.subheader("フィードバックを登録・更新")
+    
+    # 担当者一覧を取得
+    all_users = get_all_users()
+    user_dict = {user['id']: user['username'] for user in all_users}
+    
+    # UIコンポーネント
+    feedback_user_id = st.selectbox(
+        "フィードバック担当者", 
+        options=list(user_dict.keys()), 
+        format_func=lambda x: user_dict[x],
+        # ▼▼▼【ここから下の 'result_id' をすべて 'selected_match_id' に修正】▼▼▼
+        key=f"feedback_user_{selected_match_id}"
+    )
+    
+    feedback_status = st.radio(
+        "このマッチングの評価",
+        options=["👍 良いマッチング", "👎 改善の余地あり"],
+        horizontal=True,
+        key=f"feedback_status_{selected_match_id}"
+    )
+    
+    feedback_comment = st.text_area(
+        "評価の理由（なぜ良い/悪いと思いましたか？ 具体的なスキル名など）",
+        key=f"feedback_comment_{selected_match_id}"
+    )
+    
+    if st.button("フィードバックを送信", key=f"submit_feedback_{selected_match_id}"):
+        if not feedback_comment.strip():
+            st.warning("評価の理由を記入してください。")
+        else:
+            # backendの関数を呼び出してDBに保存
+            success = save_match_feedback(
+                match_id=selected_match_id, # この画面で表示しているマッチングID
+                feedback_status=feedback_status,
+                feedback_comment=feedback_comment,
+                user_id=feedback_user_id
+            )
+            
+            if success:
+                st.success("フィードバックを保存しました。ありがとうございます！")
+                st.rerun() # 画面を再読み込みして最新の情報を表示
+            else:
+                st.error("フィードバックの保存に失敗しました。")
+
+st.divider()
 
 if st.button("ダッシュボードに戻る"):
     st.switch_page("1_ダッシュボード.py")
