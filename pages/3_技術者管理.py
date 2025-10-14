@@ -25,28 +25,29 @@ init_database()
 st.title("👨‍💻 技術者管理")
 st.markdown("登録されている技術者の一覧表示、検索、並び替えができます。")
 
-# --- 検索とソート、表示オプション ---
-col1, col2, col3, col4 = st.columns([4, 2, 2, 2])
-with col1:
-    # ▼▼▼【キーワードAND検索をメインの検索フィールドとして配置】▼▼▼
+# ▼▼▼【レイアウト修正ここから】▼▼▼
+# 検索フィールドを独立したコンテナに配置し、幅を広げる
+with st.container():
+    st.markdown("##### 🔍 キーワードAND検索")
     search_keyword = st.text_input(
-        "🔍 キーワードAND検索 (例: Python リーダー経験 AWS)",
-        placeholder="技術者情報に必ず含まれるべきキーワードをスペース区切りで入力"
+        "技術者情報に必ず含まれるべきキーワードをスペース、カンマ、読点などで区切って入力 (例: Python リーダー経験 AWS)",
+        placeholder="技術者情報に必ず含まれるべきキーワード",
+        label_visibility="collapsed" # ラベルを非表示にしてスッキリさせる
     )
     st.caption("氏名、担当者名、スキル、経歴などに、入力された**すべてのキーワード**が含まれる技術者を抽出します。")
-    # ▲▲▲【変更点ここまで】▲▲▲
 
-with col2:
+st.divider() # 検索フィールドとソートオプションの間に区切りを入れる
+
+col1, col2, col3 = st.columns([1, 1, 2]) # ソートと表示オプションのカラム比率を調整
+with col1:
     sort_column = st.selectbox(
         "並び替え",
-        # ▼▼▼【AI検索類似度オプションを削除】▼▼▼
         options=["登録日", "氏名", "担当者名"],
         index=0,
         key="sort_column"
-        # ▲▲▲【変更点ここまで】▲▲▲
     )
 
-with col3:
+with col2:
     sort_order = st.selectbox(
         "順序",
         options=["降順", "昇順"],
@@ -54,12 +55,14 @@ with col3:
         key="sort_order"
     )
 
-with col4:
-    st.write("") 
-    st.write("") 
+with col3: # チェックボックスを右寄せにするために空のカラムを削除し、チェックボックスを直接配置
+    st.write("") # スペースを確保
+    st.write("") # スペースを確保
     show_hidden = st.checkbox("非表示の技術者も表示する", value=False)
 
-st.divider()
+st.divider() # ソートオプションと一覧表示の間に区切りを入れる
+# ▲▲▲【レイアウト修正ここまで】▲▲▲
+
 
 
 # --- DBから技術者データを取得 ---
