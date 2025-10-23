@@ -4,7 +4,8 @@ import os
 import json
 import html
 import time # timeモジュールを追加
-from backend import get_matching_result_details, save_match_feedback, get_all_users
+from backend import get_matching_result_details, save_match_feedback, get_all_users, hide_match, update_match_status, save_proposal_text, generate_proposal_reply_with_llm, save_internal_memo, delete_match # ← delete_match を追加
+
 
 
 
@@ -339,19 +340,35 @@ with tab2:
 
 st.divider()
 
-# --- 操作メニュー ---
-with st.expander("マッチングの操作"):
-    is_hidden = match_data['is_hidden'] == 1
-    if not is_hidden:
-        if st.button("🙈 このマッチング結果を非表示にする", use_container_width=True, type="secondary"):
-            if be.hide_match(selected_match_id):
-                st.success("このマッチングを非表示にしました。"); st.rerun()
-            else:
-                st.error("更新に失敗しました。")
-    else:
-        st.info("このマッチングは非表示に設定されています。")
+
+
+# --- 社内共有メモセクション ---
+st.header("📝 社内共有メモ")
+with st.container(border=True):
+    # DBから現在のメモを取得
+    current_memo = match_data.get('internal_memo', '')
+
+    # メモ入力エリア
+    new_memo = st.text_area(
+        "このマッチングに関する経緯や注意事項などを記録します（このメモは社内でのみ共有されます）。",
+        value=current_memo,
+        height=200,
+        key=f"internal_memo_{selected_match_id}"
+    )
+
+    # 保存ボタン
+    if st.button("メモを保存する", key=f"save_memo_{selected_match_id}"):
+        if be.save_internal_memo(selected_match_id, new_memo):
+            st.success("メモを保存しました。")
+            # 変更を即時反映させるために1秒待ってからリロード
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.error("メモの保存に失敗しました。")
+
 st.divider()
 
+# ... (既存のAI要約比較セクションなど) ...
 
 
 # --- 担当者フィードバック機能 ---
@@ -411,6 +428,56 @@ with st.expander("担当者フィードバック", expanded=True):
                 st.rerun() # 画面を再読み込みして最新の情報を表示
             else:
                 st.error("フィードバックの保存に失敗しました。")
+
+st.divider()
+
+
+# --- 操作メニュー ---
+with st.expander("マッチングの操作"):
+    is_hidden = match_data.get('is_hidden') == 1
+    if not is_hidden:
+        if st.button("🙈 このマッチング結果を非表示にする", use_container_width=True, type="secondary"):
+            if be.hide_match(selected_match_id):
+                st.success("このマッチングを非表示にしました。"); st.rerun()
+            else:
+                st.error("更新に失敗しました。")
+    else:
+        st.info("このマッチングは非表示に設定されています。")
+
+    st.markdown("---")
+
+    # ▼▼▼【ここからが削除機能の追加部分です】▼▼▼
+    delete_confirmation_key = f"confirm_delete_match_{selected_match_id}"
+
+    if delete_confirmation_key not in st.session_state:
+        st.session_state[delete_confirmation_key] = False
+
+    if st.button("🚨 このマッチングを完全に削除する", type="secondary", use_container_width=True, key=f"delete_match_main_btn_{selected_match_id}"):
+        # 削除確認UIの表示/非表示を切り替える
+        st.session_state[delete_confirmation_key] = not st.session_state[delete_confirmation_key]
+        st.rerun()
+
+    if st.session_state[delete_confirmation_key]:
+        st.warning("**本当にこのマッチングを削除しますか？**\n\nこの操作は取り消せません。")
+        
+        col_check, col_btn = st.columns([3, 1])
+        with col_check:
+            confirm_check = st.checkbox("はい、削除を承認します。", key=f"delete_match_confirm_checkbox_{selected_match_id}")
+        with col_btn:
+            if st.button("削除実行", disabled=not confirm_check, use_container_width=True, key=f"delete_match_execute_btn_{selected_match_id}"):
+                # backendのdelete_match関数を呼び出す
+                if delete_match(selected_match_id):
+                    st.success(f"マッチング結果 (ID: {selected_match_id}) を完全に削除しました。ダッシュボードに戻ります。")
+                    time.sleep(2)
+                    # セッションステートをクリーンアップ
+                    if 'selected_match_id' in st.session_state:
+                        del st.session_state['selected_match_id']
+                    if delete_confirmation_key in st.session_state:
+                        del st.session_state[delete_confirmation_key]
+                    st.switch_page("1_ダッシュボード.py")
+                else:
+                    st.error("マッチング結果の削除に失敗しました。")
+    # ▲▲▲【削除機能の追加ここまで】▲▲▲
 
 st.divider()
 

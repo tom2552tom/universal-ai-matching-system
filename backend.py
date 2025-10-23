@@ -1296,3 +1296,56 @@ def get_matching_result_details(result_id):
         except (Exception, psycopg2.Error) as e:
             print(f"マッチング詳細取得エラー: {e}"); return None
             
+
+
+def save_internal_memo(match_id, memo_text):
+    """マッチング結果に対する社内メモを保存・更新する"""
+    if not match_id:
+        st.error("マッチングIDが指定されていません。")
+        return False
+    
+    # メモが空文字列の場合も許容するため、memo_textのチェックは緩めにする
+    if memo_text is None:
+        memo_text = "" # DBには空文字列として保存
+
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE matching_results 
+                    SET internal_memo = %s
+                    WHERE id = %s
+                    """,
+                    (memo_text, match_id)
+                )
+            conn.commit()
+            return True
+        except (Exception, psycopg2.Error) as e:
+            st.error(f"社内メモの保存中にエラーが発生しました: {e}")
+            conn.rollback()
+            return False
+
+
+def delete_match(match_id):
+    """指定されたマッチングIDの結果を matching_results テーブルから削除する"""
+    if not match_id:
+        print("削除対象のマッチングIDが指定されていません。")
+        return False
+    
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("DELETE FROM matching_results WHERE id = %s", (match_id,))
+                deleted_rows = cursor.rowcount
+            
+            conn.commit()
+            
+            # 1件以上削除されたら成功とみなす
+            return deleted_rows > 0
+            
+        except (Exception, psycopg2.Error) as e:
+            st.error(f"マッチング結果の削除中にデータベースエラーが発生しました: {e}")
+            conn.rollback()
+            return False
+            
