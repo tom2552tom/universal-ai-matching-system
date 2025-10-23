@@ -3,22 +3,23 @@
 [theme]
 
 # "light"テーマをベースにする
-base = "dark"
+base = "light"
 
-# アクセントカラー (Flatlyの緑)
-primaryColor = "#18bc9c"
+# 主要なウィジェットの色を、落ち着いた青色に設定します
+primaryColor = "#0d6efd"
 
-# メインの背景色 (純白)
-backgroundColor = "#ffffff"
+# 全体の背景色を、純粋な白ではなく、少しだけグレーがかった色にします
+backgroundColor = "#f0f2f6"
 
-# サイドバーなどの背景色 (Flatlyのライトグレー)
-secondaryBackgroundColor = "#ecf0f1"
+# サイドバーやコンテナの背景色を、メインの背景より少し明るい色にします
+secondaryBackgroundColor = "#ffffff"
 
-# メインの文字色 (Flatlyの紺)
-textColor = "#2c3e50"
+# テキストの色を、真っ黒ではなく、少し柔らかいダークグレーにします
+textColor = "#1e293b"
 
-# 使用するフォントファミリー
+# フォントをゴシック体系（sans-serif）に設定します
 font = "sans serif"
+
 
 [app]
 title = "Universal AIマッチング"
