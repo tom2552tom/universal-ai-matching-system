@@ -203,41 +203,77 @@ st.header("📊 AIマッチング評価")
 # LLMを毎回呼び出すのはパフォーマンスに影響するため、可能であればDBに保存されたgradeを使用
 # ただし、positive_pointsやconcern_pointsはDBに保存されていないため、再生成が必要
 # ここでは、常にLLMを呼び出して最新の分析結果を表示するロジックを維持
-summary_data = be.get_match_summary_with_llm(job_data['document'], engineer_data['document'])
 
+# ▼▼▼【ここから修正】▼▼▼
+# DBに評価結果が保存されているかチェック
+has_existing_evaluation = (
+    match_data.get('grade') and 
+    match_data.get('positive_points') and 
+    match_data.get('concern_points')
+)
+
+summary_data = {}
+
+if has_existing_evaluation:
+    # DBに評価結果が存在する場合、そのデータを表示する
+    #st.info("ℹ️ データベースに保存されているAI評価結果を表示しています。")
+    summary_data['summary'] = match_data['grade']
+    try:
+        # JSON文字列をリストに変換
+        summary_data['positive_points'] = json.loads(match_data['positive_points'])
+        summary_data['concern_points'] = json.loads(match_data['concern_points'])
+    except (json.JSONDecodeError, TypeError):
+        # JSONのパースに失敗した場合は空リストとして扱う
+        st.warning("保存されている評価根拠のフォーマットが正しくありません。")
+        summary_data['positive_points'] = []
+        summary_data['concern_points'] = []
+else:
+    # DBに評価結果が存在しない場合のみ、AIによる再評価を実行
+    st.info("ℹ️ データベースに評価結果がなかったため、AIによる評価を実行します。")
+    with st.spinner("AIがマッチング評価を実行中..."):
+        ai_result = be.get_match_summary_with_llm(job_data['document'], engineer_data['document'])
+    
+    if ai_result and ai_result.get('summary'):
+        summary_data = ai_result
+        # 評価結果をDBに保存・更新する
+        if be.update_match_evaluation(selected_match_id, summary_data):
+            st.success("AI評価結果をデータベースに保存しました。")
+            # ページをリロードして、次回からはDBのデータを表示するようにする
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.error("AI評価結果のデータベースへの保存に失敗しました。")
+    else:
+        st.error("AIによる評価の取得に失敗しました。")
+
+# --- 評価結果の表示 ---
 with st.container(border=True):
     col1, col2, col3 = st.columns([1.5, 3, 3])
     with col1:
-        grade = None
-        if summary_data and summary_data.get('summary'):
-            grade = summary_data.get('summary')
-            grade_to_save = summary_data.get('summary')
-
-            # DBに保存されているgradeとLLMが生成したgradeが異なる場合のみ更新
-            if match_data['grade'] != grade_to_save:
-                be.save_match_grade(selected_match_id, grade_to_save)
-                match_data['grade'] = grade_to_save # dict形式なので直接更新可能
-
+        grade = summary_data.get('summary')
+        if grade:
             evaluation_html = get_evaluation_html(grade)
             st.markdown(evaluation_html, unsafe_allow_html=True)
         else:
-            st.warning("AI評価のSummaryが取得できませんでした。")
-        
-        # ▼▼▼【ここをコメントアウトして類似度を非表示にします】▼▼▼
-        # st.metric("類似度", f"{float(match_data['score']):.1f}%")
-        # ▲▲▲【類似度非表示の修正はここまで】▲▲▲
+            st.warning("評価がありません。")
 
     with col2:
         st.markdown("###### ✅ ポジティブな点")
-        if summary_data and summary_data.get('positive_points'):
-            for point in summary_data['positive_points']: st.markdown(f"- {point}")
-        else: st.caption("分析中または特筆すべき点はありません。")
+        positive_points = summary_data.get('positive_points', [])
+        if positive_points:
+            for point in positive_points: st.markdown(f"- {point}")
+        else: st.caption("特筆すべき点はありません。")
     with col3:
         st.markdown("###### ⚠️ 懸念点・確認事項")
-        if summary_data and summary_data.get('concern_points'):
-            for point in summary_data['concern_points']: st.markdown(f"- {point}")
-        else: st.caption("分析中または特に懸念はありません。")
+        concern_points = summary_data.get('concern_points', [])
+        if concern_points:
+            for point in concern_points: st.markdown(f"- {point}")
+        else: st.caption("特に懸念はありません。")
+# ▲▲▲【修正ここまで】▲▲▲
+
 st.divider()
+
+
 
 
 # --- AIによる提案メール案生成セクション ---
