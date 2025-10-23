@@ -21,7 +21,7 @@ textColor = "#2c3e50"
 font = "sans serif"
 
 [app]
-title = "Universal AI2"
+title = "Universal AIマッチング"
 
 [llm]
 model_name = "models/gemini-2.5-pro"

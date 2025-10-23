@@ -467,10 +467,10 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
 
 
 
-
 def process_single_content(source_data: dict, progress_bar, base_progress: float, progress_per_email: float):
     """
     単一のメールコンテンツを処理し、進捗バーを更新する。
+    メールからの情報抽出とDBへの登録のみを行い、マッチング処理は行わない。
     
     Args:
         source_data (dict): メールから抽出されたデータ。
@@ -482,7 +482,7 @@ def process_single_content(source_data: dict, progress_bar, base_progress: float
         st.warning("処理するデータが空です。")
         return False
 
-    # ステップ1: コンテンツ解析 (LLM) - このメール処理の50%を占めると仮定
+    # ステップ1: コンテンツ解析 (LLM) - このメール処理の大部分を占めると仮定
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")]
     if valid_attachments_content: 
         st.write(f"ℹ️ {len(valid_attachments_content)}件の添付ファイルの内容を解析に含めます。")
@@ -495,8 +495,8 @@ def process_single_content(source_data: dict, progress_bar, base_progress: float
     parsed_data = split_text_with_llm(full_text_for_llm)
     
     # 進捗バーを更新 (コンテンツ解析完了)
-    # このメールに割り当てられた進捗のうち、50%が完了したとみなす
-    current_progress = base_progress + (progress_per_email * 0.5)
+    # このメールに割り当てられた進捗のうち、60%が完了したとみなす
+    current_progress = base_progress + (progress_per_email * 0.6)
     progress_bar.progress(current_progress, text="コンテンツ解析完了")
 
     if not parsed_data: 
@@ -507,8 +507,8 @@ def process_single_content(source_data: dict, progress_bar, base_progress: float
         st.warning("LLMはテキストから案件情報または技術者情報を抽出できませんでした。")
         return False
     
-    # ステップ2: マッチング処理 - このメール処理の残りの50%
-    st.write("ベクトルインデックスを更新し、マッチング処理を開始します...")
+    # ステップ2: 抽出された情報のDBへの保存
+    st.write("抽出された情報をデータベースに保存します...")
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -518,7 +518,7 @@ def process_single_content(source_data: dict, progress_bar, base_progress: float
                 json_data_to_store['received_at'] = json_data_to_store['received_at'].isoformat()
             source_json_str = json.dumps(json_data_to_store, ensure_ascii=False, indent=2)
 
-            newly_added_jobs, newly_added_engineers = [], []
+            newly_added_items_count = 0
             
             for item_data in new_jobs_data:
                 doc = item_data.get("document") or full_text_for_llm
@@ -526,9 +526,9 @@ def process_single_content(source_data: dict, progress_bar, base_progress: float
                 meta_info = _build_meta_info_string('job', item_data)
                 full_document = meta_info + doc
                 cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (project_name, full_document, source_json_str, now_str, received_at_dt))
-                item_data['id'] = cursor.fetchone()[0]
-                item_data['document'] = full_document
-                newly_added_jobs.append(item_data)
+                item_id = cursor.fetchone()[0]
+                st.write(f"✅ 新しい案件を登録しました: 『{project_name}』 (ID: {item_id})")
+                newly_added_items_count += 1
             
             for item_data in new_engineers_data:
                 doc = item_data.get("document") or full_text_for_llm
@@ -536,28 +536,30 @@ def process_single_content(source_data: dict, progress_bar, base_progress: float
                 meta_info = _build_meta_info_string('engineer', item_data)
                 full_document = meta_info + doc
                 cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (engineer_name, full_document, source_json_str, now_str, received_at_dt))
-                item_data['id'] = cursor.fetchone()[0]
-                item_data['document'] = full_document
-                newly_added_engineers.append(item_data)
+                item_id = cursor.fetchone()[0]
+                st.write(f"✅ 新しい技術者を登録しました: 『{engineer_name}』 (ID: {item_id})")
+                newly_added_items_count += 1
             
-            # インデックス更新
-            cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_active_jobs = cursor.fetchall()
-            cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0'); all_active_engineers = cursor.fetchall()
-            if all_active_jobs: update_index(JOB_INDEX_FILE, all_active_jobs)
-            if all_active_engineers: update_index(ENGINEER_INDEX_FILE, all_active_engineers)
+            # 【削除】インデックス更新の処理 (マッチング処理がないため不要)
+            # cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_active_jobs = cursor.fetchall()
+            # cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0'); all_active_engineers = cursor.fetchall()
+            # if all_active_jobs: update_index(JOB_INDEX_FILE, all_active_jobs)
+            # if all_active_engineers: update_index(ENGINEER_INDEX_FILE, all_active_engineers)
             
-            # 再マッチング (run_matching_for_item は内部でログを出力する)
-            for new_job in newly_added_jobs:
-                run_matching_for_item(new_job, 'job', conn, now_str)
-            for new_engineer in newly_added_engineers:
-                run_matching_for_item(new_engineer, 'engineer', conn, now_str)
+            # 【削除】再マッチングの処理 (マッチング処理がないため不要)
+            # for new_job in newly_added_jobs:
+            #     run_matching_for_item(new_job, 'job', conn, now_str)
+            # for new_engineer in newly_added_engineers:
+            #     run_matching_for_item(new_engineer, 'engineer', conn, now_str)
         conn.commit()
 
     # 進捗バーを更新 (このメールの処理が100%完了)
+    # マッチング処理がなくなったので、進捗の重み付けを調整
     current_progress = base_progress + progress_per_email
-    progress_bar.progress(current_progress, text="マッチング処理完了")
+    progress_bar.progress(current_progress, text="情報保存完了！")
     
     return True
+
 
 
 
