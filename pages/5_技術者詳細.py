@@ -275,26 +275,27 @@ st.divider()
 st.header("⚙️ AI再評価＋マッチング")
 st.info("「情報ソースを更新する」ボタンでスキル情報を変更した場合、このボタンを押すことで、最新の情報ですべての案件とのマッチングを再実行します。")
 
-# ▼▼▼【ここからが新しいUIの追加部分です】▼▼▼
 with st.container(border=True):
     st.markdown("##### マッチング条件設定")
     col1, col2 = st.columns(2)
     with col1:
         target_rank = st.selectbox(
-            "目標ランク",
+            "最低ランク",
             options=['S', 'A', 'B', 'C'],
-            index=2, # デフォルトを'B'に設定
-            help="このランク以上のマッチングが見つかるまで処理を続けます。"
+            index=2, 
+            help="ここで選択したランク以上のマッチングを検索します。（例: Bを選択するとS, A, Bが対象となります）"
         )
     with col2:
+        # ▼▼▼【ここを修正】▼▼▼
         target_count = st.number_input(
-            "目標件数",
+            "目標ヒット件数", # ラベルを少し変更
             min_value=1,
             max_value=50,
-            value=5, # デフォルトを5件に設定
-            help="目標ランク以上のマッチングがこの件数に達したら処理を終了します。"
+            value=5, 
+            help="指定したランク以上のマッチングがこの件数に達した時点で、AIの評価処理を自動的に終了します。処理時間の短縮とコスト削減に繋がります。" # helpテキストを修正
         )
-# ▲▲▲【新しいUIの追加ここまで】▲▲▲
+        #st.caption("ヒットさせたい最低件数を指定します。") # ラベルの下に説明を追加
+        # ▲▲▲【修正ここまで】▲▲▲
 
 # 各技術者IDに固有のセッションステートキーを定義
 re_eval_confirmation_key = f"confirm_re_evaluate_{selected_id}"

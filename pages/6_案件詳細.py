@@ -248,21 +248,22 @@ with st.container(border=True):
     col1, col2 = st.columns(2)
     with col1:
         target_rank = st.selectbox(
-            "目標ランク",
+            "最低ランク",
             options=['S', 'A', 'B', 'C'],
-            index=2,
-            help="このランク以上のマッチングが見つかるまで処理を続けます。",
-            key=f"job_target_rank_{selected_id}" # キーを案件用に変更
+            index=2, 
+            help="ここで選択したランク以上のマッチングを検索します。（例: Bを選択するとS, A, Bが対象となります）"
         )
     with col2:
+        # ▼▼▼【ここを修正】▼▼▼
         target_count = st.number_input(
-            "目標件数",
+            "目標ヒット件数", # ラベルを少し変更
             min_value=1,
             max_value=50,
-            value=5,
-            help="目標ランク以上のマッチングがこの件数に達したら処理を終了します。",
-            key=f"job_target_count_{selected_id}" # キーを案件用に変更
+            value=5, 
+            help="指定したランク以上のマッチングがこの件数に達した時点で、AIの評価処理を自動的に終了します。処理時間の短縮とコスト削減に繋がります。" # helpテキストを修正
         )
+        #st.caption("ヒットさせたい最低件数を指定します。") # ラベルの下に説明を追加
+        # ▲▲▲【修正ここまで】▲▲▲
 
 re_eval_confirmation_key = f"confirm_re_evaluate_job_{selected_id}"
 
