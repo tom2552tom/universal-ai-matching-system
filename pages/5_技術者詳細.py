@@ -17,16 +17,6 @@ except ImportError:
 
 st.set_page_config(page_title="技術者詳細", layout="wide")
 
-# --- 表示用のカスタムCSS ---
-st.markdown("""
-<style>
-    .text-container {
-        border: 1px solid #333; padding: 15px; border-radius: 5px; background-color: #1a1a1a;
-        max-height: 400px; overflow-y: auto; white-space: pre-wrap;
-        word-wrap: break-word; font-family: monospace; font-size: 0.9em;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # --- ID取得 ---
 selected_id = st.session_state.get('selected_engineer_id', None)
@@ -157,12 +147,27 @@ if engineer_data:
 
     # --- AIによる要約情報の表示 ---
     st.header("🤖 AIによる要約情報")
+
+    # ▼▼▼【ここからが修正箇所です】▼▼▼
     doc_parts = engineer_data['document'].split('\n---\n', 1)
     meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", engineer_data['document'])
-    if meta_info: st.markdown(f"**抽出されたメタ情報:** `{meta_info}`")
-    sanitized_main_doc = html.escape(main_doc)
-    st.markdown(f'<div class="text-container">{sanitized_main_doc}</div>', unsafe_allow_html=True)
-    st.divider()
+
+    # メタ情報を枠で囲んで表示
+    if meta_info:
+        with st.container(border=True):
+            st.markdown("**抽出されたメタ情報**")
+            # 各メタ情報を整形して表示
+            # 例: "[国籍: 日本] [稼働可能日: 即日]" -> "国籍: 日本 | 稼働可能日: 即日"
+            formatted_meta = meta_info.replace("][", " | ").strip("[]")
+            st.caption(formatted_meta)
+
+    # AIによる要約文を枠で囲んで表示
+    with st.container(border=True):
+        st.markdown("**AIによる要約文**")
+        st.write(main_doc)
+    # ▲▲▲【修正ここまで】▲▲▲
+
+
 
     # --- 元の情報の表示 ---
     st.header("📄 元の情報ソース（編集可能）")

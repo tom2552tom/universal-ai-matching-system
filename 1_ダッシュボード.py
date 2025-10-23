@@ -6,6 +6,49 @@ from backend import (
 )
 import os
 
+# ▼▼▼【ここからが修正・追加箇所です】▼▼▼
+
+# --- CSSとJSを初回のみ読み込むためのヘルパー関数 ---
+@st.cache_data
+def load_file_content(file_path):
+    """外部ファイルを読み込んでその内容を返す（キャッシュ付き）"""
+    try:
+        # プロジェクトルートからの相対パスでファイルを検索
+        project_root = os.path.dirname(os.path.abspath(__file__))
+        full_path = os.path.join(project_root, file_path)
+        with open(full_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        st.warning(f"Warning: ファイルが見つかりません - {file_path}")
+        return ""
+
+def apply_global_styles():
+    """アプリケーション全体に適用するスタイルとスクリプトを注入する"""
+    # JSでテーマを検知し、CSS変数を設定
+    js_code = load_file_content('js/theme_detector.js')
+    
+    # CSSを外部ファイルから読み込み
+    css_code = load_file_content('styles/main.css')
+
+    if css_code:
+        st.markdown(f"<style>{css_code}</style>", unsafe_allow_html=True)
+    
+    if js_code:
+        st.components.v1.html(f"<script>{js_code}</script>", height=0)
+
+# --- アプリケーションの初期化とスタイル適用 ---
+config = load_app_config()
+APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
+st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
+
+# セッション内で一度だけスタイルを適用する
+if "styles_applied" not in st.session_state:
+    apply_global_styles()
+    st.session_state.styles_applied = True
+
+# ▲▲▲【修正・追加ここまで】▲▲▲
+
+
 # --- ヘルパー関数 (変更なし) ---
 def get_evaluation_html(grade, font_size='2.5em'):
     if not grade: return ""

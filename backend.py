@@ -1072,6 +1072,7 @@ def re_evaluate_and_match_single_engineer(engineer_id, target_rank='B', target_c
         try:
             with conn.cursor() as cursor:
                 # 1. 技術者の最新ドキュメントを生成
+
                 st.write("📄 元情報から技術者の最新ドキュメントを生成します...")
                 cursor.execute("SELECT source_data_json, name FROM engineers WHERE id = %s", (engineer_id,))
                 engineer_record = cursor.fetchone()
@@ -1092,6 +1093,16 @@ def re_evaluate_and_match_single_engineer(engineer_id, target_rank='B', target_c
                 meta_info = _build_meta_info_string('engineer', item_data)
                 new_full_document = meta_info + doc
                 engineer_doc = new_full_document
+
+                # ▼▼▼【技術者希望単価を抽出】▼▼▼
+                engineer_price_str = item_data.get("desired_salary")
+                engineer_price = _extract_price_from_string(engineer_price_str)
+                if engineer_price:
+                    st.write(f"  - 技術者の希望単価を **{engineer_price}万円** として認識しました。")
+                else:
+                    st.warning("  - 技術者の希望単価が抽出できなかったため、単価フィルタリングはスキップされます。")
+                # ▲▲▲【技術者希望単価の抽出ここまで】▲▲▲
+
                 
                 # 2. engineersテーブルのdocumentを更新
                 cursor.execute("UPDATE engineers SET document = %s WHERE id = %s", (engineer_doc, engineer_id))
@@ -1103,7 +1114,9 @@ def re_evaluate_and_match_single_engineer(engineer_id, target_rank='B', target_c
 
                 # 4. マッチング対象の全案件を最新順に取得
                 st.write("🔄 最新の案件から順にマッチング処理を開始します...")
-                cursor.execute("SELECT id, document, project_name FROM jobs WHERE is_hidden = 0 ORDER BY created_at DESC")
+                #cursor.execute("SELECT id, document, project_name FROM jobs WHERE is_hidden = 0 ORDER BY created_at DESC")
+                cursor.execute("SELECT id, document, project_name, source_data_json FROM jobs WHERE is_hidden = 0 ORDER BY created_at DESC")
+
                 all_active_jobs = cursor.fetchall()
                 if not all_active_jobs:
                     st.warning("マッチング対象の案件がありません。")
@@ -1120,6 +1133,21 @@ def re_evaluate_and_match_single_engineer(engineer_id, target_rank='B', target_c
 
                 for job in all_active_jobs:
                     processed_count += 1
+
+                    # ▼▼▼【単価フィルタリングロジック】▼▼▼
+                    try:
+                        job_source_data = json.loads(job['source_data_json'])
+                        job_price_str = job_source_data.get("unit_price")
+                        job_price = _extract_price_from_string(job_price_str)
+                    except (json.JSONDecodeError, TypeError):
+                        job_price = None
+
+                    if job_price is not None and engineer_price is not None:
+                        if engineer_price > job_price + 5:
+                            st.write(f"  ({processed_count}/{len(all_active_jobs)}) 案件『{job['project_name']}』 -> 単価不一致のためスキップ (案件:{job_price}万, 技術者:{engineer_price}万)")
+                            continue
+                    # ▲▲▲【単価フィルタリングここまで】▲▲▲
+
                     st.write(f"  ({processed_count}/{len(all_active_jobs)}) 案件『{job['project_name']}』とマッチング中...")
                     
                     # LLMによるマッチング評価を実行
@@ -1448,6 +1476,15 @@ def re_evaluate_and_match_single_job(job_id, target_rank='B', target_count=5):
                 meta_info = _build_meta_info_string('job', item_data)
                 new_full_document = meta_info + doc
                 job_doc = new_full_document
+
+                # ▼▼▼【案件単価を抽出】▼▼▼
+                job_price_str = item_data.get("unit_price")
+                job_price = _extract_price_from_string(job_price_str)
+                if job_price:
+                    st.write(f"  - 案件単価を **{job_price}万円** として認識しました。")
+                else:
+                    st.warning("  - 案件の単価が抽出できなかったため、単価フィルタリングはスキップされます。")
+                # ▲▲▲【案件単価の抽出ここまで】▲▲▲
                 
                 # 2. jobsテーブルのdocumentを更新
                 cursor.execute("UPDATE jobs SET document = %s WHERE id = %s", (job_doc, job_id))
@@ -1459,7 +1496,7 @@ def re_evaluate_and_match_single_job(job_id, target_rank='B', target_count=5):
 
                 # 4. マッチング対象の全技術者を最新順に取得
                 st.write("🔄 最新の技術者から順にマッチング処理を開始します...")
-                cursor.execute("SELECT id, document, name FROM engineers WHERE is_hidden = 0 ORDER BY created_at DESC")
+                cursor.execute("SELECT id, document, name, source_data_json FROM engineers WHERE is_hidden = 0 ORDER BY created_at DESC")
                 all_active_engineers = cursor.fetchall()
                 if not all_active_engineers:
                     st.warning("マッチング対象の技術者がいません。")
@@ -1476,6 +1513,23 @@ def re_evaluate_and_match_single_job(job_id, target_rank='B', target_count=5):
 
                 for engineer in all_active_engineers:
                     processed_count += 1
+
+                    # ▼▼▼【単価フィルタリングロジック】▼▼▼
+                    try:
+                        engineer_source_data = json.loads(engineer['source_data_json'])
+                        engineer_price_str = engineer_source_data.get("desired_salary")
+                        engineer_price = _extract_price_from_string(engineer_price_str)
+                    except (json.JSONDecodeError, TypeError):
+                        engineer_price = None
+
+                    # 案件単価と技術者希望単価の両方が取得できた場合のみ比較
+                    if job_price is not None and engineer_price is not None:
+                        # 技術者の希望単価が案件単価を5万円以上上回る場合はスキップ
+                        if engineer_price > job_price + 5:
+                            st.write(f"  ({processed_count}/{len(all_active_engineers)}) 技術者『{engineer['name']}』 -> 単価不一致のためスキップ (案件:{job_price}万, 技術者:{engineer_price}万)")
+                            continue # 次の技術者へ
+                    # ▲▲▲【単価フィルタリングここまで】▲▲▲
+
                     st.write(f"  ({processed_count}/{len(all_active_engineers)}) 技術者『{engineer['name']}』とマッチング中...")
                     
                     llm_result = get_match_summary_with_llm(job_doc, engineer['document'])
@@ -1517,3 +1571,28 @@ def re_evaluate_and_match_single_job(job_id, target_rank='B', target_count=5):
             return False
         
         
+
+def _extract_price_from_string(price_str: str) -> float | None:
+    """
+    "80万円", "75万～85万", "〜90" のような文字列から数値（万円単位）を抽出する。
+    範囲の場合は下限値を返す。抽出できない場合は None を返す。
+    """
+    if not price_str or not isinstance(price_str, str):
+        return None
+    
+    # 全角数字を半角に、全角マイナスを半角に変換
+    price_str = price_str.translate(str.maketrans("０１２３４５６７８９－", "0123456789-"))
+    
+    # "万"や"円"などの文字を削除
+    price_str = price_str.replace("万", "").replace("円", "").replace(",", "")
+    
+    # 数字（小数点含む）をすべて抽出
+    numbers = re.findall(r'(\d+\.?\d*)', price_str)
+    
+    if numbers:
+        # 抽出された数字の中から最小のものを返す（例: "75~85" -> 75）
+        try:
+            return min([float(n) for n in numbers])
+        except (ValueError, TypeError):
+            return None
+    return None

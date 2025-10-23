@@ -1,0 +1,15 @@
+.text-container {
+    border: 1px solid var(--text-container-border, #333); 
+    padding: 15px; 
+    border-radius: 5px; 
+    background-color: var(--text-container-bg, #1a1a1a);
+    max-height: 400px; 
+    overflow-y: auto; 
+    white-space: pre-wrap;
+    word-wrap: break-word; 
+    font-family: monospace; 
+    font-size: 0.9em;
+}
+
+/* 他にも共通で使いたいスタイルがあればここに追加できます */
+
