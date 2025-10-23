@@ -237,6 +237,80 @@ else:
     st.error("指定されたIDの案件情報が見つかりませんでした。")
 
 st.divider()
+
+
+
+st.header("⚙️ AI再評価＋マッチング")
+st.info("「情報ソースを更新する」ボタンで要件を変更した場合、このボタンを押すことで、最新の情報ですべての技術者とのマッチングを再実行します。")
+
+with st.container(border=True):
+    st.markdown("##### マッチング条件設定")
+    col1, col2 = st.columns(2)
+    with col1:
+        target_rank = st.selectbox(
+            "目標ランク",
+            options=['S', 'A', 'B', 'C'],
+            index=2,
+            help="このランク以上のマッチングが見つかるまで処理を続けます。",
+            key=f"job_target_rank_{selected_id}" # キーを案件用に変更
+        )
+    with col2:
+        target_count = st.number_input(
+            "目標件数",
+            min_value=1,
+            max_value=50,
+            value=5,
+            help="目標ランク以上のマッチングがこの件数に達したら処理を終了します。",
+            key=f"job_target_count_{selected_id}" # キーを案件用に変更
+        )
+
+re_eval_confirmation_key = f"confirm_re_evaluate_job_{selected_id}"
+
+if re_eval_confirmation_key not in st.session_state:
+    st.session_state[re_eval_confirmation_key] = False
+
+if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True, key=f"re_eval_job_main_btn_{selected_id}"):
+    st.session_state[re_eval_confirmation_key] = not st.session_state[re_eval_confirmation_key]
+    st.rerun()
+
+if st.session_state[re_eval_confirmation_key]:
+    with st.container(border=True):
+        st.warning(f"**本当に再評価と再マッチングを実行しますか？**\n\nこの案件に関する既存のマッチング結果は**すべて削除**され、最新の情報で再計算されます。\n\n**実行条件:**\n- **目標ランク:** {target_rank} ランク以上\n- **目標件数:** {target_count} 件")
+        
+        confirm_check = st.checkbox("はい、すべての既存マッチング結果の削除を承認し、再実行します。", key=f"re_eval_job_confirm_checkbox_{selected_id}")
+        
+        col_run, col_cancel, _ = st.columns([1, 1, 3])
+        with col_run:
+            execute_button_clicked = st.button("再評価実行", disabled=not confirm_check, use_container_width=True, key=f"re_eval_job_execute_btn_{selected_id}")
+        with col_cancel:
+            if st.button("キャンセル", use_container_width=True, key=f"cancel_job_re_eval_{selected_id}"):
+                st.session_state[re_eval_confirmation_key] = False
+                st.rerun()
+
+        if execute_button_clicked:
+            log_placeholder = st.container()
+            with log_placeholder:
+                with st.spinner("再評価と再マッチングを実行中..."):
+                    # ▼▼▼【backendの新しい関数を呼び出す】▼▼▼
+                    success = be.re_evaluate_and_match_single_job(
+                        job_id=selected_id, # ここでは案件IDを渡す
+                        target_rank=target_rank,
+                        target_count=target_count
+                    )
+                
+                if success:
+                    st.success("AIによる再評価と再マッチングが完了しました。")
+                    st.balloons()
+                    st.info("2秒後に画面を自動で更新します...")
+                    time.sleep(2)
+                    st.session_state[re_eval_confirmation_key] = False
+                    st.rerun()
+                else:
+                    st.error("処理中にエラーが発生しました。詳細は上記のログを確認してください。")
+
+st.divider()
+
+
 if st.button("一覧に戻る"):
     if 'selected_job_id' in st.session_state: del st.session_state['selected_job_id']
     st.switch_page("pages/4_案件管理.py")
