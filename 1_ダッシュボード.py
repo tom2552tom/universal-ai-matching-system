@@ -28,8 +28,8 @@ def get_status_badge(status):
     return f"<span style='{style}'>{status}</span>"
 
 # --- アプリケーションの初期化 ---
-init_database()
-load_embedding_model()
+#init_database()
+#load_embedding_model()
 
 config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
