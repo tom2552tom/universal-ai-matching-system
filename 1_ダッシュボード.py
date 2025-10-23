@@ -121,6 +121,9 @@ query = '''
     JOIN engineers e ON r.engineer_id = e.id
     LEFT JOIN users job_user ON j.assigned_user_id = job_user.id
     LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
+
+
+    
 '''
 params = []
 where_clauses = []
@@ -152,7 +155,17 @@ if not show_hidden_filter:
 if where_clauses:
     query += " WHERE " + " AND ".join(where_clauses)
 
-query += " ORDER BY r.created_at DESC, r.score DESC"
+query += """ ORDER BY
+            CASE r.grade
+                WHEN 'S' THEN 1
+                WHEN 'A' THEN 2
+                WHEN 'B' THEN 3
+                WHEN 'C' THEN 4
+                WHEN 'D' THEN 5
+                ELSE 6
+            END ASC,
+            r.created_at DESC
+"""
 
 with conn.cursor() as cursor:
     cursor.execute(query, tuple(params))
@@ -257,9 +270,14 @@ else:
                     
                 with col2:
                     st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-                    button_style = "display: block; padding: 0.5rem; background-color: #ff4b4b; color: white; text-align: center; text-decoration: none; border-radius: 0.5rem; font-weight: 600; margin-top: 10px; border: 1px solid #ff4b4b;"
-                    link = f'<a href="/マッチング詳細?result_id={res["res_id"]}" target="_blank" style="{button_style}">詳細を見る</a>'
-                    st.markdown(link, unsafe_allow_html=True)
+                    
+                    # 1_ダッシュボード.py のループ内
+
+                    if st.button("詳細を見る", key=f"dashboard_detail_btn_{res['res_id']}", use_container_width=True):
+                        st.session_state['selected_match_id'] = res['res_id']
+                        # ▼▼▼【ここを修正】 "pages/" を削除 ▼▼▼
+                        st.switch_page("pages/7_マッチング詳細.py")
+
 
                 with col3:
                     engineer_name = res['engineer_name'] or f"技術者(ID: {res['engineer_id']})"
