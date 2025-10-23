@@ -260,9 +260,36 @@ if engineer_data:
 else:
     st.error("指定されたIDの技術者情報が見つかりませんでした。")
 
+
+
+
+
+# pages/5_技術者詳細.py の「AI再評価＋マッチング」セクションをこちらに置き換えてください
+
 st.divider()
 st.header("⚙️ AI再評価＋マッチング")
 st.info("「情報ソースを更新する」ボタンでスキル情報を変更した場合、このボタンを押すことで、最新の情報ですべての案件とのマッチングを再実行します。")
+
+# ▼▼▼【ここからが新しいUIの追加部分です】▼▼▼
+with st.container(border=True):
+    st.markdown("##### マッチング条件設定")
+    col1, col2 = st.columns(2)
+    with col1:
+        target_rank = st.selectbox(
+            "目標ランク",
+            options=['S', 'A', 'B', 'C'],
+            index=2, # デフォルトを'B'に設定
+            help="このランク以上のマッチングが見つかるまで処理を続けます。"
+        )
+    with col2:
+        target_count = st.number_input(
+            "目標件数",
+            min_value=1,
+            max_value=50,
+            value=5, # デフォルトを5件に設定
+            help="目標ランク以上のマッチングがこの件数に達したら処理を終了します。"
+        )
+# ▲▲▲【新しいUIの追加ここまで】▲▲▲
 
 # 各技術者IDに固有のセッションステートキーを定義
 re_eval_confirmation_key = f"confirm_re_evaluate_{selected_id}"
@@ -278,7 +305,7 @@ if st.button("🤖 AI再評価と再マッチングを実行する", type="prima
 # 確認UIの表示
 if st.session_state[re_eval_confirmation_key]:
     with st.container(border=True):
-        st.warning("**本当に再評価と再マッチングを実行しますか？**\n\nこの技術者に関する既存のマッチング結果（ステータス情報などを含む）は**すべて削除**され、最新の情報で再計算されます。この操作は取り消せません。")
+        st.warning(f"**本当に再評価と再マッチングを実行しますか？**\n\nこの技術者に関する既存のマッチング結果は**すべて削除**され、最新の情報で再計算されます。\n\n**実行条件:**\n- **目標ランク:** {target_rank} ランク以上\n- **目標件数:** {target_count} 件")
         
         confirm_check = st.checkbox("はい、すべての既存マッチング結果の削除を承認し、再実行します。", key=f"re_eval_confirm_checkbox_{selected_id}")
         
@@ -292,24 +319,31 @@ if st.session_state[re_eval_confirmation_key]:
 
         # 「再評価実行」ボタンが押された後の処理
         if execute_button_clicked:
-            # ログ表示用のプレースホルダーをボタンの下に作成
             log_placeholder = st.container()
             with log_placeholder:
                 with st.spinner("再評価と再マッチングを実行中..."):
-                    success = be.re_evaluate_and_match_single_engineer(selected_id)
+                    # ▼▼▼【backendの関数に新しい引数を渡す】▼▼▼
+                    success = be.re_evaluate_and_match_single_engineer(
+                        engineer_id=selected_id,
+                        target_rank=target_rank,
+                        target_count=target_count
+                    )
                 
                 if success:
                     st.success("AIによる再評価と再マッチングが完了しました。")
                     st.balloons()
                     st.info("2秒後に画面を自動で更新します...")
                     time.sleep(2)
-                    st.session_state[re_eval_confirmation_key] = False # 確認UIを閉じる
+                    st.session_state[re_eval_confirmation_key] = False
                     st.rerun()
                 else:
                     st.error("処理中にエラーが発生しました。詳細は上記のログを確認してください。")
-# ▲▲▲ 変更点 ここまで ▲▲▲
 
 st.divider()
+
+
+
+
 
 if st.button("一覧に戻る"):
     if 'selected_engineer_id' in st.session_state: del st.session_state['selected_engineer_id']

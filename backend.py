@@ -1047,31 +1047,41 @@ def update_match_evaluation(match_id, llm_result):
             return False
 
 
-def re_evaluate_and_match_single_engineer(engineer_id):
+
+
+def re_evaluate_and_match_single_engineer(engineer_id, target_rank='B', target_count=5):
     """
-    【クリア＆再マッチング】
-    指定された技術者のdocumentを最新化し、既存のマッチングをクリア後、
-    再度すべての案件とマッチングを実行する。
+    【新しい仕様】
+    指定された技術者の情報を最新化し、既存のマッチングをクリア後、
+    案件を最新順に処理し、目標ランク以上のマッチングが目標件数に達したら処理を終了する。
     """
     if not engineer_id:
         st.error("技術者IDが指定されていません。")
         return False
 
+    # ランクの順序を定義 (Sが最も高い)
+    rank_order = ['S', 'A', 'B', 'C', 'D']
+    try:
+        # 目標ランク以上のランクのリストを作成
+        valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
+    except ValueError:
+        st.error(f"無効な目標ランクが指定されました: {target_rank}")
+        return False
+
     with get_db_connection() as conn:
         try:
             with conn.cursor() as cursor:
-                # 1. 技術者の最新のsource_data_jsonを取得
+                # 1. 技術者の最新ドキュメントを生成
+                st.write("📄 元情報から技術者の最新ドキュメントを生成します...")
                 cursor.execute("SELECT source_data_json, name FROM engineers WHERE id = %s", (engineer_id,))
                 engineer_record = cursor.fetchone()
                 if not engineer_record or not engineer_record['source_data_json']:
                     st.error(f"技術者ID:{engineer_id} の元情報が見つかりませんでした。")
                     return False
                 
-                st.write("📄 元情報から最新のドキュメントを生成します...")
                 source_data = json.loads(engineer_record['source_data_json'])
                 full_text_for_llm = source_data.get('body', '') + "".join([f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content') and not att.get('content', '').startswith("[") and not att.get('content', '').endswith("]")])
                 
-                # 2. split_text_with_llmでdocumentを再生成
                 parsed_data = split_text_with_llm(full_text_for_llm)
                 if not parsed_data or not parsed_data.get("engineers"):
                     st.error("LLMによる情報抽出（再評価）に失敗しました。")
@@ -1081,38 +1091,83 @@ def re_evaluate_and_match_single_engineer(engineer_id):
                 doc = item_data.get("document") or full_text_for_llm
                 meta_info = _build_meta_info_string('engineer', item_data)
                 new_full_document = meta_info + doc
+                engineer_doc = new_full_document
                 
-                # 3. engineersテーブルのdocumentを更新
-                cursor.execute("UPDATE engineers SET document = %s WHERE id = %s", (new_full_document, engineer_id))
+                # 2. engineersテーブルのdocumentを更新
+                cursor.execute("UPDATE engineers SET document = %s WHERE id = %s", (engineer_doc, engineer_id))
                 st.write("✅ 技術者のAI要約情報を更新しました。")
 
-                # 4. 既存のマッチング結果を削除
-                # ON DELETE CASCADEが設定されていれば不要だが、安全のため明示的に実行
+                # 3. 既存のマッチング結果を削除
                 cursor.execute("DELETE FROM matching_results WHERE engineer_id = %s", (engineer_id,))
                 st.write(f"🗑️ 技術者ID:{engineer_id} の既存マッチング結果をクリアしました。")
 
-                # 5. インデックスを再構築
-                st.write("🔄 ベクトルインデックスを更新し、再マッチング処理を開始します...")
-                cursor.execute('SELECT id, document FROM jobs WHERE is_hidden = 0'); all_active_jobs = cursor.fetchall()
-                cursor.execute('SELECT id, document FROM engineers WHERE is_hidden = 0'); all_active_engineers = cursor.fetchall()
-                if all_active_jobs: update_index(JOB_INDEX_FILE, all_active_jobs)
-                if all_active_engineers: update_index(ENGINEER_INDEX_FILE, all_active_engineers)
-                
-                # 6. 再マッチングを実行
+                # 4. マッチング対象の全案件を最新順に取得
+                st.write("🔄 最新の案件から順にマッチング処理を開始します...")
+                cursor.execute("SELECT id, document, project_name FROM jobs WHERE is_hidden = 0 ORDER BY created_at DESC")
+                all_active_jobs = cursor.fetchall()
+                if not all_active_jobs:
+                    st.warning("マッチング対象の案件がありません。")
+                    conn.commit()
+                    return True
+
+                st.write(f"  - 対象案件数: {len(all_active_jobs)}件")
+                st.write(f"  - 終了条件: 「**{target_rank}**」ランク以上のマッチングが **{target_count}** 件見つかった時点")
+
+                # 5. ループでマッチング処理を実行
+                found_count = 0
+                processed_count = 0
                 now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                engineer_data_for_matching = {
-                    'id': engineer_id, 
-                    'document': new_full_document, 
-                    'name': engineer_record['name']
-                }
-                run_matching_for_item(engineer_data_for_matching, 'engineer', conn, now_str) # cursorではなくconnを渡す
+
+                for job in all_active_jobs:
+                    processed_count += 1
+                    st.write(f"  ({processed_count}/{len(all_active_jobs)}) 案件『{job['project_name']}』とマッチング中...")
+                    
+                    # LLMによるマッチング評価を実行
+                    llm_result = get_match_summary_with_llm(job['document'], engineer_doc)
+
+                    if llm_result and 'summary' in llm_result:
+                        grade = llm_result.get('summary')
+                        positive_points = json.dumps(llm_result.get('positive_points', []), ensure_ascii=False)
+                        concern_points = json.dumps(llm_result.get('concern_points', []), ensure_ascii=False)
+                        
+                        # 類似度スコアはベクトル検索を行わないため、ダミー値（例: 0）を入れるか、NULL許容にする必要があります。
+                        # ここでは score を 0 とします。
+                        score = 0.0
+
+                        # DBに保存（ランクに関わらず一旦すべて保存する方が後々の分析に役立つ場合もあるが、今回はヒットしたものだけ保存）
+                        if grade in valid_ranks:
+                            try:
+                                cursor.execute(
+                                    'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                                    (job['id'], engineer_id, score, now_str, grade, positive_points, concern_points)
+                                )
+                                st.success(f"    -> マッチング評価: **{grade}** ... ✅ ヒット！DBに保存しました。")
+                                found_count += 1
+                            except Exception as e:
+                                st.error(f"    -> DB保存中にエラー: {e}")
+                        else:
+                            st.write(f"    -> マッチング評価: **{grade}** ... スキップ")
+                    else:
+                        st.warning(f"    -> LLM評価失敗のためスキップ")
+
+                    # 終了条件をチェック
+                    if found_count >= target_count:
+                        st.success(f"🎉 目標の {target_count} 件に到達したため、処理を終了します。")
+                        break
+                
+                if found_count < target_count:
+                    st.info(f"すべての案件とのマッチングが完了しました。(ヒット数: {found_count}件)")
 
             conn.commit()
             return True
         except (Exception, psycopg2.Error) as e:
             conn.rollback()
             st.error(f"再評価・再マッチング中にエラーが発生しました: {e}")
+            st.exception(e) # 詳細なトレースバックを表示
             return False
+        
+
+
         
 
 def save_proposal_text(match_id, text):
@@ -1348,4 +1403,3 @@ def delete_match(match_id):
             st.error(f"マッチング結果の削除中にデータベースエラーが発生しました: {e}")
             conn.rollback()
             return False
-            
