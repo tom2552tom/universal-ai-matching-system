@@ -191,59 +191,29 @@ else:
     if not results_to_display:
         st.warning("AIが提案したマッチングはありましたが、ルールフィルターによってすべて除外されました。")
     else:
+
+        # ▼▼▼【ここからが修正箇所です】▼▼▼
+
+        # --- "Load More"方式のためのセッションステート初期化 ---
+        ITEMS_PER_LOAD = 10 # 一回に読み込む件数
+        if 'items_to_show' not in st.session_state:
+            st.session_state.items_to_show = ITEMS_PER_LOAD
+
         total_items = len(results_to_display)
 
-        # --- ヘッダーと表示件数設定 ---
-        header_cols = st.columns([3, 1])
-        with header_cols[0]:
-            st.write(f"**表示中のマッチング結果: {total_items}件**")
-        with header_cols[1]:
-            items_per_page_options = [5, 10, 20, 50]
-            
-            new_items_per_page = st.selectbox(
-                "表示件数",
-                options=items_per_page_options,
-                index=items_per_page_options.index(st.session_state.items_per_page),
-                key="items_per_page_selector",
-                label_visibility="collapsed"
-            )
-            
-            if new_items_per_page != st.session_state.items_per_page:
-                st.session_state.items_per_page = new_items_per_page
-                st.session_state.current_page = 1
-                st.rerun()
+        # --- ヘッダー表示 ---
+        # 表示件数セレクターは不要になるため削除（またはコメントアウト）
+        st.write(f"**マッチング結果: {total_items}件**")
 
-        total_pages = (total_items + st.session_state.items_per_page - 1) // st.session_state.items_per_page
-
-        # ページネーションコントロール
-        if total_pages > 1:
-            st.markdown("---")
-            pagination_cols = st.columns([1, 2, 1])
-            with pagination_cols[0]:
-                if st.button("前のページ", key="prev_page_btn", disabled=(st.session_state.current_page <= 1)):
-                    st.session_state.current_page -= 1
-                    st.rerun()
-            with pagination_cols[1]:
-                st.markdown(f"<p style='text-align: center; font-weight: bold;'>ページ {st.session_state.current_page} / {total_pages}</p>", unsafe_allow_html=True)
-            with pagination_cols[2]:
-                if st.button("次のページ", key="next_page_btn", disabled=(st.session_state.current_page >= total_pages)):
-                    st.session_state.current_page += 1
-                    st.rerun()
-            st.markdown("---")
-
-        start_index = (st.session_state.current_page - 1) * st.session_state.items_per_page
-        end_index = start_index + st.session_state.items_per_page
-        paginated_results = results_to_display[start_index:end_index]
+        # --- 表示するデータのスライス ---
+        # 現在表示すべき件数までのデータを取得
+        items_to_display_now = results_to_display[:st.session_state.items_to_show]
 
         # --- マッチング結果の表示ループ ---
-        for res in paginated_results:
-            
-            # ▼▼▼【ここが修正箇所】▼▼▼
-            # 1. 壊れたst.markdownのラッパーを、st.containerに戻す
+        for res in items_to_display_now:
             with st.container(border=True):
                 is_archived = res['match_is_hidden'] or res['job_is_hidden'] or res['engineer_is_hidden']
                 
-                # 2. 非表示の場合、コンテナの先頭に警告メッセージを表示する
                 if is_archived:
                     st.warning("このマッチングは、関連する案件・技術者、またはマッチング自体が非表示（アーカイブ済み）です。")
                 
@@ -260,9 +230,12 @@ else:
                 
                 with col1:
                     project_name = res['project_name'] or f"案件(ID: {res['job_id']})"
+                    project_button_label = project_name
                     if res['job_is_hidden']:
-                        project_name += " <span style='color: #888; font-size: 0.8em;'>(案件 非表示)</span>"
-                    st.markdown(f"##### 💼 {project_name}", unsafe_allow_html=True)
+                        project_button_label += " (案件 非表示)"
+                    if st.button(f"💼 {project_button_label}", key=f"job_link_{res['res_id']}", use_container_width=True, type="secondary"):
+                        st.session_state['selected_job_id'] = res['job_id']
+                        st.switch_page("pages/6_案件詳細.py")
                     if res['job_assignee']:
                         st.caption(f"**担当:** {res['job_assignee']}")
                     job_doc_summary = (res['job_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
@@ -270,23 +243,37 @@ else:
                     
                 with col2:
                     st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-                    
-                    # 1_ダッシュボード.py のループ内
-
                     if st.button("詳細を見る", key=f"dashboard_detail_btn_{res['res_id']}", use_container_width=True):
                         st.session_state['selected_match_id'] = res['res_id']
-                        # ▼▼▼【ここを修正】 "pages/" を削除 ▼▼▼
                         st.switch_page("pages/7_マッチング詳細.py")
-
 
                 with col3:
                     engineer_name = res['engineer_name'] or f"技術者(ID: {res['engineer_id']})"
+                    engineer_button_label = engineer_name
                     if res['engineer_is_hidden']:
-                        engineer_name += " <span style='color: #888; font-size: 0.8em;'>(技術者 非表示)</span>"
-                    st.markdown(f"##### 👤 {engineer_name}", unsafe_allow_html=True)
+                        engineer_button_label += " (技術者 非表示)"
+                    if st.button(f"👤 {engineer_button_label}", key=f"eng_link_{res['res_id']}", use_container_width=True, type="secondary"):
+                        st.session_state['selected_engineer_id'] = res['engineer_id']
+                        st.switch_page("pages/5_技術者詳細.py")
                     if res['engineer_assignee']:
                         st.caption(f"**担当:** {res['engineer_assignee']}")
                     eng_doc_summary = (res['eng_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
                     st.caption(f"{eng_doc_summary}...")
-            # ▲▲▲【修正ここまで】▲▲▲
 
+
+        
+        # まだ表示していないアイテムが残っている場合のみボタンを表示
+        if st.session_state.items_to_show < total_items:
+            # 画面中央にボタンを配置するためのカラム
+            _, col_btn, _ = st.columns([2, 1, 2])
+            with col_btn:
+                if st.button("もっと見る", use_container_width=True, type="primary"):
+                    # 表示件数を増やす
+                    st.session_state.items_to_show += ITEMS_PER_LOAD
+                    st.rerun()
+        else:
+            st.success("すべてのマッチング結果を表示しました。")
+
+        # ▲▲▲【修正ここまで】▲▲▲
+
+        

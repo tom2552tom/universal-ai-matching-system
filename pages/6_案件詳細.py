@@ -256,9 +256,9 @@ with st.container(border=True):
     with col2:
         # ▼▼▼【ここを修正】▼▼▼
         target_count = st.number_input(
-            "目標ヒット件数", # ラベルを少し変更
+            "最大ヒット件数(1-10件)", # ラベルを少し変更
             min_value=1,
-            max_value=50,
+            max_value=10,
             value=5, 
             help="指定したランク以上のマッチングがこの件数に達した時点で、AIの評価処理を自動的に終了します。処理時間の短縮とコスト削減に繋がります。" # helpテキストを修正
         )

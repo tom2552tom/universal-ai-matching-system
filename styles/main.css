@@ -13,3 +13,18 @@
 
 /* 他にも共通で使いたいスタイルがあればここに追加できます */
 
+/* ▼▼▼【このスタイルを追加】▼▼▼ */
+.link-button {
+    background-color: transparent !important;
+    color: inherit !important;
+    border: none !important;
+    padding: 0 !important;
+    font: inherit !important;
+    text-align: left !important;
+    display: inline !important;
+    cursor: pointer !important;
+}
+.link-button:hover {
+    text-decoration: underline !important;
+}
+/* ▲▲▲【追加ここまで】▲▲▲ */
