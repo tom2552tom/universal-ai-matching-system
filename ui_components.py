@@ -1,6 +1,7 @@
 import streamlit as st
 import toml
 import os
+import hmac 
 
 @st.cache_data
 def load_app_config():
@@ -76,3 +77,54 @@ def apply_global_styles():
         
     except FileNotFoundError:
         st.error(f"エラー: スタイルシートが見つかりません。パス: {css_file_path}")
+
+
+def check_password():
+    """
+    ログインフォームを表示し、認証状態を返す。
+    認証成功ならTrue、失敗ならFalseを返す。
+    """
+    
+    # --- 認証状態の確認 ---
+    # st.session_state に authentication_status がなく、False でもない場合（つまり未ログイン）
+    if st.session_state.get("authentication_status", False) != True:
+        
+        # --- ログインフォーム ---
+        # フォームを中央に配置するためのカラム
+        _, col2, _ = st.columns([1, 2, 1])
+        with col2:
+            st.title("🔒 ログイン")
+            
+            # secrets.toml からユーザー情報を読み込む
+            try:
+                users = st.secrets["credentials"]["usernames"]
+                user_list = list(users.keys())
+            except (KeyError, AttributeError):
+                st.error("認証情報が `secrets.toml` に正しく設定されていません。")
+                return False
+
+            # ログインフォームを作成
+            with st.form("login_form"):
+                username = st.selectbox("ユーザー名", user_list)
+                password = st.text_input("パスワード", type="password")
+                submitted = st.form_submit_button("ログイン", use_container_width=True, type="primary")
+
+                if submitted:
+                    # 入力されたパスワードと、secrets.toml のパスワードを比較
+                    # hmac.compare_digest を使うことで、タイミング攻撃に対して安全になる
+                    if hmac.compare_digest(password, users[username]):
+                        # 認証成功
+                        st.session_state["authentication_status"] = True
+                        st.rerun() # ページを再実行してメインコンテンツを表示
+                    else:
+                        st.error("パスワードが間違っています。")
+        
+        # フォームが表示されている間は、これ以降の処理を停止
+        return False
+
+    # --- 認証成功後の処理 ---
+    else:
+        # 認証済みであれば True を返す
+        return True
+
+# ▲▲▲【新しい関数ここまで】▲▲▲

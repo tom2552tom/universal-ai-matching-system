@@ -30,6 +30,12 @@ st.set_page_config(page_title=f"{APP_TITLE} | メール処理", layout="wide")
 ui.apply_global_styles() 
 
 
+# 認証チェック
+if not ui.check_password():
+    st.stop() # 認証が通らない場合、ここで処理を停止
+
+
+
 # タイトル
 st.title("📧 メールサーバーからのデータ取込")
 st.divider()
