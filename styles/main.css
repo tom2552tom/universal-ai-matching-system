@@ -11,9 +11,6 @@
     font-size: 0.9em;
 }
 
-/* 他にも共通で使いたいスタイルがあればここに追加できます */
-
-/* ▼▼▼【このスタイルを追加】▼▼▼ */
 .link-button {
     background-color: transparent !important;
     color: inherit !important;
@@ -27,4 +24,27 @@
 .link-button:hover {
     text-decoration: underline !important;
 }
-/* ▲▲▲【追加ここまで】▲▲▲ */
+
+
+[data-testid="stAppViewContainer"] h1 {
+    font-size: 2.0rem !important;
+}
+/* H2 (st.header) のフォントサイズを調整 */
+[data-testid="stAppViewContainer"] h2 {
+    font-size: 1.7rem !important;
+}
+
+/* H3 (st.subheader) のフォントサイズを調整 */
+[data-testid="stAppViewContainer"] h3 {
+    font-size: 1.4rem !important;
+}
+
+/* 通常のテキスト (st.markdown, st.write など) */
+.stApp {
+    font-size: 1rem;
+}
+
+/* ボタンのテキストを少し大きくする */
+.stButton>button {
+    font-size: 0.9rem;
+}

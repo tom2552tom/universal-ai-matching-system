@@ -8,12 +8,6 @@ import os
 import ui_components as ui  # ← 1. 新しいファイルをインポート
 
 
-
-# ▼▼▼【ここからが修正・追加箇所です】▼▼▼
-
-
-
-
 # --- CSSとJSを初回のみ読み込むためのヘルパー関数 ---
 @st.cache_data
 def load_file_content(file_path):
@@ -46,13 +40,7 @@ def apply_global_styles():
 config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
-
-# セッション内で一度だけスタイルを適用する
-if "styles_applied" not in st.session_state:
-    apply_global_styles()
-    st.session_state.styles_applied = True
-
-# ▲▲▲【修正・追加ここまで】▲▲▲
+ui.apply_global_styles()
 
 
 # --- ヘルパー関数 (変更なし) ---

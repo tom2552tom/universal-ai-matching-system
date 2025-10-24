@@ -16,12 +16,10 @@ load_embedding_model()
 config = load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 
-# ▼▼▼【ここからが修正箇所】▼▼▼
 
 # メール処理の設定値を取得（取得できない場合はデフォルトで10）
 FETCH_LIMIT = config.get("email_processing", {}).get("fetch_limit", 10)
 
-# ▲▲▲【修正ここまで】▲▲▲
 
 # セッションステートの初期化
 if 'debug_log' not in st.session_state:
@@ -29,6 +27,7 @@ if 'debug_log' not in st.session_state:
 
 # ページ設定
 st.set_page_config(page_title=f"{APP_TITLE} | メール処理", layout="wide")
+ui.apply_global_styles() 
 
 
 # タイトル

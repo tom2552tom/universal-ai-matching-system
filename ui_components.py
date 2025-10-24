@@ -1,5 +1,6 @@
 import streamlit as st
 import toml
+import os
 
 @st.cache_data
 def load_app_config():
@@ -56,5 +57,22 @@ def display_footer():
         """,
         unsafe_allow_html=True
     )
+
+def apply_global_styles():
+    """
+    static/main.css ファイルを読み込み、スタイルを適用する。
+    st.set_page_config の直後に呼び出すことを想定。
+    """
+    # CSSファイルのパスを指定
+    # このファイル (ui_components.py) からの相対パスで指定する
+    css_file_path = os.path.join(os.path.dirname(__file__), "styles", "main.css")
     
-    # ▲▲▲【修正ここまで】▲▲▲
+    try:
+        with open(css_file_path) as f:
+            css_content = f.read()
+        
+        # 読み込んだCSSを<style>タグで囲み、markdownとして埋め込む
+        st.markdown(f"<style>{css_content}</style>", unsafe_allow_html=True)
+        
+    except FileNotFoundError:
+        st.error(f"エラー: スタイルシートが見つかりません。パス: {css_file_path}")

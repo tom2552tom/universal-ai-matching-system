@@ -17,6 +17,7 @@ if project_root not in sys.path:
 
 import backend as be
 
+ui.apply_global_styles()
 st.set_page_config(page_title="マッチング詳細", layout="wide")
 
 st.title("マッチング詳細")

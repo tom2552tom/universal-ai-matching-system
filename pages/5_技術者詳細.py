@@ -16,6 +16,7 @@ except ImportError:
         if not grade: return ""
         return f"<p style='font-size:{font_size}; text-align:center;'>{grade}</p>"
 
+ui.apply_global_styles()
 st.set_page_config(page_title="技術者詳細", layout="wide")
 
 

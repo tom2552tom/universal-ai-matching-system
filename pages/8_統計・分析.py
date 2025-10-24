@@ -6,6 +6,7 @@ import pandas as pd
 from backend import get_dashboard_data
 import ui_components as ui
 
+ui.apply_global_styles()
 st.set_page_config(page_title="統計・分析ダッシュボード", layout="wide")
 
 st.title("📊 統計・分析ダッシュボード")
