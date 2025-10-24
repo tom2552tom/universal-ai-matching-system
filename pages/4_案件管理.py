@@ -1,5 +1,6 @@
 import streamlit as st
 from backend import init_database, get_db_connection
+import ui_components as ui
 
 # --- ページ設定と初期化 ---
 st.set_page_config(page_title="案件管理", layout="wide")
@@ -129,3 +130,5 @@ else:
                 if st.button("詳細を見る", key=f"detail_job_{job['id']}", use_container_width=True):
                     st.session_state['selected_job_id'] = job['id']
                     st.switch_page("pages/6_案件詳細.py")
+
+ui.display_footer()

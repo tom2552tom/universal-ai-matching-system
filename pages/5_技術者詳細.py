@@ -5,6 +5,7 @@ import html
 import base64
 import time
 from datetime import datetime
+import ui_components as ui
 
 # backend から get_evaluation_html をインポート
 try:
@@ -354,3 +355,6 @@ st.divider()
 if st.button("一覧に戻る"):
     if 'selected_engineer_id' in st.session_state: del st.session_state['selected_engineer_id']
     st.switch_page("pages/3_技術者管理.py")
+
+
+ui.display_footer()

@@ -5,7 +5,7 @@ import json
 import html
 import time # timeモジュールを追加
 from backend import get_matching_result_details, save_match_feedback, get_all_users, hide_match, update_match_status, save_proposal_text, generate_proposal_reply_with_llm, save_internal_memo, delete_match # ← delete_match を追加
-
+import ui_components as ui
 
 
 
@@ -484,3 +484,4 @@ st.divider()
 if st.button("ダッシュボードに戻る"):
     st.switch_page("1_ダッシュボード.py")
 
+ui.display_footer()

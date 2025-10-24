@@ -5,8 +5,14 @@ from backend import (
     hide_match, load_app_config, get_all_users
 )
 import os
+import ui_components as ui  # ← 1. 新しいファイルをインポート
+
+
 
 # ▼▼▼【ここからが修正・追加箇所です】▼▼▼
+
+
+
 
 # --- CSSとJSを初回のみ読み込むためのヘルパー関数 ---
 @st.cache_data
@@ -277,3 +283,4 @@ else:
         # ▲▲▲【修正ここまで】▲▲▲
 
         
+ui.display_footer()

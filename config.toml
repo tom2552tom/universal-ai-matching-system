@@ -23,6 +23,8 @@ font = "sans serif"
 
 [app]
 title = "Universal AIマッチング"
+version = "1.0.0"  #
+
 
 [llm]
 model_name = "models/gemini-2.5-pro"

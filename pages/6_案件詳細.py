@@ -4,6 +4,7 @@ import json
 import html
 import time
 from datetime import datetime
+import ui_components as ui
 
 try:
     from backend import get_evaluation_html
@@ -315,3 +316,5 @@ st.divider()
 if st.button("一覧に戻る"):
     if 'selected_job_id' in st.session_state: del st.session_state['selected_job_id']
     st.switch_page("pages/4_案件管理.py")
+
+ui.display_footer()

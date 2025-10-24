@@ -1657,3 +1657,4 @@ def _extract_price_from_string(price_str: str) -> float | None:
         except (ValueError, TypeError):
             return None
     return None
+

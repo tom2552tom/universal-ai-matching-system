@@ -9,6 +9,7 @@ import html
 import time
 from datetime import datetime
 import re 
+import ui_components as ui
 
 # プロジェクトルートをパスに追加 (既存のコード)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -194,3 +195,7 @@ else:
                 if st.button("詳細を見る", key=f"detail_btn_{eng['id']}", use_container_width=True):
                     st.session_state['selected_engineer_id'] = eng['id']
                     st.switch_page("pages/5_技術者詳細.py")
+
+
+
+ui.display_footer()

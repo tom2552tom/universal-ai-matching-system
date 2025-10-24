@@ -4,6 +4,7 @@ import streamlit as st
 import plotly.express as px
 import pandas as pd
 from backend import get_dashboard_data
+import ui_components as ui
 
 st.set_page_config(page_title="統計・分析ダッシュボード", layout="wide")
 
@@ -130,3 +131,5 @@ with col2:
     else:
         st.info("担当者別の担当件数データがありません。")
 
+
+ui.display_footer()

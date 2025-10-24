@@ -7,6 +7,8 @@ from backend import (
     load_app_config
 )
 
+import ui_components as ui
+
 # --- アプリケーションの初期化 ---
 # ページがロードされたときに一度だけ実行
 init_database()
@@ -47,3 +49,7 @@ if st.session_state.debug_log:
         # ログをst.codeではなく、より見やすいst.textやst.info/warningで表示することも検討可能
         st.code(st.session_state.debug_log, language='text')
 
+
+
+
+ui.display_footer()
