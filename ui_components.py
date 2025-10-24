@@ -28,18 +28,33 @@ def display_footer():
     version = config.get("app", {}).get("version", "N/A")
     
     st.markdown("---") # 区切り線
-
-    # ▼▼▼【ここからが修正箇所】▼▼▼
+   # ▼▼▼【ここからが修正箇所】▼▼▼
     
-    # 表示したいテキストを準備
-    footer_text = f"Universal AI Agent | Version: {version} | © 2025 Universal Concern"
+    # 表示したいテキストとアイコンを準備
+    footer_icon = "🤖"
+    footer_text = f"Universal AI Agent | Version: {version}"
     
     # st.markdown を使って中央揃えのHTMLを埋め込む
     st.markdown(
         f"""
-        <div style="text-align: center; color: #888; font-size: 0.9em;">
-            {footer_text}
+        <div style="
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        ">
+            <div style="
+                display: flex;
+                align-items: center;
+                color: #888;
+                font-size: 0.9em;
+            ">
+                <span style="font-size: 1.2em; margin-right: 10px;">{footer_icon}</span>
+                <span>{footer_text}</span>
+            </div>
         </div>
         """,
         unsafe_allow_html=True
     )
+    
+    # ▲▲▲【修正ここまで】▲▲▲
