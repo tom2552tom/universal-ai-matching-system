@@ -581,6 +581,46 @@ def extract_text_from_docx(file_bytes):
     except Exception as e:
         return f"[DOCXテキスト抽出エラー: {e}]"
 
+def extract_text_from_excel(file_bytes: bytes) -> str:
+    """
+    Excelファイル（.xlsx, .xls）のバイトデータを受け取り、
+    すべてのシートの内容をテキスト形式で結合して返す。
+    """
+    try:
+        # バイトデータを pandas が読み込める形式に変換
+        excel_file = io.BytesIO(file_bytes)
+        
+        # Excelファイル内の全シート名を取得
+        xls = pd.ExcelFile(excel_file)
+        sheet_names = xls.sheet_names
+        
+        all_text_parts = []
+        
+        # 各シートをループで処理
+        for sheet_name in sheet_names:
+            # シートをDataFrameとして読み込む
+            df = pd.read_excel(xls, sheet_name=sheet_name, header=None)
+            
+            # DataFrameが空でないことを確認
+            if not df.empty:
+                # シートの内容を文字列に変換（CSV形式に似せる）
+                # 各セルをタブ区切り、各行を改行で結合する
+                sheet_text = df.to_string(header=False, index=False, na_rep='')
+                
+                # シート名と内容を結合してリストに追加
+                all_text_parts.append(f"\n--- シート: {sheet_name} ---\n{sheet_text}")
+
+        if not all_text_parts:
+            return "[Excelテキスト抽出失敗: ファイル内に解析可能なデータがありません]"
+            
+        # 全シートのテキストを結合して返す
+        return "".join(all_text_parts)
+
+    except Exception as e:
+        # pandas が読み込めない形式や破損ファイルなどのエラーをキャッチ
+        return f"[Excelテキスト抽出エラー: {e}]"
+    
+
 def get_email_contents(msg) -> dict:
     subject = str(make_header(decode_header(msg["subject"]))) if msg["subject"] else ""
     from_ = str(make_header(decode_header(msg["from"]))) if msg["from"] else ""
@@ -598,10 +638,31 @@ def get_email_contents(msg) -> dict:
                 filename = str(make_header(decode_header(raw_filename)))
                 st.write(f"📄 添付ファイル '{filename}' を発見しました。")
                 file_bytes, lower_filename = part.get_payload(decode=True), filename.lower()
-                if lower_filename.endswith(".pdf"): attachments.append({"filename": filename, "content": extract_text_from_pdf(file_bytes)})
-                elif lower_filename.endswith(".docx"): attachments.append({"filename": filename, "content": extract_text_from_docx(file_bytes)})
-                elif lower_filename.endswith(".txt"): attachments.append({"filename": filename, "content": file_bytes.decode('utf-8', errors='ignore')})
-                else: st.write(f"ℹ️ 添付ファイル '{filename}' は未対応の形式のため、スキップします。")
+
+                #if lower_filename.endswith(".pdf"): attachments.append({"filename": filename, "content": extract_text_from_pdf(file_bytes)})
+                #elif lower_filename.endswith(".docx"): attachments.append({"filename": filename, "content": extract_text_from_docx(file_bytes)})
+                #elif lower_filename.endswith(".txt"): attachments.append({"filename": filename, "content": file_bytes.decode('utf-8', errors='ignore')})
+                #else: st.write(f"ℹ️ 添付ファイル '{filename}' は未対応の形式のため、スキップします。")
+
+                # ▼▼▼【ここからが修正・追加箇所】▼▼▼
+                if lower_filename.endswith(".pdf"):
+                    attachments.append({"filename": filename, "content": extract_text_from_pdf(file_bytes)})
+                
+                elif lower_filename.endswith(".docx"):
+                    attachments.append({"filename": filename, "content": extract_text_from_docx(file_bytes)})
+
+                elif lower_filename.endswith((".xlsx", ".xls")): # .xlsx と .xls の両方に対応
+                    attachments.append({"filename": filename, "content": extract_text_from_excel(file_bytes)})
+
+                elif lower_filename.endswith(".txt"):
+                    attachments.append({"filename": filename, "content": file_bytes.decode('utf-8', errors='ignore')})
+                
+                else:
+                    st.write(f"ℹ️ 添付ファイル '{filename}' は未対応の形式のため、スキップします。")
+                
+                # ▲▲▲【修正・追加ここまで】▲▲▲
+
+
     else:
         charset = msg.get_content_charset()
         try: body_text = msg.get_payload(decode=True).decode(charset or 'utf-8', errors='ignore')
