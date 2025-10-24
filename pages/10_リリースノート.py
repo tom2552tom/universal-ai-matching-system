@@ -1,9 +1,20 @@
 import streamlit as st
 import ui_components as ui
 import os
+from backend import (
+    init_database, 
+    load_embedding_model, 
+    fetch_and_process_emails,
+    load_app_config  # load_app_config をインポートリストに追加
+)
+
+config = load_app_config()
+APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
+
+
 
 # --- ページ設定 ---
-st.set_page_config(page_title="リリースノート", layout="wide")
+st.set_page_config(page_title=f"{APP_TITLE} | リリースノート", layout="wide")
 
 # --- 認証と共通スタイル ---
 #if not ui.check_password():

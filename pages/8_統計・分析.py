@@ -6,8 +6,17 @@ import pandas as pd
 from backend import get_dashboard_data
 import ui_components as ui
 
+from backend import (
+    init_database, 
+    load_embedding_model, 
+    fetch_and_process_emails,
+    load_app_config  # load_app_config をインポートリストに追加
+)
+
+config = load_app_config()
+APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
+st.set_page_config(page_title=f"{APP_TITLE} | 統計・分析ダッシュボード", layout="wide")
 ui.apply_global_styles()
-st.set_page_config(page_title="統計・分析ダッシュボード", layout="wide")
 
 st.title("📊 統計・分析ダッシュボード")
 st.write("このページでは、システム全体の活動状況やマッチングの品質を可視化します。")

@@ -3,9 +3,19 @@ import backend as be
 import ui_components as ui
 import re
 
+from backend import (
+    init_database, 
+    load_embedding_model, 
+    fetch_and_process_emails,
+    load_app_config  # load_app_config をインポートリストに追加
+)
+
+config = load_app_config()
+APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
+st.set_page_config(page_title=f"{APP_TITLE} | 技術者管理", layout="wide")
+
 # --- ページ設定と初期化 ---
 ui.apply_global_styles()
-st.set_page_config(page_title="技術者管理", layout="wide")
 st.title("👨‍💻 技術者管理")
 st.markdown("登録されている技術者の一覧表示、検索、並び替えができます。")
 
