@@ -88,7 +88,7 @@ st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wi
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 1
 if 'items_per_page' not in st.session_state:
-    st.session_state.items_per_page = 10 
+    st.session_state.items_per_page = 20 
 
 # --- サイドバーフィルター ---
 st.sidebar.header("フィルター")

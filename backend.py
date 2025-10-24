@@ -43,7 +43,11 @@ def load_app_config():
         with open("config.toml", "r", encoding="utf-8") as f:
             return toml.load(f)
     except FileNotFoundError:
-        return {"app": {"title": "Universal AI Agent (Default)"}, "messages": {"sales_staff_notice": ""}}
+        return {
+                "app": {"title": "Universal AI Agent (Default)"}, "messages": {"sales_staff_notice": ""},
+                "email_processing": {"fetch_limit": 10} # デフォルト値にも追加
+                }
+    
     except Exception as e:
         print(f"❌ 設定ファイルの読み込み中にエラーが発生しました: {e}")
         return {"app": {"title": "Universal AI Agent (Error)"}, "messages": {"sales_staff_notice": ""}}
@@ -677,6 +681,11 @@ def get_email_contents(msg) -> dict:
 
 def fetch_and_process_emails():
     try:
+        # 1. 設定ファイルから読み込み件数を取得
+        config = load_app_config()
+        # .get() を使って安全に値を取得し、取得できない場合はデフォルトで10を設定
+        FETCH_LIMIT = config.get("email_processing", {}).get("fetch_limit", 10)
+
         # プログレスバーの初期化と重み付け定義
         progress_bar = st.progress(0, text="処理を開始します...")
         
@@ -711,7 +720,7 @@ def fetch_and_process_emails():
                 if not email_ids:
                     st.write("処理対象の未読メールは見つかりませんでした。")
                 else:
-                    latest_ids = email_ids[::-1][:10]
+                    latest_ids = email_ids[::-1][:FETCH_LIMIT]
                     checked_count = len(latest_ids)
                     st.write(f"最新の未読メール {checked_count}件をチェックします。")
 
@@ -1658,3 +1667,90 @@ def _extract_price_from_string(price_str: str) -> float | None:
             return None
     return None
 
+
+def get_filtered_item_ids(item_type: str, keyword: str = "", sort_column: str = "登録日", sort_order: str = "降順", show_hidden: bool = False) -> list:
+    """
+    【修正版】
+    フィルターとソート条件に基づいて、IDリストのみを取得する。
+    """
+    if item_type not in ['jobs', 'engineers']: 
+        return []
+
+    table_name = 'jobs' if item_type == 'jobs' else 'engineers'
+    name_column = "project_name" if table_name == "jobs" else "name"
+    
+    # usersテーブルをJOINして担当者名で検索・ソートできるようにする
+    # エイリアス 'e' をテーブル名に付与
+    query = f"SELECT e.id FROM {table_name} e LEFT JOIN users u ON e.assigned_user_id = u.id"
+    
+    params = []
+    where_clauses = []
+
+    if not show_hidden:
+        where_clauses.append("e.is_hidden = 0")
+
+    if keyword:
+        # ご提示のコードにあった、より優れたキーワード分割ロジックを採用
+        keywords_list = [k.strip() for k in re.split(r'[,\s　、]+', keyword) if k.strip()]
+        if keywords_list:
+            for kw in keywords_list:
+                # 担当者名(u.username)での検索も追加
+                where_clauses.append(f"(e.document ILIKE %s OR e.name ILIKE %s OR u.username ILIKE %s)")
+                param = f'%{kw}%'
+                params.extend([param, param, param])
+
+    if where_clauses:
+        query += " WHERE " + " AND ".join(where_clauses)
+
+    # ソート順の決定
+    sort_column_map = {
+        "登録日": "e.created_at",
+        "氏名": "e.name",
+        "担当者名": "u.username"
+    }
+    order_map = {"降順": "DESC", "昇順": "ASC"}
+    
+    order_by_column = sort_column_map.get(sort_column, "e.created_at")
+    # u.username でソートする場合、NULLのレコードが最後に来るように調整
+    nulls_order = "NULLS LAST" if sort_order == "降順" else "NULLS FIRST"
+    order_by_direction = order_map.get(sort_order, "DESC")
+    
+    query += f" ORDER BY {order_by_column} {order_by_direction} {nulls_order}"
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query, tuple(params))
+            return [item[0] for item in cursor.fetchall()]
+    except Exception as e:
+        print(f"IDリストの取得中にエラー: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+def get_items_by_ids(item_type: str, ids: list) -> list:
+    """
+    IDのリストに基づいて、案件または技術者の完全なレコードを取得する。
+    """
+    if not ids or item_type not in ['jobs', 'engineers']:
+        return []
+
+    table_name = item_type
+    
+    # ANY() を使うことで、単一のクエリで効率的に複数IDのデータを取得
+    query = f"SELECT * FROM {table_name} WHERE id = ANY(%s)"
+    
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query, (ids,))
+            # 取得した順序ではなく、元のIDリストの順序に並べ替える
+            results_map = {res['id']: res for res in cursor.fetchall()}
+            return [results_map[id] for id in ids if id in results_map]
+    except Exception as e:
+        print(f"IDによるアイテム取得中にエラー: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()

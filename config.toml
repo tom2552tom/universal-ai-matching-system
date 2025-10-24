@@ -25,6 +25,8 @@ font = "sans serif"
 title = "Universal AIマッチング"
 version = "1.0.0"  #
 
+[email_processing]
+fetch_limit = 100
 
 [llm]
 model_name = "models/gemini-2.5-pro"

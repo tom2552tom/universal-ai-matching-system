@@ -1,134 +1,114 @@
 import streamlit as st
-from backend import init_database, get_db_connection
+import backend as be
 import ui_components as ui
+import re
 
 # --- ページ設定と初期化 ---
 st.set_page_config(page_title="案件管理", layout="wide")
-init_database()
+# init_database() はメインのページで一度だけ呼び出すのが推奨されるため、ここではコメントアウトしても良い
+# be.init_database() 
 
 st.title("💼 案件管理")
-st.markdown("登録されている案件の一覧表示と検索ができます。")
+st.markdown("登録されている案件の一覧表示、検索、並び替えができます。")
 
-# --- 検索とソート、表示オプション ---
-col1, col2, col3, col4 = st.columns([4, 2, 2, 2])
-with col1:
-    search_keyword = st.text_input(
-        "🔍 キーワードで検索",
-        placeholder="プロジェクト名、担当者名、業務内容などで絞り込み"
-    )
-with col2:
-    sort_column = st.selectbox(
-        "並び替え",
-        options=["登録日", "プロジェクト名", "担当者名"],
-        index=0,
-        key="sort_column"
-    )
+ITEMS_PER_PAGE = 20 # 1回に読み込む件数
 
-with col3:
-    sort_order = st.selectbox(
-        "順序",
-        options=["降順", "昇順"],
-        index=0,
-        key="sort_order"
-    )
+# --- セッションステートの初期化 ---
+if 'all_job_ids' not in st.session_state:
+    st.session_state.all_job_ids = None
+if 'job_display_count' not in st.session_state:
+    st.session_state.job_display_count = ITEMS_PER_PAGE
+if 'last_job_search_params' not in st.session_state:
+    st.session_state.last_job_search_params = {}
 
-with col4:
-    st.write("") 
-    st.write("") 
-    show_hidden = st.checkbox("非表示の案件も表示する", value=False)
+# --- UIセクション: 検索とソート ---
+search_keyword = st.text_input(
+    "キーワード検索",
+    placeholder="プロジェクト名、担当者名、業務内容などで検索 (スペース区切りでAND検索)",
+    label_visibility="collapsed"
+)
 
 st.divider()
+col1, col2, col3 = st.columns([1, 1, 2])
+with col1:
+    sort_column = st.selectbox("並び替え", ["登録日", "プロジェクト名", "担当者名"], 0, key="job_sort_col")
+with col2:
+    sort_order = st.selectbox("順序", ["降順", "昇順"], 0, key="job_sort_order")
+with col3:
+    st.write(""); st.write("") # スペーサー
+    show_hidden = st.checkbox("非表示の案件も表示する", False, key="job_show_hidden")
+st.divider()
 
-# --- DBから案件データを取得 ---
-conn = get_db_connection()
-query = """
-SELECT 
-    j.id, j.project_name, j.document, j.created_at, j.is_hidden,
-    u.username as assigned_username
-FROM jobs j
-LEFT JOIN users u ON j.assigned_user_id = u.id
-"""
-params = []
-where_clauses = []
-
-if not show_hidden:
-    where_clauses.append("j.is_hidden = 0")
-
-# ▼▼▼【ここが修正箇所】▼▼▼
-# プレースホルダを %s に、LIKE を ILIKE に変更
-if search_keyword:
-    where_clauses.append("(j.project_name ILIKE %s OR j.document ILIKE %s OR u.username ILIKE %s)")
-    keyword_param = f'%{search_keyword}%'
-    params.extend([keyword_param, keyword_param, keyword_param])
-# ▲▲▲【修正ここまで】▲▲▲
-
-if where_clauses:
-    query += " WHERE " + " AND ".join(where_clauses)
-
-# --- ソート順の決定 (変更なし) ---
-sort_column_map = {
-    "登録日": "j.created_at",
-    "プロジェクト名": "j.project_name",
-    "担当者名": "assigned_username"
+# --- 検索ロジック ---
+current_search_params = {
+    "keyword": search_keyword,
+    "sort_col": sort_column,
+    "sort_order": sort_order,
+    "show_hidden": show_hidden,
 }
-order_map = {
-    "降順": "DESC",
-    "昇順": "ASC"
-}
-order_by_column = sort_column_map.get(sort_column, "j.created_at")
-order_by_direction = order_map.get(sort_order, "DESC")
 
-query += f" ORDER BY {order_by_column} {order_by_direction}"
+if current_search_params != st.session_state.last_job_search_params:
+    with st.spinner("検索中..."):
+        # バックエンドから条件に合う全IDリストを取得
+        st.session_state.all_job_ids = be.get_filtered_item_ids(
+            item_type='jobs', # 対象を 'jobs' に変更
+            keyword=search_keyword,
+            sort_column=sort_column,
+            sort_order=sort_order,
+            show_hidden=show_hidden
+        )
+    
+    st.session_state.job_display_count = ITEMS_PER_PAGE
+    st.session_state.last_job_search_params = current_search_params
+    st.rerun()
 
-# ▼▼▼【ここも修正箇所】▼▼▼
-# executeとfetchallを分離
-with conn.cursor() as cursor:
-    cursor.execute(query, tuple(params))
-    jobs = cursor.fetchall()
-conn.close()
-# ▲▲▲【修正ここまで】▲▲▲
-
-# --- 一覧表示 ---
-st.header(f"案件一覧 ({len(jobs)} 件)")
-
-if not jobs:
-    st.info("表示対象の案件はありません。検索条件を変更するか、「非表示の案件も表示する」を試してください。")
+# --- 結果表示ロジック ---
+all_ids = st.session_state.all_job_ids
+if all_ids is None:
+    st.info("キーワードを入力して案件を検索してください。")
+elif not all_ids:
+    st.warning("条件に一致する案件は見つかりませんでした。")
 else:
-    for job in jobs:
-        with st.container(border=True):
-            col1, col2 = st.columns([4, 1])
+    display_count = st.session_state.job_display_count
+    ids_to_display = all_ids[:display_count]
+    
+    jobs_to_display = be.get_items_by_ids('jobs', ids_to_display)
+    
+    header_text = f"検索結果: **{len(all_ids)}** 件中、**{len(jobs_to_display)}** 件を表示中"
+    st.header(header_text)
 
-            with col1:
-                project_name = job['project_name'] or f"案件 (ID: {job['id']})"
-                title_display = f"#### {project_name}"
-                if job['is_hidden']:
-                    title_display += " <span style='color: #888; font-size: 0.8em; vertical-align: middle;'>(非表示)</span>"
-                st.markdown(title_display, unsafe_allow_html=True)
-                
-                doc_parts = job['document'].split('\n---\n', 1)
-                display_doc = doc_parts[1] if len(doc_parts) > 1 else job['document']
-                preview_text = display_doc.replace('\n', ' ').replace('\r', '')
-                st.caption(preview_text[:250] + "..." if len(preview_text) > 250 else preview_text)
+    if not jobs_to_display:
+        st.warning("表示するデータがありません。")
+    else:
+        for job in jobs_to_display:
+            with st.container(border=True):
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    # ご提示のコードの表示ロジックを流用
+                    project_name = job['project_name'] or f"案件 (ID: {job['id']})"
+                    title_display = f"#### {project_name}"
+                    if job['is_hidden']:
+                        title_display += " <span style='color: #888;'>(非表示)</span>"
+                    st.markdown(title_display, unsafe_allow_html=True)
+                    doc_parts = job['document'].split('\n---\n', 1)
+                    preview_text = (doc_parts[1] if len(doc_parts) > 1 else job['document']).replace('\n',' ')
+                    st.caption(preview_text[:250] + "...")
+                with col2:
+                    if job.get('assigned_username'):
+                        st.markdown(f"👤 **担当:** {job['assigned_username']}")
+                    st.markdown(f"**ID:** {job['id']}")
+                    if st.button("詳細を見る", key=f"detail_job_{job['id']}", use_container_width=True):
+                        st.session_state['selected_job_id'] = job['id']
+                        st.switch_page("pages/3_案件詳細") # ファイル名に合わせて修正
 
-            with col2:
-                if job['assigned_username']:
-                    st.markdown(f"👤 **担当:** {job['assigned_username']}")
-                
-                st.markdown(f"**ID:** {job['id']}")
-                
-                # created_atがdatetimeオブジェクトの場合を考慮
-                created_at_str = job['created_at']
-                if isinstance(created_at_str, str):
-                    created_date = created_at_str.split(' ')[0]
-                else:
-                    try:
-                        created_date = created_at_str.strftime('%Y-%m-%d')
-                    except:
-                        created_date = "N/A"
-                st.caption(f"登録日: {created_date}")
+    # --- 「Load More」ボタン ---
+    if display_count < len(all_ids):
+        st.divider()
+        _, col_btn, _ = st.columns([2, 1, 2])
+        with col_btn:
+            if st.button(f"さらに {min(ITEMS_PER_PAGE, len(all_ids) - display_count)} 件読み込む", use_container_width=True):
+                st.session_state.job_display_count += ITEMS_PER_PAGE
+                st.rerun()
 
-                if st.button("詳細を見る", key=f"detail_job_{job['id']}", use_container_width=True):
-                    st.session_state['selected_job_id'] = job['id']
-                    st.switch_page("pages/6_案件詳細.py")
-
+# --- フッター ---
 ui.display_footer()
