@@ -1668,10 +1668,10 @@ def _extract_price_from_string(price_str: str) -> float | None:
     return None
 
 
-def get_filtered_item_ids(item_type: str, keyword: str = "", sort_column: str = "登録日", sort_order: str = "降順", show_hidden: bool = False) -> list:
+def get_filtered_item_ids(item_type: str, keyword: str = "", assigned_user_ids: list = None, include_unassigned: bool = False, sort_column: str = "登録日", sort_order: str = "降順", show_hidden: bool = False) -> list:
     """
-    【修正版】
-    フィルターとソート条件に基づいて、IDリストのみを取得する。
+    【再々修正版】
+    「未割り当て(IS NULL)」と「担当者ID(ANY)」のOR検索ロジックを正しく実装する。
     """
     if item_type not in ['jobs', 'engineers']: 
         return []
@@ -1679,8 +1679,6 @@ def get_filtered_item_ids(item_type: str, keyword: str = "", sort_column: str = 
     table_name = 'jobs' if item_type == 'jobs' else 'engineers'
     name_column = "project_name" if table_name == "jobs" else "name"
     
-    # usersテーブルをJOINして担当者名で検索・ソートできるようにする
-    # エイリアス 'e' をテーブル名に付与
     query = f"SELECT e.id FROM {table_name} e LEFT JOIN users u ON e.assigned_user_id = u.id"
     
     params = []
@@ -1690,36 +1688,62 @@ def get_filtered_item_ids(item_type: str, keyword: str = "", sort_column: str = 
         where_clauses.append("e.is_hidden = 0")
 
     if keyword:
-        # ご提示のコードにあった、より優れたキーワード分割ロジックを採用
         keywords_list = [k.strip() for k in re.split(r'[,\s　、]+', keyword) if k.strip()]
         if keywords_list:
             for kw in keywords_list:
-                # 担当者名(u.username)での検索も追加
-                where_clauses.append(f"(e.document ILIKE %s OR e.name ILIKE %s OR u.username ILIKE %s)")
+                where_clauses.append(f"(e.document ILIKE %s OR e.{name_column} ILIKE %s OR u.username ILIKE %s)")
                 param = f'%{kw}%'
                 params.extend([param, param, param])
+
+    # ▼▼▼【ここが修正の核となる部分】▼▼▼
+    
+    # 担当者関連の絞り込み条件を一時的に格納するリスト
+    user_filter_conditions = []
+    
+    # 1. 実在の担当者IDが選択されている場合
+    if assigned_user_ids:
+        user_filter_conditions.append("e.assigned_user_id = ANY(%s)")
+        params.append(assigned_user_ids)
+    
+    # 2. 「未割り当て」が選択されている場合
+    if include_unassigned:
+        user_filter_conditions.append("e.assigned_user_id IS NULL")
+
+    # 担当者関連の条件が1つでもあれば、それらをORで結合してWHERE句に追加
+    if user_filter_conditions:
+        where_clauses.append(f"({' OR '.join(user_filter_conditions)})")
+
+    # ▲▲▲【修正ここまで】▲▲▲
 
     if where_clauses:
         query += " WHERE " + " AND ".join(where_clauses)
 
-    # ソート順の決定
+    # --- ソート順の決定 (ロジックを少し修正) ---
     sort_column_map = {
         "登録日": "e.created_at",
+        "プロジェクト名": "e.project_name",
         "氏名": "e.name",
         "担当者名": "u.username"
     }
+    # 案件/技術者に応じて不要なキーを削除
+    if item_type == 'jobs':
+        sort_column_map.pop('氏名', None)
+    else: # engineers
+        sort_column_map.pop('プロジェクト名', None)
+        
     order_map = {"降順": "DESC", "昇順": "ASC"}
-    
     order_by_column = sort_column_map.get(sort_column, "e.created_at")
-    # u.username でソートする場合、NULLのレコードが最後に来るように調整
     nulls_order = "NULLS LAST" if sort_order == "降順" else "NULLS FIRST"
     order_by_direction = order_map.get(sort_order, "DESC")
     
     query += f" ORDER BY {order_by_column} {order_by_direction} {nulls_order}"
 
+    # --- DB実行 (変更なし) ---
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
+            # デバッグ用に最終的なクエリとパラメータを出力
+            # print("Executing Query:", cursor.mogrify(query, tuple(params)))
             cursor.execute(query, tuple(params))
             return [item[0] for item in cursor.fetchall()]
     except Exception as e:
@@ -1728,6 +1752,9 @@ def get_filtered_item_ids(item_type: str, keyword: str = "", sort_column: str = 
     finally:
         if conn:
             conn.close()
+
+
+
 
 def get_items_by_ids(item_type: str, ids: list) -> list:
     """
@@ -1739,8 +1766,20 @@ def get_items_by_ids(item_type: str, ids: list) -> list:
     table_name = item_type
     
     # ANY() を使うことで、単一のクエリで効率的に複数IDのデータを取得
-    query = f"SELECT * FROM {table_name} WHERE id = ANY(%s)"
+    #query = f"SELECT * FROM {table_name} WHERE id = ANY(%s)"
     
+        # ▼▼▼【このクエリを修正】▼▼▼
+    # usersテーブルをLEFT JOINして、u.usernameをassigned_usernameとして取得
+    query = f"""
+        SELECT 
+            e.*, 
+            u.username as assigned_username 
+        FROM {table_name} e
+        LEFT JOIN users u ON e.assigned_user_id = u.id
+        WHERE e.id = ANY(%s)
+    """
+    # ▲▲▲【修正ここまで】▲▲▲
+
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
