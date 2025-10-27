@@ -104,21 +104,31 @@ st.header("最新マッチング結果一覧")
 
 # --- DBからフィルタリングされた結果を取得 ---
 conn = get_db_connection()
+
+# ▼▼▼【このクエリを修正】▼▼▼
 query = '''
     SELECT 
         r.id as res_id, r.job_id, j.document as job_doc, j.project_name, j.is_hidden as job_is_hidden,
         r.engineer_id, e.document as eng_doc, e.name as engineer_name, e.is_hidden as engineer_is_hidden,
         r.score, r.created_at, r.is_hidden as match_is_hidden, r.grade, r.status,
-        job_user.username as job_assignee, eng_user.username as engineer_assignee
+        job_user.username as job_assignee, eng_user.username as engineer_assignee,
+        
+        -- フィードバックの有無を判定する仮想カラムを追加
+        CASE 
+            WHEN r.feedback_status IS NOT NULL AND r.feedback_status != ''
+            THEN true
+            ELSE false
+        END AS has_feedback
+
     FROM matching_results r
     JOIN jobs j ON r.job_id = j.id
     JOIN engineers e ON r.engineer_id = e.id
     LEFT JOIN users job_user ON j.assigned_user_id = job_user.id
     LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
-
-
-    
 '''
+# ▲▲▲【修正ここまで】▲▲▲
+
+
 params = []
 where_clauses = []
 
@@ -236,7 +246,23 @@ else:
                     st.caption(f"{job_doc_summary}...")
                     
                 with col2:
-                    st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
+
+                     # ▼▼▼【この部分を修正】▼▼▼
+
+                    # フィードバックアイコンを準備
+                    feedback_icon = "💬" if res.get('has_feedback') else ""
+                    
+                    # 評価(Grade)のHTMLを取得
+                    grade_html = get_evaluation_html(res['grade'])
+                    
+                    # HTMLを結合して表示
+                    st.markdown(f"{grade_html}<div style='text-align:center; font-size:1.2em;'>{feedback_icon}</div>", unsafe_allow_html=True)
+                    
+                    # ▲▲▲【修正ここまで】▲▲▲
+
+                    #st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
+
+                    
                     if st.button("詳細を見る", key=f"dashboard_detail_btn_{res['res_id']}", use_container_width=True):
                         st.session_state['selected_match_id'] = res['res_id']
                         st.switch_page("pages/7_マッチング詳細.py")
