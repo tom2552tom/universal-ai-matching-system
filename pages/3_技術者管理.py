@@ -108,9 +108,18 @@ else:
                     preview_text = (doc_parts[1] if len(doc_parts) > 1 else eng['document']).replace('\n',' ')
                     st.caption(preview_text[:250] + "...")
                 with col2:
-                    if eng.get('assigned_username'):
-                        st.markdown(f"👤 **担当:** {eng['assigned_username']}")
+                    assignee = eng.get('assigned_username', '未割り当て')
+                    
+                    # 担当者が「未割り当て」の場合、少し薄い色で表示
+                    if assignee == '未割り当て':
+                        st.markdown(f"<span style='color: #888;'>👤 担当: {assignee}</span>", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"👤 **担当:** {assignee}")
+
+                    # ▲▲▲【修正ここまで】▲▲▲
+
                     st.markdown(f"**ID:** {eng['id']}")
+                    
                     if st.button("詳細を見る", key=f"detail_{eng['id']}", use_container_width=True):
                         st.session_state['selected_engineer_id'] = eng['id']
                         st.switch_page("pages/5_技術者詳細.py") # .py を削除
