@@ -1745,7 +1745,7 @@ def get_filtered_item_ids(item_type: str, keyword: str = "", assigned_user_ids: 
 
     # --- ソート順の決定 (ロジックを少し修正) ---
     sort_column_map = {
-        "登録日": "e.created_at",
+        "登録日": "e.id",  # "e.created_at" から "e.id" に変更
         "プロジェクト名": "e.project_name",
         "氏名": "e.name",
         "担当者名": "u.username"
@@ -1757,7 +1757,7 @@ def get_filtered_item_ids(item_type: str, keyword: str = "", assigned_user_ids: 
         sort_column_map.pop('プロジェクト名', None)
         
     order_map = {"降順": "DESC", "昇順": "ASC"}
-    order_by_column = sort_column_map.get(sort_column, "e.created_at")
+    order_by_column = sort_column_map.get(sort_column, "e.id")
     nulls_order = "NULLS LAST" if sort_order == "降順" else "NULLS FIRST"
     order_by_direction = order_map.get(sort_order, "DESC")
     
