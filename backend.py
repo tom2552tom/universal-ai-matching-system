@@ -152,6 +152,11 @@ def get_extraction_prompt(doc_type, text_content):
 # ▼▼▼【ここが修正箇所】▼▼▼
 def split_text_with_llm(text_content):
     """【二段階処理】1. 文書を分類し、2. 分類結果に応じて専用プロンプトで情報抽出を行う。"""
+
+    # ▼▼▼【この行を追加・または関数の先頭に移動】▼▼▼
+    logs = []  # この処理で発生したログを格納するリストを、関数の冒頭で初期化
+    # ▲▲▲【修正ここまで】▲▲▲
+
     classification_prompt = f"""
         あなたはテキスト分類の専門家です。以下のテキストが「案件情報」「技術者情報」「その他」のどれに最も当てはまるか判断し、指定された単語一つだけで回答してください。
         # 判断基準
@@ -191,44 +196,64 @@ def split_text_with_llm(text_content):
         
         raw_text = response.text
         
-        # ▼▼▼【ここからがJSON抽出・修復ロジックです】▼▼▼
-        json_str = None
-        try:
-            # 1. ```json ... ``` 形式のコードブロックを探す
-            match = re.search(r'```json\s*(\{.*?\})\s*```', raw_text, re.DOTALL)
-            if match:
-                json_str = match.group(1)
-            else:
-                # 2. コードブロックがない場合、最も大きな波括弧のペアを探す
-                start_index = raw_text.find('{')
-                end_index = raw_text.rfind('}')
-                if start_index != -1 and end_index != -1 and start_index < end_index:
-                    json_str = raw_text[start_index : end_index + 1]
-                else:
-                    st.error("LLMの応答から有効なJSON構造を抽出できませんでした。")
-                    st.code(raw_text, language='text')
-                    return None
+        # ▼▼▼【ここからが新しいJSON抽出・修復ロジックです】▼▼▼
+                
+        parsed_json = None
+
+        # 1. 応答テキストから、最初の '{' を探す
+        start_index = raw_text.find('{')
+        if start_index == -1:
+            logs.append("❌ LLMの応答からJSONオブジェクトの開始文字 '{' が見つかりませんでした。\n")
+            logs.append(f"```text\n{raw_text}\n```\n")
+            return None, logs # ログを返して終了
+
+        # 2. バランスの取れた波括弧のペアを探す
+        brace_counter = 0
+        end_index = -1
+        # 文字列をスキャンして、対応する '}' を見つける
+        for i in range(start_index, len(raw_text)):
+            char = raw_text[i]
+            if char == '{':
+                brace_counter += 1
+            elif char == '}':
+                brace_counter -= 1
             
-            # 抽出した文字列をパース
+            if brace_counter == 0:
+                # カウンターが0になった瞬間が、対応する閉じ括弧の位置
+                end_index = i
+                break
+
+        if end_index == -1:
+            logs.append("❌ LLMの応答のJSON構造が壊れています（波括弧の対応が取れません）。\n")
+            logs.append(f"```text\n{raw_text}\n```\n")
+            return None, logs
+
+        # 3. 抽出された、バランスの取れたJSON候補の文字列
+        json_str = raw_text[start_index : end_index + 1]
+
+        try:
+            # 4. まずはそのままパースを試みる
             parsed_json = json.loads(json_str)
+            logs.append("✅ JSONのパースに成功しました。\n")
 
         except json.JSONDecodeError as e:
-            # パースに失敗した場合、修復を試みる
-            print(f"WARN: JSONのパースに失敗。修復を試みます。エラー: {e}")
+            # 5. パースに失敗した場合、修復を試みる
+            logs.append(f"⚠️ JSONのパースに失敗。修復を試みます... (エラー: {e})\n")
             
-            repaired_text = json_str or raw_text
-            # 文字列内の不正な改行を置換
-            repaired_text = re.sub(r'(?<!\\)\n', r'\\n', repaired_text)
+            # 文字列内の不正な改行（JSON文字列リテラル内以外）をエスケープ
+            repaired_text = re.sub(r'(?<!\\)\n', r'\\n', json_str)
+            # 閉じ括弧の直前にある余分なカンマ（trailing comma）を削除
+            repaired_text = re.sub(r',\s*([\}\]])', r'\1', repaired_text)
             
             try:
-                # 修復したテキストで再度パースを試みる
-                print("INFO: 修復後のJSONで再パースを試みます。")
+                # 修復したテキストで再度パース
                 parsed_json = json.loads(repaired_text)
+                logs.append("✅ JSONの修復と再パースに成功しました。\n")
             except json.JSONDecodeError as final_e:
-                st.error(f"JSONの修復後もパースに失敗しました: {final_e}")
-                st.write("修復を試みたJSON文字列:")
-                st.code(repaired_text, language='json')
-                return None
+                logs.append(f"❌ JSONの修復後もパースに失敗しました: {final_e}\n")
+                logs.append(f"修復を試みたJSON文字列:\n```json\n{repaired_text}\n```\n")
+                return None, logs
+
         # ▲▲▲【JSON抽出・修復ロジックここまで】▲▲▲
 
         if "技術者情報" in doc_type: parsed_json["jobs"] = []
