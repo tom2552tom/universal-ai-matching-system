@@ -37,7 +37,7 @@ TOP_K_CANDIDATES = 500
 MIN_SCORE_THRESHOLD = 70.0
 
 # --- 関数定義 ---
-@st.cache_data
+#@st.cache_data
 def load_app_config():
     try:
         with open("config.toml", "r", encoding="utf-8") as f:
@@ -267,7 +267,7 @@ def split_text_with_llm(text_content):
         return None
     
 
-@st.cache_data
+#@st.cache_data
 def get_match_summary_with_llm(job_doc, engineer_doc):
     model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
     # ▼▼▼ 変更点 1: プロンプトの強化 ▼▼▼
