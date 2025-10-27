@@ -372,20 +372,54 @@ st.divider()
 # ... (既存のAI要約比較セクションなど) ...
 
 
-# --- 担当者フィードバック機能 ---
 with st.expander("担当者フィードバック", expanded=True):
-    # 現在のフィードバック情報を表示
-    if details["match_result"].get("feedback_at"):
-        feedback_time = details["match_result"]["feedback_at"].strftime('%Y-%m-%d %H:%M')
-        # backendで取得した担当者名を表示
-        feedback_user = details["match_result"].get("feedback_username", "不明") 
-        st.info(f"最終フィードバック: {feedback_time} by **{feedback_user}**")
-        st.write(f"評価: **{details['match_result']['feedback_status']}**")
-        st.caption("コメント:")
-        st.text(details['match_result']['feedback_comment'])
-        st.write("---")
+    
+    # --- 既存フィードバックの表示 ---
+    # get()を使って安全に値を取得
+    feedback_at = match_data.get("feedback_at")
+    feedback_status = match_data.get("feedback_status")
+    feedback_comment = match_data.get("feedback_comment")
+    feedback_user = match_data.get("feedback_username", "不明") 
 
+    if feedback_at and feedback_status and feedback_comment:
+        with st.container(border=True):
+            st.info(f"最終フィードバック: {feedback_at.strftime('%Y-%m-%d %H:%M')} by **{feedback_user}**")
+            st.markdown(f"**評価:** {feedback_status}")
+            st.markdown(f"**コメント:**")
+            # 引用ブロックで見やすく表示
+            st.markdown(f"> {feedback_comment.replace('\n', '\n> ')}")
+
+            st.markdown("---") # 区切り線
+
+            # ▼▼▼【ここからがAI分析コメントの表示ロジック】▼▼▼
+            st.markdown("**🤖 AIの学習メモ:**")
+            
+            # AI分析は毎回実行するとコストと時間がかかるため、キャッシュを利用
+            # st.cache_data をデコレータとして使うことで、同じ引数での呼び出し結果をキャッシュする
+            @st.cache_data(show_spinner="🤖 AIがフィードバックを分析中...")
+            def cached_ai_analysis(job_doc, eng_doc, fb_eval, fb_comment):
+                return be.generate_ai_analysis_on_feedback(job_doc, eng_doc, fb_eval, fb_comment)
+
+            # キャッシュされた関数を呼び出す
+            ai_analysis_comment = cached_ai_analysis(
+                job_data['document'],
+                engineer_data['document'],
+                feedback_status,
+                feedback_comment
+            )
+            
+            st.success(ai_analysis_comment)
+            # ▲▲▲【AI分析コメントの表示ロジックここまで】▲▲▲
+
+    else:
+        st.info("このマッチングにはまだ担当者からのフィードバックがありません。")
+
+
+    # --- フィードバック登録フォーム ---
+    st.markdown("---")
     st.subheader("フィードバックを登録・更新")
+    
+    
     
     # 担当者一覧を取得
     all_users = get_all_users()

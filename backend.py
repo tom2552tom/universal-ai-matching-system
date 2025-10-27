@@ -1793,3 +1793,56 @@ def get_items_by_ids(item_type: str, ids: list) -> list:
     finally:
         if conn:
             conn.close()
+
+
+
+
+def generate_ai_analysis_on_feedback(job_doc: str, engineer_doc: str, feedback_evaluation: str, feedback_comment: str) -> str:
+    """
+    案件・技術者情報と、それに対する人間のフィードバックを受け取り、
+    AIがそのフィードバックから何を学習したかを分析・要約して返す。
+    """
+    if not all([job_doc, engineer_doc, feedback_evaluation, feedback_comment]):
+        return "分析対象のフィードバック情報が不足しています。"
+
+    # AIへの指示プロンプト
+    prompt = f"""
+        あなたは、IT人材のマッチング精度を日々改善している、学習するAIアシスタントです。
+        あなたの仕事は、案件情報と技術者情報、そしてそれに対する人間の担当者からのフィードバックを分析し、そのフィードバックから何を学び、次にどう活かすかを簡潔に言語化することです。
+
+        # 指示
+        - 担当者からの評価とコメントの本質を捉えてください。
+        - ポジティブな評価であれば、なぜそれが良かったのか、そのパターンをどう強化するかを記述してください。
+        - ネガティブな評価であれば、なぜそれが悪かったのか、その間違いを今後どう避けるかを記述してください。
+        - 「単価」「スキル」「経験年数」「勤務地」などの具体的な要素に言及してください。
+        - あなた自身の言葉で、学習内容を宣言するように記述してください。
+
+        # 分析対象データ
+        ---
+        ## 案件情報
+        {job_doc}
+        ---
+        ## 技術者情報
+        {engineer_doc}
+        ---
+        ## 担当者からのフィードバック
+        - **評価:** {feedback_evaluation}
+        - **コメント:** {feedback_comment}
+        ---
+
+        # 出力例
+        - このフィードバックから、コアスキルが完全に一致する場合、単価に10万円程度の差があっても「良いマッチング」と評価されることを学習しました。今後は、スキルの一致度をより重視し、単価の条件を少し緩和して候補を提案します。
+        - このフィードバックから、xxというスキルはyyという業務内容と関連性が低いと判断されていることを学びました。今後は、この組み合わせでのマッチングスコアを下方修正します。
+
+        # あなたの分析結果を生成してください
+    """
+
+    try:
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"フィードバックのAI分析中にエラー: {e}")
+        return f"AIによる分析中にエラーが発生しました: {e}"
+
+# ▲▲▲【新しい関数ここまで】▲▲▲
