@@ -94,7 +94,7 @@ if submitted:
 # --- 結果表示ロジック ---
 all_ids = st.session_state.all_job_ids
 if all_ids is None:
-    st.info("キーワードを入力して案件を検索してください。")
+    st.info("検索条件を入力し、「この条件で検索する」ボタンを押してください。")
 elif not all_ids:
     st.warning("条件に一致する案件は見つかりませんでした。")
 else:
