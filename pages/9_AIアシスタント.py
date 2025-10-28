@@ -22,9 +22,9 @@ with st.form("ondemand_matching_form"):
     st.markdown("##### 検索条件")
     col1, col2 = st.columns(2)
     with col1:
-        target_rank = st.selectbox("最低ランク", ['S', 'A', 'B', 'C'], index=2)
+        target_rank = st.selectbox("最低ランク", ['S', 'A', 'B', 'C'], index=1)
     with col2:
-        target_count = st.number_input("最大表示件数", 1, 50, 10)
+        target_count = st.number_input("最大表示件数", 1, 10, 5)
     submitted = st.form_submit_button("この条件で候補者を探す", type="primary", use_container_width=True)
 
 
