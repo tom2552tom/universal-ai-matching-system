@@ -1947,7 +1947,7 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
     or_conditions = [f"document ILIKE %s OR {name_column} ILIKE %s" for _ in search_keywords]
     params = [f"%{kw}%" for kw in search_keywords for _ in (0, 1)]
     query += " OR ".join(or_conditions)
-    query += ") ORDER BY id DESC LIMIT 500"
+    query += ") ORDER BY id DESC LIMIT 100"
 
     conn = get_db_connection()
     try:
@@ -1979,21 +1979,48 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
     
     ids = np.array([item['id'] for item in candidate_records_for_indexing], dtype=np.int64)
     documents = [str(item['document']) for item in candidate_records_for_indexing]
+    
+    
+    # --- ここからがUIプログレスバー付きのベクトル化処理 ---
+    
+    total_docs = len(documents)
+    yield f"  > {total_docs}件のドキュメントのベクトル化を開始します...\n"
+    
+    # プログレスバーをUI上に表示するための準備
+    # st.progress(0) を yield して、フロントエンドにプログレスバーの初期状態を送る
+    progress_bar_key = f"progress_bar_{datetime.now().timestamp()}" # 一意のキー
+    yield {"type": "progress", "key": progress_bar_key, "value": 0, "text": "ベクトル化の準備中..."}
 
-    # --- ここからが進捗表示を改善したベクトル化処理 ---
-    
-    yield f"  > {len(documents)}件のドキュメントのベクトル化を開始します... (GPU利用時は高速です)\n"
-    
-    # バッチ処理で一気にベクトル化するのが最も高速
-    # show_progress_bar=True にすると、実行中のターミナルに進捗バーが表示される
-    embeddings = embedding_model.encode(
-        documents, 
-        normalize_embeddings=True, 
-        show_progress_bar=True  # ターミナルに進捗バーを表示
-    )
-    
+    # バッチサイズを決定（32は一般的なデフォルト値）
+    batch_size = 32
+    all_embeddings = []
+
+    # バッチごとにループ処理
+    for i in range(0, total_docs, batch_size):
+        # 現在のバッチを切り出す
+        batch_documents = documents[i:i+batch_size]
+        
+        # バッチをベクトル化
+        batch_embeddings = embedding_model.encode(
+            batch_documents, 
+            normalize_embeddings=True, 
+            show_progress_bar=False # ターミナルバーは不要
+        )
+        all_embeddings.extend(batch_embeddings)
+        
+        # 進捗を計算 (0.0 ~ 1.0)
+        progress_value = min((i + batch_size) / total_docs, 1.0)
+        progress_text = f"ベクトル化中... ({min(i + batch_size, total_docs)}/{total_docs})"
+        
+        # プログレスバーを更新するための情報をyield
+        yield {"type": "progress", "key": progress_bar_key, "value": progress_value, "text": progress_text}
+
+    embeddings = np.array(all_embeddings)
     yield f"  > ✅ ベクトル化が完了しました。\n"
     
+    # --- 修正ここまで ---
+
+
     index.add_with_ids(embeddings, ids)
 
     yield f"  > FAISSインデックスをメモリ上に構築しました。類似度検索を実行します...\n"
@@ -2074,7 +2101,7 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
             yield "**ポジティブな点:**\n"
             for point in candidate['positive_points']: yield f"- {point}\n"
         if candidate.get('concern_points'):
-            yield "**懸念点:**\n"
+            yield "\n**懸念点:**\n"
             for point in candidate['concern_points']: yield f"- {point}\n"
         yield "\n"
     # ▲▲▲【補完ここまで】▲▲▲

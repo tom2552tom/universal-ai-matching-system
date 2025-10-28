@@ -29,42 +29,60 @@ with st.form("ondemand_matching_form"):
 
 
 # ▼▼▼【ここからが全面的に修正する処理ロジック】▼▼▼
-
 # --- 処理ロジック ---
 if submitted:
     if not input_text.strip():
         st.error("案件情報または技術者情報を入力してください。")
     else:
-        # 結果表示用のコンテナをフォームの外側に用意
         results_container = st.container()
-        
         with results_container:
             with st.expander("処理ログと結果", expanded=True):
                 
-                # ジェネレータ関数を呼び出す
                 response_generator = be.find_candidates_on_demand(
                     input_text=input_text,
                     target_rank=target_rank,
                     target_count=target_count
                 )
                 
-                # st.empty() を使って、リアルタイムでログを表示する場所を確保
+                # ▼▼▼【ここが修正の核となる部分】▼▼▼
+                
+                # ログ表示用のプレースホルダー
                 log_placeholder = st.empty()
+                # プログレスバーを管理するための辞書
+                progress_bars = {} 
+                # 通常のログメッセージを溜めるリスト
                 log_chunks = []
                 
                 try:
-                    # ジェネレータをループで回して、yieldされた値を取得
+                    # ジェネレータから一つずつ値を取り出す
                     for chunk in response_generator:
-                        log_chunks.append(str(chunk))
-                        # これまで受信したログをすべて結合して表示
-                        log_placeholder.markdown("".join(log_chunks))
+                        
+                        # 1. chunkが辞書で、かつ type が 'progress' かをチェック
+                        if isinstance(chunk, dict) and chunk.get("type") == "progress":
+                            key = chunk["key"]
+                            
+                            # 2. 対応するプログレスバーがなければ作成
+                            if key not in progress_bars:
+                                # st.progress はUI上の別の場所に追加される
+                                progress_bars[key] = st.progress(0, text="...")
+                            
+                            # 3. プログレスバーの状態を更新
+                            progress_bars[key].progress(chunk["value"], text=chunk["text"])
+                        
+                        else:
+                            # 4. それ以外（通常の文字列ログ）の場合
+                            log_chunks.append(str(chunk))
+                            # これまでのログをすべて結合して表示
+                            log_placeholder.markdown("".join(log_chunks))
                 
                 except Exception as e:
-                    # ジェネレータの実行中にエラーが発生した場合
                     st.error("処理中に予期せぬエラーが発生しました。")
                     st.exception(e)
-
-# ▲▲▲【修正ここまで】▲▲▲
-
+                
+                finally:
+                    # 5. 処理が完了したら、すべてのプログレスバーを画面から消す
+                    for bar in progress_bars.values():
+                        bar.empty()
+                        
 # フッター表示
 ui.display_footer()
