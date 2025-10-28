@@ -2033,7 +2033,7 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
             candidate['positive_points'] = llm_result.get('positive_points', [])
             candidate['concern_points'] = llm_result.get('concern_points', [])
             final_candidates.append(candidate)
-            yield f"    -> ✅ ヒット！ (ランク: **{candidate['grade']}**)\n"
+            yield f"    -> ✅ ランク: **{candidate['grade']}**\n"
         else:
             actual_grade = llm_result.get('summary') if llm_result else "評価失敗"
             yield f"    -> ｽｷｯﾌﾟ (ランク: **{actual_grade}** が目標「{target_rank}」以上ではない、または評価失敗のため)\n"
