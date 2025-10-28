@@ -1959,7 +1959,7 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
     or_conditions = [f"document ILIKE %s OR {name_column} ILIKE %s" for _ in search_keywords]
     params = [f"%{kw}%" for kw in search_keywords for _ in (0, 1)]
     query += " OR ".join(or_conditions)
-    query += ") ORDER BY id DESC LIMIT 100"
+    query += ") ORDER BY id DESC LIMIT 500"
 
     conn = get_db_connection()
     try:
@@ -1985,7 +1985,7 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
     ids = np.array([item['id'] for item in candidate_records_for_indexing], dtype=np.int64)
     documents = [str(item['document']) for item in candidate_records_for_indexing]
     
-    yield f"  > {len(documents)}件のドキュメントのベクトル化を開始します... (これには数秒〜数十秒かかります)\n"
+    yield f"  > {len(documents)}件のドキュメントのベクトル化を開始します... (これには数十秒〜数分かかります)\n"
     embeddings = embedding_model.encode(documents, normalize_embeddings=True, show_progress_bar=True)
     yield f"  > ✅ ベクトル化が完了しました。\n"
     
