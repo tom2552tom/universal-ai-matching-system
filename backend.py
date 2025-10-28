@@ -149,14 +149,20 @@ def get_extraction_prompt(doc_type, text_content):
         """
     return ""
 
-# ▼▼▼【ここが修正箇所】▼▼▼
-def split_text_with_llm(text_content):
-    """【二段階処理】1. 文書を分類し、2. 分類結果に応じて専用プロンプトで情報抽出を行う。"""
 
-    # ▼▼▼【この行を追加・または関数の先頭に移動】▼▼▼
-    logs = []  # この処理で発生したログを格納するリストを、関数の冒頭で初期化
-    # ▲▲▲【修正ここまで】▲▲▲
+# backend.py
 
+def split_text_with_llm(text_content: str) -> (dict | None, list):
+    """
+    【UI用・修正版】
+    文書を分類し、情報抽出を行う。進捗を st.write で表示し、
+    最終的に (結果, ログリスト) のタプルを返す。
+    """
+    # この関数内で発生したログを収集するためのリスト
+    # UI表示とは別に、呼び出し元に返す
+    logs_for_caller = []
+    
+    # --- 1. 文書タイプの分類 ---
     classification_prompt = f"""
         あなたはテキスト分類の専門家です。以下のテキストが「案件情報」「技術者情報」「その他」のどれに最も当てはまるか判断し、指定された単語一つだけで回答してください。
         # 判断基準
@@ -173,99 +179,101 @@ def split_text_with_llm(text_content):
     """
     try:
         model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        
+        # UIに直接進捗を表示
         st.write("📄 文書タイプを分類中...")
+        logs_for_caller.append("📄 文書タイプを分類中...") # 呼び出し元用のログにも追加
+
         response = model.generate_content(classification_prompt)
         doc_type = response.text.strip()
-        st.write(f"✅ AIによる分類結果: **{doc_type}**")
-    except Exception as e:
-        st.error(f"文書の分類中にエラーが発生しました: {e}"); return None
 
+        st.write(f"✅ AIによる分類結果: **{doc_type}**")
+        logs_for_caller.append(f"✅ AIによる分類結果: **{doc_type}**")
+
+    except Exception as e:
+        st.error(f"文書の分類中にエラーが発生しました: {e}")
+        logs_for_caller.append(f"❌ 文書の分類中にエラーが発生しました: {e}")
+        return None, logs_for_caller # ★ 修正: 必ずタプルを返す
+
+    # --- 2. 抽出プロンプトの選択 ---
     if "技術者情報" in doc_type:
         extraction_prompt = get_extraction_prompt('engineer', text_content)
     elif "案件情報" in doc_type:
         extraction_prompt = get_extraction_prompt('job', text_content)
     else:
-        st.warning("このテキストは案件情報または技術者情報として分類されませんでした。処理をスキップします。"); return None
+        st.warning("このテキストは案件情報または技術者情報として分類されませんでした。処理をスキップします。")
+        logs_for_caller.append("⚠️ このテキストは案件情報または技術者情報として分類されませんでした。")
+        return None, logs_for_caller # ★ 修正: 必ずタプルを返す
 
+    # --- 3. 構造化処理 ---
     generation_config = {"response_mime_type": "application/json"}
     safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
     
     try:
         with st.spinner("AIが情報を構造化中..."):
+            logs_for_caller.append("🤖 AIが情報を構造化中...")
             response = model.generate_content(extraction_prompt, generation_config=generation_config, safety_settings=safety_settings)
         
         raw_text = response.text
         
-        # ▼▼▼【ここからが新しいJSON抽出・修復ロジックです】▼▼▼
-                
+        # --- 4. JSONの抽出・修復 ---
         parsed_json = None
-
-        # 1. 応答テキストから、最初の '{' を探す
         start_index = raw_text.find('{')
         if start_index == -1:
-            logs.append("❌ LLMの応答からJSONオブジェクトの開始文字 '{' が見つかりませんでした。\n")
-            logs.append(f"```text\n{raw_text}\n```\n")
-            return None, logs # ログを返して終了
+            st.error("LLM応答からJSON開始文字'{'が見つかりません。")
+            logs_for_caller.append("❌ LLM応答からJSON開始文字'{'が見つかりません。")
+            return None, logs_for_caller
 
-        # 2. バランスの取れた波括弧のペアを探す
-        brace_counter = 0
-        end_index = -1
-        # 文字列をスキャンして、対応する '}' を見つける
+        brace_counter, end_index = 0, -1
         for i in range(start_index, len(raw_text)):
             char = raw_text[i]
-            if char == '{':
-                brace_counter += 1
-            elif char == '}':
-                brace_counter -= 1
-            
+            if char == '{': brace_counter += 1
+            elif char == '}': brace_counter -= 1
             if brace_counter == 0:
-                # カウンターが0になった瞬間が、対応する閉じ括弧の位置
                 end_index = i
                 break
-
-        if end_index == -1:
-            logs.append("❌ LLMの応答のJSON構造が壊れています（波括弧の対応が取れません）。\n")
-            logs.append(f"```text\n{raw_text}\n```\n")
-            return None, logs
-
-        # 3. 抽出された、バランスの取れたJSON候補の文字列
-        json_str = raw_text[start_index : end_index + 1]
-
-        try:
-            # 4. まずはそのままパースを試みる
-            parsed_json = json.loads(json_str)
-            logs.append("✅ JSONのパースに成功しました。\n")
-
-        except json.JSONDecodeError as e:
-            # 5. パースに失敗した場合、修復を試みる
-            logs.append(f"⚠️ JSONのパースに失敗。修復を試みます... (エラー: {e})\n")
-            
-            # 文字列内の不正な改行（JSON文字列リテラル内以外）をエスケープ
-            repaired_text = re.sub(r'(?<!\\)\n', r'\\n', json_str)
-            # 閉じ括弧の直前にある余分なカンマ（trailing comma）を削除
-            repaired_text = re.sub(r',\s*([\}\]])', r'\1', repaired_text)
-            
-            try:
-                # 修復したテキストで再度パース
-                parsed_json = json.loads(repaired_text)
-                logs.append("✅ JSONの修復と再パースに成功しました。\n")
-            except json.JSONDecodeError as final_e:
-                logs.append(f"❌ JSONの修復後もパースに失敗しました: {final_e}\n")
-                logs.append(f"修復を試みたJSON文字列:\n```json\n{repaired_text}\n```\n")
-                return None, logs
-
-        # ▲▲▲【JSON抽出・修復ロジックここまで】▲▲▲
-
-        if "技術者情報" in doc_type: parsed_json["jobs"] = []
-        elif "案件情報" in doc_type: parsed_json["engineers"] = []
-        return parsed_json
         
+        if end_index == -1:
+            st.error("LLM応答のJSON構造が壊れています（括弧の対応が取れません）。")
+            logs_for_caller.append("❌ LLM応答のJSON構造が壊れています（括弧の対応が取れません）。")
+            return None, logs_for_caller
+
+        json_str = raw_text[start_index : end_index + 1]
+        try:
+            parsed_json = json.loads(json_str)
+            logs_for_caller.append("✅ JSONのパースに成功しました。")
+        except json.JSONDecodeError as e:
+            logs_for_caller.append(f"⚠️ JSONパース失敗。修復試行... (エラー: {e})")
+            repaired_text = re.sub(r',\s*([\}\]])', r'\1', re.sub(r'(?<!\\)\n', r'\\n', json_str))
+            try:
+                parsed_json = json.loads(repaired_text)
+                logs_for_caller.append("✅ JSONの修復と再パースに成功しました。")
+            except json.JSONDecodeError as final_e:
+                st.error(f"JSON修復後もパース失敗: {final_e}")
+                logs_for_caller.append(f"❌ JSON修復後もパース失敗: {final_e}")
+                return None, logs_for_caller
+
+        # --- 5. 成功時の戻り値 ---
+        if "技術者情報" in doc_type:
+            if "jobs" not in parsed_json: parsed_json["jobs"] = []
+        elif "案件情報" in doc_type:
+            if "engineers" not in parsed_json: parsed_json["engineers"] = []
+
+        # ★ 修正: 成功時も必ず「辞書オブジェクト」とログのタプルを返す
+        return parsed_json, logs_for_caller
+
     except Exception as e:
-        st.error(f"LLMによる構造化処理中に予期せぬエラーが発生しました: {e}");
+        st.error(f"LLMによる構造化処理中に予期せぬエラーが発生しました: {e}")
+        logs_for_caller.append(f"❌ LLMによる構造化処理中に予期せぬエラーが発生しました: {e}")
         try: st.code(response.text, language='text')
         except NameError: st.text("レスポンスの取得にも失敗しました。")
-        return None
-    
+        
+        # ★ 修正: 例外発生時も必ずタプルを返す
+        return None, logs_for_caller
+
+
+
+
 
 #@st.cache_data
 def get_match_summary_with_llm(job_doc, engineer_doc):
@@ -1780,44 +1788,63 @@ def get_filtered_item_ids(item_type: str, keyword: str = "", assigned_user_ids: 
 
 
 
-
 def get_items_by_ids(item_type: str, ids: list) -> list:
     """
-    IDのリストに基づいて、案件または技術者の完全なレコードを取得する。
+    【修正版】
+    IDリストに基づきレコードを取得。担当者名もJOINし、
+    結果を「変更可能な」通常の辞書(dict)のリストとして返す。
     """
     if not ids or item_type not in ['jobs', 'engineers']:
         return []
 
-    table_name = item_type
+    table_name = 'jobs' if item_type == 'jobs' else 'engineers'
     
-    # ANY() を使うことで、単一のクエリで効率的に複数IDのデータを取得
-    #query = f"SELECT * FROM {table_name} WHERE id = ANY(%s)"
-    
-        # ▼▼▼【このクエリを修正】▼▼▼
-    # usersテーブルをLEFT JOINして、u.usernameをassigned_usernameとして取得
     query = f"""
         SELECT 
-            e.*, 
-            u.username as assigned_username 
-        FROM {table_name} e
-        LEFT JOIN users u ON e.assigned_user_id = u.id
-        WHERE e.id = ANY(%s)
+            t.*, 
+            u.username as assigned_username,
+            fb_counts.feedback_count
+        FROM {table_name} t
+        LEFT JOIN users u ON t.assigned_user_id = u.id
+        LEFT JOIN (
+            SELECT 
+                {'job_id' if item_type == 'jobs' else 'engineer_id'} as join_key, 
+                COUNT(*) as feedback_count
+            FROM matching_results
+            WHERE feedback_status IS NOT NULL AND feedback_comment IS NOT NULL AND feedback_comment != ''
+            GROUP BY join_key
+        ) AS fb_counts ON t.id = fb_counts.join_key
+        WHERE t.id = ANY(%s)
     """
-    # ▲▲▲【修正ここまで】▲▲▲
 
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute(query, (ids,))
-            # 取得した順序ではなく、元のIDリストの順序に並べ替える
-            results_map = {res['id']: res for res in cursor.fetchall()}
+            
+            # ▼▼▼【ここからが修正の核となる部分】▼▼▼
+            
+            # fetchall() の結果は DictRow のリスト
+            results_from_db = cursor.fetchall()
+
+            # DictRow を通常の dict に変換する
+            dict_results = [dict(row) for row in results_from_db]
+            
+            # IDをキーにした辞書を作成して、元のIDリストの順序に並べ替える
+            results_map = {res['id']: res for res in dict_results}
             return [results_map[id] for id in ids if id in results_map]
+
+            # ▲▲▲【修正ここまで】▲▲▲
+
     except Exception as e:
         print(f"IDによるアイテム取得中にエラー: {e}")
         return []
     finally:
         if conn:
             conn.close()
+
+
+
 
 
 
@@ -1871,3 +1898,159 @@ def generate_ai_analysis_on_feedback(job_doc: str, engineer_doc: str, feedback_e
         return f"AIによる分析中にエラーが発生しました: {e}"
 
 # ▲▲▲【新しい関数ここまで】▲▲▲
+
+
+
+
+
+def find_candidates_on_demand(input_text: str, target_rank: str, target_count: int):
+    """
+    【ハイブリッド版・進捗表示改善】
+    1. キーワードでDBから候補を粗く絞り込み。
+    2. 絞り込んだ候補だけで動的にFAISSインデックスを生成し、ベクトル検索を実行。
+    3. AIで再評価して最終結果を生成する。
+    """
+    # --- ステップ1 & 2: テキスト分類、ターゲットとキーワードの決定 ---
+    yield "ステップ1/5: 入力情報をAIが分類・要約しています...\n"
+    parsed_data, logs = split_text_with_llm(input_text)
+    for log in logs: yield f"  > {log}\n"
+    if not parsed_data:
+        yield "❌ エラー: 入力情報から構造化データを抽出できませんでした。\n"; return
+
+    yield "\nステップ2/5: 検索ターゲットとキーワードを決定しています...\n"
+    source_doc_type, search_target_type, source_item = (None, None, None)
+    if parsed_data.get("jobs") and parsed_data["jobs"]:
+        source_doc_type, search_target_type, source_item = 'job', 'engineer', parsed_data['jobs'][0]
+    elif parsed_data.get("engineers") and parsed_data["engineers"]:
+        source_doc_type, search_target_type, source_item = 'engineer', 'job', parsed_data['engineers'][0]
+    if not source_doc_type:
+        yield "❌ エラー: 構造化データの中身が案件か技術者か判断できませんでした。\n"; return
+    yield f"  > 入力は「{source_doc_type}」情報と判断。検索ターゲットは「{search_target_type}」です。\n"
+    source_doc = _build_meta_info_string(source_doc_type, source_item) + source_item.get("document", "")
+
+    keywords = (source_item.get("required_skills") or source_item.get("main_skills") or "").split(',')
+    name_keyword = source_item.get("project_name") or source_item.get("name")
+    if name_keyword: keywords.append(name_keyword)
+    search_keywords = [kw.strip() for kw in keywords if kw.strip()][:3]
+    if not search_keywords:
+        yield "⚠️ 検索キーワードが抽出できませんでした。検索精度が低下する可能性があります。\n"
+        search_keywords = [source_item.get("document", "")[:50]]
+
+    # --- ステップ3: キーワードによるDBからの候補絞り込み ---
+    yield f"\nステップ3/5: キーワードでデータベースから候補を絞り込んでいます...\n"
+    yield f"  > 主要キーワード: `{'`, `'.join(search_keywords)}`\n"
+
+    target_table = search_target_type + 's'
+    name_column = "project_name" if search_target_type == 'job' else "name"
+    
+    query = f"SELECT id, document FROM {target_table} WHERE is_hidden = 0 AND ("
+    or_conditions = [f"document ILIKE %s OR {name_column} ILIKE %s" for _ in search_keywords]
+    params = [f"%{kw}%" for kw in search_keywords for _ in (0, 1)]
+    query += " OR ".join(or_conditions)
+    query += ") ORDER BY id DESC LIMIT 500"
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query, tuple(params))
+            candidate_records_for_indexing = cursor.fetchall()
+    finally:
+        if conn: conn.close()
+
+    if not candidate_records_for_indexing:
+        yield "✅ データベースを検索しましたが、キーワードに一致する候補は見つかりませんでした。\n"; return
+    yield f"  > {len(candidate_records_for_indexing)}件の候補を一次抽出しました。\n"
+
+    # --- ステップ4: 動的インデックス生成とベクトル検索 ---
+    yield f"\nステップ4/5: 一次抽出した候補から、意味的に最も近い候補をAI的に検索しています...\n"
+    embedding_model = load_embedding_model()
+    if not embedding_model:
+        yield "❌ エラー: 埋め込みモデルの読み込みに失敗しました。\n"; return
+        
+    dimension = embedding_model.get_sentence_embedding_dimension()
+    index = faiss.IndexIDMap(faiss.IndexFlatIP(dimension))
+    
+    ids = np.array([item['id'] for item in candidate_records_for_indexing], dtype=np.int64)
+    documents = [str(item['document']) for item in candidate_records_for_indexing]
+
+    # ▼▼▼【ここが修正箇所】▼▼▼
+    yield f"  > {len(documents)}件のドキュメントのベクトル化を開始します... (これには数秒〜数十秒かかります)\n"
+    embeddings = embedding_model.encode(documents, normalize_embeddings=True, show_progress_bar=True)
+    yield f"  > ✅ ベクトル化が完了しました。\n"
+    # ▲▲▲【修正ここまで】▲▲▲
+
+    index.add_with_ids(embeddings, ids)
+
+    yield f"  > FAISSインデックスをメモリ上に構築しました。類似度検索を実行します...\n"
+    query_vector = embedding_model.encode([source_doc], normalize_embeddings=True)
+    _, result_ids = index.search(query_vector, min(TOP_K_CANDIDATES, index.ntotal))
+    
+    final_ids = [int(i) for i in result_ids[0] if i != -1]
+    if not final_ids:
+        yield "✅ 類似度検索を行いましたが、意味的に近い候補は見つかりませんでした。\n"; return
+    yield f"  > {len(final_ids)}件の候補に絞り込みました。\n"
+
+    # ▼▼▼【ここが補完されたロジック】▼▼▼
+    # --- ステップ5: AIによる再評価と最終候補リストの生成 ---
+    yield f"\nステップ5/5: 各候補者とのマッチング度をAIが評価し、最終リストを作成します...\n"
+    
+    candidate_records_for_eval = get_items_by_ids(search_target_type + 's', final_ids)
+    
+    rank_order = ['S', 'A', 'B', 'C', 'D']
+    try:
+        valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
+    except ValueError:
+        yield f"❌ エラー: 無効なランク '{target_rank}' が指定されました。\n"
+        return
+    
+    final_candidates = []
+    processed_count = 0
+    for record in candidate_records_for_eval:
+        candidate = dict(record)
+        processed_count += 1
+        name = candidate.get('name') or candidate.get('project_name')
+        yield f"  > ({processed_count}/{len(candidate_records_for_eval)}) 「{name}」を評価中...\n"
+
+        if search_target_type == 'engineer':
+            job_doc, engineer_doc = source_doc, candidate['document']
+        else:
+            job_doc, engineer_doc = candidate['document'], source_doc
+
+        llm_result = get_match_summary_with_llm(job_doc, engineer_doc)
+
+        if llm_result and llm_result.get('summary') in valid_ranks:
+            candidate['grade'] = llm_result.get('summary')
+            candidate['positive_points'] = llm_result.get('positive_points', [])
+            candidate['concern_points'] = llm_result.get('concern_points', [])
+            final_candidates.append(candidate)
+            yield f"    -> ✅ ヒット！ (ランク: {candidate['grade']})\n"
+        else:
+            yield f"    -> ｽｷｯﾌﾟ (ランク外または評価失敗)\n"
+
+        if len(final_candidates) >= target_count:
+            yield f"  > 目標の{target_count}件に到達したため、評価を終了します。\n"
+            break
+
+    # --- 最終結果の表示 ---
+    yield f"\n---\n### **最終候補者リスト**\n"
+    if not final_candidates:
+        yield f"評価の結果、指定された条件（{target_rank}ランク以上）に合致する候補者はいませんでした。\n"
+        return
+    
+    final_candidates.sort(key=lambda x: rank_order.index(x['grade']))
+
+    for i, candidate in enumerate(final_candidates):
+        name = candidate.get('name') or candidate.get('project_name')
+        page_name = "技術者詳細" if search_target_type == 'engineer' else "案件詳細"
+        link = f"/{page_name}?id={candidate['id']}" 
+        
+        yield f"#### **{i+1}. [{name} (ID: {candidate['id']})]({link}) - ランク: {candidate['grade']}**\n"
+        if candidate.get('positive_points'):
+            yield "**ポジティブな点:**\n"
+            for point in candidate['positive_points']: yield f"- {point}\n"
+        if candidate.get('concern_points'):
+            yield "**懸念点:**\n"
+            for point in candidate['concern_points']: yield f"- {point}\n"
+        yield "\n"
+    # ▲▲▲【補完ここまで】▲▲▲
+

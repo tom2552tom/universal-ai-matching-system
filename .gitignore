@@ -12,3 +12,4 @@ venv/
 .streamlit/
 *.faiss
 *.faiss
+logs/email_cron.log

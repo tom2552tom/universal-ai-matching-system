@@ -27,12 +27,40 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- ID取得 ---
-selected_id = st.session_state.get('selected_job_id', None)
+
+# ▼▼▼【ここからが修正箇所】▼▼▼
+
+# --- ID取得ロジックの修正 ---
+# 1. URLのクエリパラメータからIDを取得
+query_id = st.query_params.get("id")
+
+# 2. session_state からIDを取得
+session_id = st.session_state.get('selected_job_id')
+
+selected_id = None
+if query_id:
+    # URLにIDがあれば最優先で採用
+    try:
+        selected_id = int(query_id)
+        # ページ内での状態維持のため、session_stateにもIDをセットしておく
+        st.session_state['selected_job_id'] = selected_id
+    except (ValueError, TypeError):
+        st.error("URLのIDが不正な形式です。")
+        st.stop()
+elif session_id:
+    # URLにIDがなく、session_stateにあればそれを使用
+    selected_id = session_id
+
+# --- IDが取得できなかった場合の処理 ---
 if selected_id is None:
-    st.error("案件が選択されていません。案件管理ページから案件を選択してください。")
-    if st.button("案件管理に戻る"): st.switch_page("pages/4_案件管理.py")
+    st.error("案件が選択されていません。案件管理ページまたはAIアシスタントから案件を選択してください。")
+    # 戻るボタンのリンク先も実際のファイル名に合わせる
+    if st.button("案件管理に戻る"):
+        st.switch_page("pages/4_案件管理") 
     st.stop()
+
+# ▲▲▲【修正ここまで】▲▲▲
+
 
 # --- DBから全データを取得 ---
 conn = be.get_db_connection()

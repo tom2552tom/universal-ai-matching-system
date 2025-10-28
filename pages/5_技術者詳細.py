@@ -20,12 +20,38 @@ ui.apply_global_styles()
 st.set_page_config(page_title="技術者詳細", layout="wide")
 
 
-# --- ID取得 ---
-selected_id = st.session_state.get('selected_engineer_id', None)
+
+# ▼▼▼【ここからが修正箇所】▼▼▼
+
+# --- ID取得ロジックの修正 ---
+# 1. URLのクエリパラメータからIDを取得
+query_id = st.query_params.get("id")
+
+# 2. session_state からIDを取得
+session_id = st.session_state.get('selected_engineer_id')
+
+selected_id = None
+if query_id:
+    # URLにIDがあれば最優先で採用
+    try:
+        selected_id = int(query_id)
+        # ページ内での状態維持のため、session_stateにもIDをセットしておく
+        st.session_state['selected_engineer_id'] = selected_id
+    except (ValueError, TypeError):
+        st.error("URLのIDが不正な形式です。")
+        st.stop()
+elif session_id:
+    # URLにIDがなく、session_stateにあればそれを使用
+    selected_id = session_id
+
+# --- IDが取得できなかった場合の処理 ---
 if selected_id is None:
-    st.error("技術者が選択されていません。技術者管理ページから技術者を選択してください。")
-    if st.button("技術者管理に戻る"): st.switch_page("pages/3_技術者管理.py")
+    st.error("技術者が選択されていません。技術者管理ページまたはAIアシスタントから技術者を選択してください。")
+    # 戻るボタンのリンク先も実際のファイル名に合わせる
+    if st.button("技術者管理に戻る"):
+        st.switch_page("pages/3_技術者管理.py") 
     st.stop()
+
 
 # --- DBから全データを取得 ---
 conn = be.get_db_connection()
