@@ -1961,8 +1961,15 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
         yield "✅ データベースを検索しましたが、キーワードに一致する候補は見つかりませんでした。\n"; return
     yield f"  > {len(candidate_records_for_indexing)}件の候補を一次抽出しました。\n"
 
+
+
+
+    
+    
+
     # --- ステップ4: 動的インデックス生成とベクトル検索 ---
     yield f"\nステップ4/5: 一次抽出した候補から、意味的に最も近い候補をAI的に検索しています...\n"
+    
     embedding_model = load_embedding_model()
     if not embedding_model:
         yield "❌ エラー: 埋め込みモデルの読み込みに失敗しました。\n"; return
@@ -1973,12 +1980,20 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
     ids = np.array([item['id'] for item in candidate_records_for_indexing], dtype=np.int64)
     documents = [str(item['document']) for item in candidate_records_for_indexing]
 
-    # ▼▼▼【ここが修正箇所】▼▼▼
-    yield f"  > {len(documents)}件のドキュメントのベクトル化を開始します... (これには数秒〜数十秒かかります)\n"
-    embeddings = embedding_model.encode(documents, normalize_embeddings=True, show_progress_bar=True)
+    # --- ここからが進捗表示を改善したベクトル化処理 ---
+    
+    yield f"  > {len(documents)}件のドキュメントのベクトル化を開始します... (GPU利用時は高速です)\n"
+    
+    # バッチ処理で一気にベクトル化するのが最も高速
+    # show_progress_bar=True にすると、実行中のターミナルに進捗バーが表示される
+    embeddings = embedding_model.encode(
+        documents, 
+        normalize_embeddings=True, 
+        show_progress_bar=True  # ターミナルに進捗バーを表示
+    )
+    
     yield f"  > ✅ ベクトル化が完了しました。\n"
-    # ▲▲▲【修正ここまで】▲▲▲
-
+    
     index.add_with_ids(embeddings, ids)
 
     yield f"  > FAISSインデックスをメモリ上に構築しました。類似度検索を実行します...\n"
@@ -1986,9 +2001,19 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
     _, result_ids = index.search(query_vector, min(TOP_K_CANDIDATES, index.ntotal))
     
     final_ids = [int(i) for i in result_ids[0] if i != -1]
+    
+    # result_idsの件数が多すぎると、その後のAI評価で時間がかかるため、絞り込む
+    # ここで絞り込む件数は、AI評価の対象となる最大件数
+    final_ids = final_ids[:100] # 例: 上位100件に絞る
+    
     if not final_ids:
         yield "✅ 類似度検索を行いましたが、意味的に近い候補は見つかりませんでした。\n"; return
-    yield f"  > {len(final_ids)}件の候補に絞り込みました。\n"
+    yield f"  > 類似度検索の結果、{len(final_ids)}件の候補に絞り込みました。\n"
+
+    # ▲▲▲【修正ここまで】▲▲▲
+
+
+
 
     # ▼▼▼【ここが補完されたロジック】▼▼▼
     # --- ステップ5: AIによる再評価と最終候補リストの生成 ---
