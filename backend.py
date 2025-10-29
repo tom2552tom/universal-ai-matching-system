@@ -1920,10 +1920,25 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
     # --- ステップ2: 検索ターゲットとキーワードの決定 ---
     yield "\nステップ2/5: 検索ターゲットとキーワードを決定しています...\n"
     source_doc_type, search_target_type, source_item = (None, None, None)
+
+    # ▼▼▼【ここからが修正箇所】▼▼▼
+    
     if parsed_data.get("jobs") and parsed_data["jobs"]:
-        source_doc_type, search_target_type, source_item = 'job', 'engineer', parsed_data['jobs'][0]
+        source_doc_type = 'job'
+        search_target_type = 'engineer'
+        source_item = parsed_data['jobs'][0]
     elif parsed_data.get("engineers") and parsed_data["engineers"]:
-        source_doc_type, search_target_type = 'engineer', 'job', parsed_data['engineers'][0]
+        source_doc_type = 'engineer'
+        search_target_type = 'job'
+        source_item = parsed_data['engineers'][0]
+        
+    # ▲▲▲【修正ここまで】▲▲▲
+
+
+    #if parsed_data.get("jobs") and parsed_data["jobs"]:
+    #    source_doc_type, search_target_type, source_item = 'job', 'engineer', parsed_data['jobs'][0]
+    #elif parsed_data.get("engineers") and parsed_data["engineers"]:
+    #    source_doc_type, search_target_type = 'engineer', 'job', parsed_data['engineers'][0]
     
     if not source_doc_type or not source_item:
         yield "❌ エラー: AIはテキストを構造化しましたが、中身が案件か技術者か判断できませんでした。\n"; return
