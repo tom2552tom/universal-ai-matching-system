@@ -1900,45 +1900,28 @@ def generate_ai_analysis_on_feedback(job_doc: str, engineer_doc: str, feedback_e
 # ▲▲▲【新しい関数ここまで】▲▲▲
 
 
-
-# find_candidates_on_demand 関数を以下に置き換える
+# backend.py
 
 def find_candidates_on_demand(input_text: str, target_rank: str, target_count: int):
     """
-    【ハイブリッド版・完成形】
-    1. キーワードでDBから候補を粗く絞り込み。
-    2. 絞り込んだ候補だけで動的にFAISSインデックスを生成し、ベクトル検索を実行。
-    3. AIで再評価して最終結果を生成する。
+    【最終完成版】
+    キーワードでDBから候補IDを全件取得後、100件ずつのバッチで
+    「動的インデックス生成」「ベクトル検索」「AI評価」を繰り返し、
+    目標件数に達したら処理を打ち切る、効率的かつ高品質な実装。
     """
-    # --- ステップ1: テキスト分類と要約 ---
-    yield "ステップ1/5: 入力情報をAIが分類・要約しています...\n"
-    # split_text_with_llm はUIに直接ログを出力する
+    # --- ステップ1: テキスト分類、キーワード抽出、候補IDの全件取得 ---
+    yield "ステップ1/3: 入力情報から評価対象となる全候補をリストアップしています...\n"
+    
+    # 1a. テキスト分類と要約
     parsed_data, _ = split_text_with_llm(input_text)
     if not parsed_data:
-        yield "❌ エラー: 入力情報から構造化データを抽出できませんでした。処理を中断します。\n"; return
-
-    # --- ステップ2: 検索ターゲットとキーワードの決定 ---
-    yield "\nステップ2/5: 検索ターゲットとキーワードを決定しています...\n"
-    source_doc_type, search_target_type, source_item = (None, None, None)
-
-    # ▼▼▼【ここからが修正箇所】▼▼▼
+        yield "❌ エラー: 入力情報から構造化データを抽出できませんでした。\n"; return
     
+    source_doc_type, search_target_type, source_item = (None, None, None)
     if parsed_data.get("jobs") and parsed_data["jobs"]:
-        source_doc_type = 'job'
-        search_target_type = 'engineer'
-        source_item = parsed_data['jobs'][0]
+        source_doc_type, search_target_type, source_item = 'job', 'engineer', parsed_data['jobs'][0]
     elif parsed_data.get("engineers") and parsed_data["engineers"]:
-        source_doc_type = 'engineer'
-        search_target_type = 'job'
-        source_item = parsed_data['engineers'][0]
-        
-    # ▲▲▲【修正ここまで】▲▲▲
-
-
-    #if parsed_data.get("jobs") and parsed_data["jobs"]:
-    #    source_doc_type, search_target_type, source_item = 'job', 'engineer', parsed_data['jobs'][0]
-    #elif parsed_data.get("engineers") and parsed_data["engineers"]:
-    #    source_doc_type, search_target_type = 'engineer', 'job', parsed_data['engineers'][0]
+        source_doc_type, search_target_type, source_item = 'engineer', 'job', parsed_data['engineers'][0]
     
     if not source_doc_type or not source_item:
         yield "❌ エラー: AIはテキストを構造化しましたが、中身が案件か技術者か判断できませんでした。\n"; return
@@ -1946,118 +1929,134 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
     yield f"  > 入力は「{source_doc_type}」情報と判断。検索ターゲットは「{search_target_type}」です。\n"
     source_doc = _build_meta_info_string(source_doc_type, source_item) + source_item.get("document", "")
 
+    # 1b. キーワード抽出
     yield "  > 検索の核となるキーワードをAIが抽出しています...\n"
-    keyword_extraction_prompt = f"""
-        以下のテキストから、データベース検索に有効な技術要素、役職、スキル名を最大5つ、カンマ区切りの単語リストとして抜き出してください。
-        バージョン情報や経験年数などの付随情報は含めず、単語のみを抽出してください。
-        例:
-        入力:「Laravel（v10）での開発経験があり、Vue.js（v3）も使えます。PM補佐の経験もあります。」
-        出力: Laravel, Vue.js, PM
-        入力テキスト: --- {input_text} ---
-        出力:
-    """
+    search_keywords = []
     try:
+        keyword_extraction_prompt = f"""
+            以下のテキストから、データベース検索に有効な技術要素、役職、スキル名を最大5つ、カンマ区切りの単語リストとして抜き出してください。
+            バージョン情報や経験年数などの付随情報は含めず、単語のみを抽出してください。
+            例:
+            入力:「Laravel（v10）での開発経験があり、Vue.js（v3）も使えます。PM補佐の経験もあります。」
+            出力: Laravel, Vue.js, PM
+            入力テキスト: --- {input_text} ---
+            出力:
+        """
         model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         response = model.generate_content(keyword_extraction_prompt)
-        search_keywords = [kw.strip() for kw in response.text.strip().split(',') if kw.strip()]
-        if not search_keywords: raise ValueError("キーワードが抽出できませんでした。")
-        yield f"  > 抽出されたキーワード: `{'`, `'.join(search_keywords)}`\n"
+        keywords_from_ai = [kw.strip() for kw in response.text.strip().split(',') if kw.strip()]
+        if not keywords_from_ai: raise ValueError("AIはキーワードを返しませんでした。")
+        search_keywords = keywords_from_ai
     except Exception as e:
-        yield f"  > ⚠️ キーワードのAI抽出に失敗({e})。ドキュメント冒頭で検索を試みます。\n"
-        search_keywords = [source_item.get("document", "")[:50]]
+        yield f"  > ⚠️ キーワードのAI抽出に失敗({e})。代替キーワードで検索します。\n"
+        fallback_keyword = source_item.get("project_name") or source_item.get("name")
+        if fallback_keyword: search_keywords = [fallback_keyword.strip()]
 
-    # --- ステップ3: キーワードによるDBからの候補絞り込み ---
-    yield f"\nステップ3/5: キーワードでデータベースから候補を絞り込んでいます...\n"
+    if not search_keywords:
+        yield "  > ❌ 検索キーワードを特定できませんでした。処理を中断します。\n"; return
+    yield f"  > 抽出されたキーワード: `{'`, `'.join(search_keywords)}`\n"
+
+    # 1c. キーワードに一致する「IDのみ」をDBから全件取得
     target_table = search_target_type + 's'
     name_column = "project_name" if search_target_type == 'job' else "name"
-    query = f"SELECT id, document FROM {target_table} WHERE is_hidden = 0 AND ("
-    or_conditions = [f"document ILIKE %s OR {name_column} ILIKE %s" for _ in search_keywords]
+    query = f"SELECT id FROM {target_table} WHERE is_hidden = 0 AND ("
+    or_conditions = [f"(document ILIKE %s OR {name_column} ILIKE %s)" for _ in search_keywords]
     params = [f"%{kw}%" for kw in search_keywords for _ in (0, 1)]
     query += " OR ".join(or_conditions)
-    query += ") ORDER BY id DESC LIMIT 100"
+    query += ") ORDER BY id DESC"
 
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute(query, tuple(params))
-            candidate_records_for_indexing = cursor.fetchall()
+            all_candidate_ids = [item['id'] for item in cursor.fetchall()]
     finally:
         if conn: conn.close()
 
-    if not candidate_records_for_indexing:
+    if not all_candidate_ids:
         yield "✅ データベースを検索しましたが、キーワードに一致する候補は見つかりませんでした。\n"; return
-    yield f"  > {len(candidate_records_for_indexing)}件の候補を一次抽出しました。\n"
+    yield f"  > キーワード検索の結果、{len(all_candidate_ids)}件の評価対象候補をリストアップしました。\n"
 
-    # --- ステップ4: 動的インデックス生成とベクトル検索 ---
-    yield f"\nステップ4/5: 一次抽出した候補から、意味的に最も近い候補をAI的に検索しています...\n"
+    # --- ループの初期化 ---
+    final_candidates = []
+    DB_FETCH_BATCH_SIZE = 25
+    rank_order = ['S', 'A', 'B', 'C', 'D']
+    valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
     embedding_model = load_embedding_model()
     if not embedding_model:
         yield "❌ エラー: 埋め込みモデルの読み込みに失敗しました。\n"; return
-        
-    dimension = embedding_model.get_sentence_embedding_dimension()
-    index = faiss.IndexIDMap(faiss.IndexFlatIP(dimension))
-    
-    ids = np.array([item['id'] for item in candidate_records_for_indexing], dtype=np.int64)
-    documents = [str(item['document']) for item in candidate_records_for_indexing]
-    
-    yield f"  > {len(documents)}件のドキュメントのベクトル化を開始します... (これには数十秒〜数分かかります)\n"
-    embeddings = embedding_model.encode(documents, normalize_embeddings=True, show_progress_bar=True)
-    yield f"  > ✅ ベクトル化が完了しました。\n"
-    
-    index.add_with_ids(embeddings, ids)
-    yield f"  > FAISSインデックスをメモリ上に構築しました。類似度検索を実行します...\n"
-    
     query_vector = embedding_model.encode([source_doc], normalize_embeddings=True)
-    _, result_ids = index.search(query_vector, min(TOP_K_CANDIDATES, index.ntotal))
-    final_ids = [int(i) for i in result_ids[0] if i != -1][:100] # 上位100件に絞る
-    
-    if not final_ids:
-        yield "✅ 類似度検索を行いましたが、意味的に近い候補は見つかりませんでした。\n"; return
-    yield f"  > 類似度検索の結果、{len(final_ids)}件の候補に絞り込みました。\n"
 
-    # --- ステップ5: AIによる再評価と最終候補リストの生成 ---
-    yield f"\nステップ5/5: 各候補者とのマッチング度をAIが評価し、最終リストを作成します...\n"
-    candidate_records_for_eval = get_items_by_ids(search_target_type + 's', final_ids)
+    # --- ステップ2: 目標件数に達するまで検索・評価ループを実行 ---
+    yield f"\nステップ2/3: 候補者を{DB_FETCH_BATCH_SIZE}件ずつのグループに分けて、AI評価を開始します...\n"
+    yield f"  > 目標: 「{target_rank}」ランク以上を {target_count}件 見つけるまで処理を続けます。\n"
     
-    rank_order = ['S', 'A', 'B', 'C', 'D']
-    try:
-        valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
-    except ValueError:
-        yield f"❌ エラー: 無効なランク '{target_rank}' が指定されました。\n"; return
-    
-    final_candidates = []
-    processed_count = 0
-    for record in candidate_records_for_eval:
-        # ★★★【KeyError対策】★★★
-        # 変更不可能なDictRowを、変更可能なdictに変換する
-        candidate = dict(record)
+    for page in range(0, len(all_candidate_ids), DB_FETCH_BATCH_SIZE):
+        batch_ids = all_candidate_ids[page : page + DB_FETCH_BATCH_SIZE]
+        if not batch_ids: break
+
+        yield f"\n--- 検索サイクル {page//DB_FETCH_BATCH_SIZE + 1} (DBの {page+1}件目〜) ---\n"
         
-        processed_count += 1
-        name = candidate.get('name') or candidate.get('project_name')
-        yield f"  > ({processed_count}/{len(candidate_records_for_eval)}) 「{name}」を評価中...\n"
+        # 2a. このバッチで必要なデータをDBから取得
+        candidate_records_for_indexing = get_items_by_ids(search_target_type + 's', batch_ids)
+        if not candidate_records_for_indexing: continue
+        
+        # 2b. 動的インデックス生成とベクトル検索 (このバッチ内での処理)
+        yield f"  > {len(candidate_records_for_indexing)}件の候補から、意味的に近いものを探しています...\n"
+        dimension = embedding_model.get_sentence_embedding_dimension()
+        index = faiss.IndexIDMap(faiss.IndexFlatIP(dimension))
+        ids = np.array([item['id'] for item in candidate_records_for_indexing], dtype=np.int64)
+        documents = [str(item['document']) for item in candidate_records_for_indexing]
+        embeddings = embedding_model.encode(documents, normalize_embeddings=True, show_progress_bar=False)
+        index.add_with_ids(embeddings, ids)
+        
+        _, result_ids = index.search(query_vector, len(documents))
+        batch_sorted_ids = [int(i) for i in result_ids[0] if i != -1]
+        if not batch_sorted_ids:
+            yield "  > このバッチには類似する候補がありませんでした。次のサイクルに進みます。\n"; continue
 
-        if search_target_type == 'engineer':
-            job_doc, engineer_doc = source_doc, candidate['document']
-        else:
-            job_doc, engineer_doc = candidate['document'], source_doc
+        # 2c. AIによる再評価
+        candidate_records_for_eval = get_items_by_ids(search_target_type + 's', batch_sorted_ids)
+        for record in candidate_records_for_eval:
+            candidate = dict(record)
+            name = candidate.get('name') or candidate.get('project_name')
+            
+            skills_text = ""
+            if search_target_type == 'engineer':
+                match = re.search(r'\[主要スキル:\s*([^\]]+)\]', candidate.get('document', ''))
+                if match: skills_text = match.group(1)
+            elif search_target_type == 'job':
+                match = re.search(r'\[必須スキル:\s*([^\]]+)\]', candidate.get('document', ''))
+                if match: skills_text = match.group(1)
+            
+            yield {"type": "eval_progress", "message": f"「{name}」を評価中...", "skills": skills_text[:100] + "..." if len(skills_text) > 100 else skills_text}
+            
+            llm_result = get_match_summary_with_llm(source_doc, candidate['document'])
 
-        llm_result = get_match_summary_with_llm(job_doc, engineer_doc)
+            if llm_result and llm_result.get('summary') in valid_ranks:
+                candidate['grade'] = llm_result.get('summary')
+                candidate['positive_points'] = llm_result.get('positive_points', [])
+                candidate['concern_points'] = llm_result.get('concern_points', [])
+                final_candidates.append(candidate)
+                yield f"    -> ✅ ヒット！ (ランク: **{candidate['grade']}**) - 現在 {len(final_candidates)}/{target_count} 件\n"
+            else:
+                actual_grade = llm_result.get('summary') if llm_result else "評価失敗"
+                yield f"    -> ｽｷｯﾌﾟ (ランク: **{actual_grade}**)\n"
 
-        if llm_result and llm_result.get('summary') in valid_ranks:
-            candidate['grade'] = llm_result.get('summary')
-            candidate['positive_points'] = llm_result.get('positive_points', [])
-            candidate['concern_points'] = llm_result.get('concern_points', [])
-            final_candidates.append(candidate)
-            yield f"    -> ✅ ランク: **{candidate['grade']}**\n"
-        else:
-            actual_grade = llm_result.get('summary') if llm_result else "評価失敗"
-            yield f"    -> ｽｷｯﾌﾟ (ランク: **{actual_grade}** が目標「{target_rank}」以上ではない、または評価失敗のため)\n"
-
+            if len(final_candidates) >= target_count:
+                yield f"\n🎉 目標の {target_count} 件に到達したため、全ての処理を終了します。\n"
+                break
+        
         if len(final_candidates) >= target_count:
-            yield f"  > 目標の{target_count}件に到達したため、評価を終了します。\n"; break
+            break
+    
+    if not final_candidates:
+        yield "\nℹ️ 全ての候補者を評価しましたが、目標ランクに達する結果はありませんでした。\n"
+    elif len(final_candidates) < target_count:
+        yield "\nℹ️ 全ての候補者の評価が完了しました。\n"
 
-    # --- 最終結果の表示 ---
-    yield f"\n---\n### **最終候補者リスト**\n"
+    # --- ステップ3: 最終結果の表示 ---
+    yield f"\nステップ3/3: 最終的な候補者リストを表示します。\n---\n### **最終候補者リスト**\n"
     if not final_candidates:
         yield f"評価の結果、指定された条件（{target_rank}ランク以上）に合致する候補者はいませんでした。\n"; return
     
@@ -2073,7 +2072,9 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
             yield "**ポジティブな点:**\n"
             for point in candidate['positive_points']: yield f"- {point}\n"
         if candidate.get('concern_points'):
-            yield "\n\n**懸念点:**\n"
+            yield "**懸念点:**\n"
             for point in candidate['concern_points']: yield f"- {point}\n"
         yield "\n"
+
+
 

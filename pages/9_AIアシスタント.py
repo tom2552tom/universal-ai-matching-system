@@ -44,47 +44,80 @@ if submitted:
                     target_count=target_count
                 )
                 
-
                 # ▼▼▼【ここからが新しいログ表示ロジック】▼▼▼
                 
                 # 履歴として残すログを表示する場所
                 permanent_log_placeholder = st.empty()
                 # 上書きされる一時的なログを表示する場所
                 temp_log_placeholder = st.empty()
+                # プログレスバーを管理するための辞書
+                progress_bars = {} 
 
                 permanent_logs = []
                 
                 try:
                     for chunk in response_generator:
-                        chunk_str = str(chunk)
+                        
+                        # 1. chunkが辞書かどうかをチェック
+                        if isinstance(chunk, dict):
+                            chunk_type = chunk.get("type")
+                            key = chunk.get("key")
 
-                        # ヒットログか、ステップ区切りか、最終結果のヘッダーかを判断
-                        if "✅ ヒット！" in chunk_str or "ステップ" in chunk_str or "最終候補者リスト" in chunk_str or "---" in chunk_str:
-                            # 履歴として残すログ
-                            permanent_logs.append(chunk_str)
-                            permanent_log_placeholder.markdown("".join(permanent_logs))
-                            # 一時ログはクリア
-                            temp_log_placeholder.empty()
+                            if chunk_type == "progress_start":
+                                progress_bars[key] = st.progress(0, text=chunk.get("text", "..."))
+                            
+                            elif chunk_type == "progress_update":
+                                if key in progress_bars:
+                                    progress_bars[key].progress(chunk["value"], text=chunk["text"])
+                            
+                            elif chunk_type == "progress_end":
+                                if key in progress_bars:
+                                    progress_bars[key].progress(1.0, text="完了！")
+                                    time.sleep(0.5)
+                                    progress_bars[key].empty()
+                                    del progress_bars[key]
+
+                            elif chunk_type == "eval_progress":
+                                # ★★★【ここが今回の修正の核】★★★
+                                message = chunk.get("message", "")
+                                skills = chunk.get("skills", "")
+                                
+                                # 整形して一時ログとして表示
+                                if skills:
+                                    temp_log_placeholder.info(f"{message}\n\n> **スキル:** {skills}")
+                                else:
+                                    temp_log_placeholder.info(message)
                         
-                        elif "評価中..." in chunk_str or "ｽｷｯﾌﾟ" in chunk_str:
-                            # 上書きする一時的なログ
-                            # 評価中のログとスキップログはここに表示される
-                            temp_log_placeholder.info(chunk_str.strip())
-                        
+                        # 2. それ以外（通常の文字列ログ）の場合
                         else:
-                            # 上記以外のログ（エラーなど）は履歴に残す
-                            permanent_logs.append(chunk_str)
-                            permanent_log_placeholder.markdown("".join(permanent_logs))
+                            chunk_str = str(chunk)
+                            # ヒットログやステップ区切りは永続ログへ
+                            if "✅ ヒット！" in chunk_str or "ステップ" in chunk_str or "最終候補者リスト" in chunk_str or "---" in chunk_str or "🎉" in chunk_str or "ℹ️" in chunk_str:
+                                permanent_logs.append(chunk_str)
+                                permanent_log_placeholder.markdown("".join(permanent_logs))
+                                temp_log_placeholder.empty() # ヒットしたら一時ログはクリア
+                            
+                            # スキップログは一時ログへ
+                            elif "ｽｷｯﾌﾟ" in chunk_str:
+                                temp_log_placeholder.warning(chunk_str.strip())
+                            
+                            # その他のログも永続ログへ
+                            else:
+                                permanent_logs.append(chunk_str)
+                                permanent_log_placeholder.markdown("".join(permanent_logs))
 
                 except Exception as e:
                     st.error("処理中に予期せぬエラーが発生しました。")
                     st.exception(e)
                 
                 finally:
-                    # 処理完了後、一時ログを完全にクリア
+                    # 処理完了後、残っている一時ログとプログレスバーをすべて消去
                     temp_log_placeholder.empty()
-
+                    for bar in progress_bars.values():
+                        bar.empty()
+                        
                 # ▲▲▲【ログ表示ロジックここまで】▲▲▲
+                
 
 # フッター表示
 ui.display_footer()
