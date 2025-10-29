@@ -1974,7 +1974,7 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
     or_conditions = [f"document ILIKE %s OR {name_column} ILIKE %s" for _ in search_keywords]
     params = [f"%{kw}%" for kw in search_keywords for _ in (0, 1)]
     query += " OR ".join(or_conditions)
-    query += ") ORDER BY id DESC LIMIT 500"
+    query += ") ORDER BY id DESC LIMIT 100"
 
     conn = get_db_connection()
     try:
@@ -2073,7 +2073,7 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
             yield "**ポジティブな点:**\n"
             for point in candidate['positive_points']: yield f"- {point}\n"
         if candidate.get('concern_points'):
-            yield "**懸念点:**\n"
+            yield "\n\n**懸念点:**\n"
             for point in candidate['concern_points']: yield f"- {point}\n"
         yield "\n"
 
