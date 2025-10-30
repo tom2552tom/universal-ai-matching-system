@@ -2077,4 +2077,163 @@ def find_candidates_on_demand(input_text: str, target_rank: str, target_count: i
         yield "\n"
 
 
+# backend.py の get_all_candidate_ids_and_source_doc 関数をこちらに置き換えてください
 
+def get_all_candidate_ids_and_source_doc(input_text: str) -> dict:
+    """
+    【修正版】
+    入力テキストを解析し、キーワードで一次絞り込みを行った候補IDの全リストと、
+    後続の処理で必要な情報を辞書で返す。
+    """
+    logs = []
+    
+    # --- 1a. テキスト分類と要約 ---
+    logs.append("ステップ1/2: 入力情報を解析しています...")
+    # split_text_with_llm はUI依存の可能性があるため、UI非依存版が望ましい
+    # ここではそのまま使用するが、st.spinnerなどは呼び出し元で管理するのが理想
+    with st.spinner("AIが入力テキストを分類・構造化中..."):
+        parsed_data, llm_logs = split_text_with_llm(input_text)
+    logs.extend(llm_logs)
+
+    if not parsed_data:
+        logs.append("❌ エラー: 入力情報から構造化データを抽出できませんでした。")
+        return {"logs": logs}
+    
+    source_doc_type, search_target_type, source_item = (None, None, None)
+    if parsed_data.get("jobs") and parsed_data["jobs"]:
+        source_doc_type, search_target_type, source_item = 'job', 'engineer', parsed_data['jobs'][0]
+    elif parsed_data.get("engineers") and parsed_data["engineers"]:
+        source_doc_type, search_target_type, source_item = 'engineer', 'job', parsed_data['engineers'][0]
+    
+    if not source_doc_type or not source_item:
+        logs.append("❌ エラー: テキストは構造化されましたが、案件か技術者か判断できませんでした。")
+        return {"logs": logs}
+        
+    logs.append(f"  > 入力は「{source_doc_type}」情報と判断。検索ターゲットは「{search_target_type}」です。")
+    source_doc = _build_meta_info_string(source_doc_type, source_item) + source_item.get("document", "")
+
+    # --- 1b. キーワード抽出 ---
+    logs.append("  > 検索キーワードをAIが抽出しています...")
+    search_keywords = []
+    try:
+        keyword_extraction_prompt = f"""
+            以下のテキストから、データベース検索に有効な技術要素、役職、スキル名を最大5つ、カンマ区切りの単語リストとして抜き出してください。
+            バージョン情報や経験年数などの付随情報は含めず、単語のみを抽出してください。
+            例:
+            入力:「Laravel（v10）での開発経験があり、Vue.js（v3）も使えます。PM補佐の経験もあります。」
+            出力: Laravel, Vue.js, PM
+            入力テキスト: --- {input_text} ---
+            出力:
+        """
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        response = model.generate_content(keyword_extraction_prompt)
+        keywords_from_ai = [kw.strip() for kw in response.text.strip().split(',') if kw.strip()]
+        if not keywords_from_ai: raise ValueError("AI did not return keywords.")
+        search_keywords = keywords_from_ai
+    except Exception as e:
+        logs.append(f"  > ⚠️ キーワード抽出失敗({e})。代替キーワードで検索します。")
+        fallback_keyword = source_item.get("project_name") or source_item.get("name")
+        if fallback_keyword:
+            search_keywords = [fallback_keyword.strip()]
+
+    if not search_keywords:
+        logs.append("  > ❌ 検索キーワードを特定できず、処理を中断します。")
+        # ★★★ 候補が0件であることを明示して返す ★★★
+        return {"logs": logs, "all_candidate_ids": []}
+        
+    logs.append(f"  > 抽出キーワード: `{'`, `'.join(search_keywords)}`")
+
+    # --- 1c. キーワードに一致する「IDのみ」をDBから全件取得 ---
+    logs.append("ステップ2/2: キーワードに一致する候補をデータベースからリストアップしています...")
+    target_table = search_target_type + 's'
+    name_column = "project_name" if search_target_type == 'job' else "name"
+    
+    # ★★★ `params` をここで初期化する ★★★
+    params = []
+    
+    query = f"SELECT id FROM {target_table} WHERE is_hidden = 0 AND ("
+    or_conditions = []
+    for kw in search_keywords:
+        or_conditions.append(f"(document ILIKE %s OR {name_column} ILIKE %s)")
+        params.extend([f"%{kw}%", f"%{kw}%"])
+    
+    query += " OR ".join(or_conditions)
+    query += ") ORDER BY id DESC"
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query, tuple(params))
+            all_candidate_ids = [item['id'] for item in cursor.fetchall()]
+    except Exception as e:
+        logs.append(f"❌ データベース検索中にエラーが発生しました: {e}")
+        return {"logs": logs, "all_candidate_ids": []}
+    finally:
+        if conn: conn.close()
+
+    if not all_candidate_ids:
+        logs.append("✅ データベースを検索しましたが、キーワードに一致する候補は見つかりませんでした。")
+        return {"logs": logs, "all_candidate_ids": []}
+    
+    return {
+        "logs": logs,
+        "all_candidate_ids": all_candidate_ids,
+        "source_doc": source_doc,
+        "search_target_type": search_target_type,
+    }
+
+
+# backend.py の evaluate_next_candidates 関数をこちらに置き換えてください
+def evaluate_next_candidates(candidate_ids: list, source_doc: str, search_target_type: str, target_rank: str):
+    """
+    【修正版】
+    ヒットした場合、Markdownではなく、フロントエンドで処理しやすいように
+    構造化された辞書データを返す。
+    """
+    if not candidate_ids:
+        return
+
+    rank_order = ['S', 'A', 'B', 'C', 'D']
+    try:
+        valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
+    except ValueError:
+        valid_ranks = []
+
+    candidate_records = get_items_by_ids(search_target_type + 's', candidate_ids)
+
+    for record in candidate_records:
+        page_name = "技術者詳細" if search_target_type == 'engineer' else "案件詳細"
+        candidate = dict(record)
+        name = candidate.get('name') or candidate.get('project_name')
+        
+        # ... (前略: eval_progress, llm_start の yield) ...
+        
+        llm_result = get_match_summary_with_llm(source_doc, candidate['document'])
+
+        if llm_result and llm_result.get('summary') in valid_ranks:
+            # ★★★【ここからが修正の核】★★★
+            # --- ヒットした場合 ---
+            
+            # 以前: Markdownを生成していた
+            # 変更後: 必要な情報をすべて含んだ辞書を返す
+            yield {
+                "type": "hit_candidate",
+                "data": {
+                    "id": candidate['id'],
+                    "name": name,
+                    "grade": llm_result.get('summary'),
+                    "positive_points": llm_result.get('positive_points', []),
+                    "concern_points": llm_result.get('concern_points', []),
+                    "page_name": page_name
+                }
+            }
+            yield {"type": "pause"}
+            # ★★★【修正ここまで】★★★
+
+        else:
+            # --- スキップした場合 (変更なし) ---
+            actual_grade = llm_result.get('summary') if llm_result else "評価失敗"
+            yield {
+                "type": "skip_log",
+                "message": f"候補「{name}」はスキップされました。(AI評価: {actual_grade})"
+            }
