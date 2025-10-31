@@ -297,82 +297,99 @@ else:
 
 
 
-# pages/5_技術者詳細.py の「AI再評価＋マッチング」セクションをこちらに置き換えてください
-
 st.divider()
 st.header("⚙️ AI再評価＋マッチング")
-st.info("「情報ソースを更新する」ボタンでスキル情報を変更した場合、このボタンを押すことで、最新の情報ですべての案件とのマッチングを再実行します。")
 
+# --- UIと状態管理 ---
+# selected_id はこのページの技術者ID
+CONFIRM_KEY = f"rematch_confirm_engineer_{selected_id}"
+RUN_KEY = f"run_rematch_engineer_{selected_id}"
+RANK_KEY = f"rematch_rank_engineer_{selected_id}"
+COUNT_KEY = f"rematch_count_engineer_{selected_id}"
+
+if CONFIRM_KEY not in st.session_state:
+    st.session_state[CONFIRM_KEY] = False
+if RUN_KEY not in st.session_state:
+    st.session_state[RUN_KEY] = False
+
+# --- UI定義 ---
 with st.container(border=True):
+    st.info("この技術者のスキル情報からAIがキーワードを抽出し、関連する案件候補を絞り込んでから、最新のAI評価に基づいた再マッチングを実行します。")
+    
     st.markdown("##### マッチング条件設定")
     col1, col2 = st.columns(2)
     with col1:
-        target_rank = st.selectbox(
-            "最低ランク",
-            options=['S', 'A', 'B', 'C'],
-            index=2, 
-            help="ここで選択したランク以上のマッチングを検索します。（例: Bを選択するとS, A, Bが対象となります）"
+        st.selectbox(
+            "最低ランク", ['S', 'A', 'B', 'C'], index=1, key=RANK_KEY,
+            help="ここで選択したランク以上のマッチング結果を生成します。"
         )
     with col2:
-        # ▼▼▼【ここを修正】▼▼▼
-        target_count = st.number_input(
-            "最大ヒット件数(1-10件)", # ラベルを少し変更
-            min_value=1,
-            max_value=10,
-            value=5, 
-            help="指定したランク以上のマッチングがこの件数に達した時点で、AIの評価処理を自動的に終了します。処理時間の短縮とコスト削減に繋がります。" # helpテキストを修正
+        st.number_input(
+            "最大ヒット件数(1-10件)", 1, 10, 5, key=COUNT_KEY,
+            help="指定ランク以上のマッチングがこの件数に達すると処理を終了します。"
         )
-        #st.caption("ヒットさせたい最低件数を指定します。") # ラベルの下に説明を追加
-        # ▲▲▲【修正ここまで】▲▲▲
 
-# 各技術者IDに固有のセッションステートキーを定義
-re_eval_confirmation_key = f"confirm_re_evaluate_{selected_id}"
+    if st.button("🤖 AIキーワード抽出による再マッチングを実行", type="primary", use_container_width=True):
+        st.session_state[CONFIRM_KEY] = True
+        st.rerun()
 
-if re_eval_confirmation_key not in st.session_state:
-    st.session_state[re_eval_confirmation_key] = False
-
-# 確認UIの表示/非表示を切り替えるボタン
-if st.button("🤖 AI再評価と再マッチングを実行する", type="primary", use_container_width=True, key=f"re_eval_main_btn_{selected_id}"):
-    st.session_state[re_eval_confirmation_key] = not st.session_state[re_eval_confirmation_key]
-    st.rerun()
-
-# 確認UIの表示
-if st.session_state[re_eval_confirmation_key]:
+# --- 確認UIと実行トリガー ---
+if st.session_state.get(CONFIRM_KEY):
     with st.container(border=True):
-        st.warning(f"**本当に再評価と再マッチングを実行しますか？**\n\nこの技術者に関する既存のマッチング結果は**すべて削除**され、最新の情報で再計算されます。\n\n**実行条件:**\n- **目標ランク:** {target_rank} ランク以上\n- **目標件数:** {target_count} 件")
+        st.warning(f"**本当に再マッチングを実行しますか？**\n\nこの技術者に関する既存のマッチング結果は**すべて削除**されます。")
+        st.markdown(f"""
+        **実行条件:**
+        - **目標ランク:** `{st.session_state[RANK_KEY]}` ランク以上
+        - **目標件数:** `{st.session_state[COUNT_KEY]}` 件
+        """)
         
-        confirm_check = st.checkbox("はい、すべての既存マッチング結果の削除を承認し、再実行します。", key=f"re_eval_confirm_checkbox_{selected_id}")
+        agree = st.checkbox("はい、既存のマッチング結果の削除を承認し、再実行します。")
         
-        col_run, col_cancel, _ = st.columns([1, 1, 3])
+        col_run, col_cancel = st.columns(2)
         with col_run:
-            execute_button_clicked = st.button("再評価実行", disabled=not confirm_check, use_container_width=True, key=f"re_eval_execute_btn_{selected_id}")
+            if st.button("実行", disabled=not agree, use_container_width=True):
+                st.session_state[RUN_KEY] = True
+                st.session_state[CONFIRM_KEY] = False
+                st.rerun()
         with col_cancel:
-            if st.button("キャンセル", use_container_width=True):
-                st.session_state[re_eval_confirmation_key] = False
+            if st.button("キャンセル"):
+                st.session_state[CONFIRM_KEY] = False
                 st.rerun()
 
-        # 「再評価実行」ボタンが押された後の処理
-        if execute_button_clicked:
-            log_placeholder = st.container()
-            with log_placeholder:
-                with st.spinner("再評価と再マッチングを実行中..."):
-                    # ▼▼▼【backendの関数に新しい引数を渡す】▼▼▼
-                    success = be.re_evaluate_and_match_single_engineer(
-                        engineer_id=selected_id,
-                        target_rank=target_rank,
-                        target_count=target_count
-                    )
-                
-                if success:
-                    st.success("AIによる再評価と再マッチングが完了しました。")
-                    st.balloons()
-                    st.info("2秒後に画面を自動で更新します...")
-                    time.sleep(2)
-                    st.session_state[re_eval_confirmation_key] = False
-                    st.rerun()
-                else:
-                    st.error("処理中にエラーが発生しました。詳細は上記のログを確認してください。")
+# --- 実行ロジック (st.status) ---
+if st.session_state.get(RUN_KEY):
+    st.session_state[RUN_KEY] = False
+    
+    with st.status("AIキーワード抽出による再マッチングを実行中...", expanded=True) as status:
+        try:
+            # ★★★ 技術者用の新しい専用関数を呼び出す ★★★
+            response_generator = be.rematch_engineer_with_keyword_filtering(
+                engineer_id=selected_id, # ここでは技術者IDを渡す
+                target_rank=st.session_state[RANK_KEY],
+                target_count=st.session_state[COUNT_KEY]
+            )
+            
+            final_message = ""
+            for log_message in response_generator:
+                st.markdown(log_message, unsafe_allow_html=True)
+                final_message = log_message
 
+            if "✅" in final_message or "🎉" in final_message or "ℹ️" in final_message:
+                status.update(label="処理が正常に完了しました！", state="complete", expanded=False)
+                st.success("再マッチングが完了しました。ページをリロードして結果を確認してください。")
+                st.balloons()
+            else:
+                status.update(label="処理が完了しませんでした。", state="error", expanded=True)
+                st.error("処理が完了しませんでした。上記のログを確認してください。")
+
+        except Exception as e:
+            st.error(f"UI処理中に予期せぬエラーが発生しました: {e}")
+            status.update(label="UIエラー", state="error", expanded=True)
+
+    if st.button("ページを更新して結果を確認"):
+        st.rerun()
+
+        
 st.divider()
 
 
