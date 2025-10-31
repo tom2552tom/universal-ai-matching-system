@@ -2392,23 +2392,27 @@ def get_items_by_ids_sync(item_type: str, ids: list) -> list:
                 if not batch_ids:
                     continue
                 
+                # ★★★【ここからが修正の核】★★★
                 query = f"""
                     SELECT 
                         t.*, 
                         u.username as assigned_username,
-                        fb_counts.feedback_count
+                        COALESCE(mc.match_count, 0) as match_count -- マッチング件数を取得(NULLの場合は0に)
                     FROM {table_name} t
                     LEFT JOIN users u ON t.assigned_user_id = u.id
                     LEFT JOIN (
+                        -- このサブクエリで、各案件/技術者ごとの有効なマッチング件数を事前に計算する
                         SELECT 
-                            {'job_id' if item_type == 'jobs' else 'engineer_id'} as join_key, 
-                            COUNT(*) as feedback_count
+                            {'job_id' if item_type == 'jobs' else 'engineer_id'} as item_id, 
+                            COUNT(*) as match_count
                         FROM matching_results
-                        WHERE feedback_status IS NOT NULL AND feedback_comment IS NOT NULL AND feedback_comment != ''
-                        GROUP BY join_key
-                    ) AS fb_counts ON t.id = fb_counts.join_key
+                        WHERE is_hidden = 0 -- 非表示でないマッチングのみをカウント
+                        GROUP BY item_id
+                    ) AS mc ON t.id = mc.item_id
                     WHERE t.id = ANY(%s)
                 """
+                # ★★★【修正ここまで】★★★
+                
                 cursor.execute(query, (batch_ids,))
                 
                 batch_results = cursor.fetchall()

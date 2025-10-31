@@ -88,7 +88,7 @@ else:
     display_count = st.session_state.eng_display_count
     ids_to_display = all_ids[:display_count]
     
-    engineers_to_display = be.get_items_by_ids('engineers', ids_to_display)
+    engineers_to_display = be.get_items_by_ids_sync('engineers', ids_to_display)
     
     header_text = f"検索結果: **{len(all_ids)}** 名中、**{len(engineers_to_display)}** 名を表示中"
     st.header(header_text)
@@ -96,34 +96,38 @@ else:
     if not engineers_to_display:
         st.warning("表示するデータがありません。")
     else:
-        for eng in engineers_to_display:
+
+        for engineer in engineers_to_display:
             with st.container(border=True):
-                col1, col2 = st.columns([4, 1])
+                col1, col2, col3 = st.columns([4, 2, 1])
+
                 with col1:
-                    title_display = f"#### {eng['name'] or 'N/A'}"
-                    if eng['is_hidden']:
-                        title_display += " <span style='color: #888;'>(非表示)</span>"
-                    st.markdown(title_display, unsafe_allow_html=True)
-                    doc_parts = eng['document'].split('\n---\n', 1)
-                    preview_text = (doc_parts[1] if len(doc_parts) > 1 else eng['document']).replace('\n',' ')
-                    st.caption(preview_text[:250] + "...")
-                with col2:
-
-                    assigned_username = eng.get('assigned_username')
-
-                    if assigned_username:
-                        st.markdown(f"👤 **担当:** {assigned_username}")
+                    engineer_name = engineer.get('name') or f"技術者 (ID: {engineer['id']})"
+                    if engineer.get('is_hidden') == 1:
+                        st.markdown(f"##### 🙈 `{engineer_name}`")
                     else:
-                        # 担当者がいない場合は、スペースを確保するため空のマークダウンを置くか、
-                        # 「未割り当て」と表示しても良い
-                        st.markdown("👤 **担当:** <span style='color: #888;'>未割り当て</span>", unsafe_allow_html=True)
+                        st.markdown(f"##### {engineer_name}")
 
-                    
-                    st.markdown(f"**ID:** {eng['id']}")
+                    doc_parts = engineer.get('document', '').split('\n---\n', 1)
+                    main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
+                    st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:100] + "...")
 
-                    if st.button("詳細を見る", key=f"detail_{eng['id']}", use_container_width=True):
-                        st.session_state['selected_engineer_id'] = eng['id']
-                        st.switch_page("pages/5_技術者詳細.py") # .py を削除
+                with col2:
+                    # ★★★【ここからが修正の核】★★★
+                    match_count = engineer.get('match_count', 0)
+                    if match_count > 0:
+                        st.markdown(f"**🤝 `{match_count}`** 件のマッチ")
+                    # ★★★【修正ここまで】★★★
+
+                    assignee = engineer.get('assigned_username') or "未担当"
+                    st.markdown(f"**担当:** {assignee}")
+
+                with col3:
+                    if st.button("詳細を見る", key=f"eng_detail_{engineer['id']}", use_container_width=True):
+                        st.session_state['selected_engineer_id'] = engineer['id']
+                        st.switch_page("pages/5_技術者詳細.py")
+
+                        
 
     # --- 「Load More」ボタン ---
     if all_ids and display_count < len(all_ids): # all_idsが存在することを確認

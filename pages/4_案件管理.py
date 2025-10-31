@@ -101,7 +101,7 @@ else:
     display_count = st.session_state.job_display_count
     ids_to_display = all_ids[:display_count]
     
-    jobs_to_display = be.get_items_by_ids('jobs', ids_to_display)
+    jobs_to_display = be.get_items_by_ids_sync('jobs', ids_to_display)
     
     header_text = f"検索結果: **{len(all_ids)}** 件中、**{len(jobs_to_display)}** 件を表示中"
     st.header(header_text)
@@ -109,46 +109,38 @@ else:
     if not jobs_to_display:
         st.warning("表示するデータがありません。")
     else:
+        
         for job in jobs_to_display:
             with st.container(border=True):
-                col1, col2 = st.columns([4, 1])
+                col1, col2, col3 = st.columns([4, 2, 1])
+                
                 with col1:
-                    # ご提示のコードの表示ロジックを流用
-                    project_name = job['project_name'] or f"案件 (ID: {job['id']})"
-                    title_display = f"#### {project_name}"
-                    if job['is_hidden']:
-                        title_display += " <span style='color: #888;'>(非表示)</span>"
-                    st.markdown(title_display, unsafe_allow_html=True)
-                    doc_parts = job['document'].split('\n---\n', 1)
-                    preview_text = (doc_parts[1] if len(doc_parts) > 1 else job['document']).replace('\n',' ')
-                    st.caption(preview_text[:250] + "...")
-                
-
-                # ▼▼▼【ここのカラム内を修正】▼▼▼
-                with col2:
-                    # 担当者が存在する場合のみ表示
-                    assigned_username = job.get('assigned_username')
-                    if assigned_username:
-                        st.markdown(f"👤 **担当:** {assigned_username}")
+                    project_name = job.get('project_name') or f"案件 (ID: {job['id']})"
+                    if job.get('is_hidden') == 1:
+                        st.markdown(f"##### 🙈 `{project_name}`")
                     else:
-                        # 担当者がいない場合は、スペースを確保するため空のマークダウンを置くか、
-                        # 「未割り当て」と表示しても良い
-                        st.markdown("👤 **担当:** <span style='color: #888;'>未割り当て</span>", unsafe_allow_html=True)
-
-                    st.markdown(f"**ID:** {job['id']}")
+                        st.markdown(f"##### {project_name}")
                     
-                    if st.button("詳細を見る", key=f"detail_job_{job['id']}", use_container_width=True):
+                    # documentからメタ情報を除いた本文だけをプレビュー表示
+                    doc_parts = job.get('document', '').split('\n---\n', 1)
+                    main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
+                    st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:100] + "...")
+
+                with col2:
+                    # ★★★【ここからが修正の核】★★★
+                    match_count = job.get('match_count', 0)
+                    if match_count > 0:
+                        st.markdown(f"**🤝 `{match_count}`** 件のマッチ")
+                    # ★★★【修正ここまで】★★★
+
+                    assignee = job.get('assigned_username') or "未担当"
+                    st.markdown(f"**担当:** {assignee}")
+
+                with col3:
+                    if st.button("詳細を見る", key=f"job_detail_{job['id']}", use_container_width=True):
                         st.session_state['selected_job_id'] = job['id']
-                        st.switch_page("pages/6_案件詳細.py") # 以前の修正を反映
-                # ▲▲▲【修正ここまで】▲▲▲
-                
-                #with col2:
-                #    if job.get('assigned_username'):
-                #        st.markdown(f"👤 **担当:** {job['assigned_username']}")
-                #    st.markdown(f"**ID:** {job['id']}")
-                #    if st.button("詳細を見る", key=f"detail_job_{job['id']}", use_container_width=True):
-                #       st.session_state['selected_job_id'] = job['id']
-                #        st.switch_page("pages/6_案件詳細.py") # ファイル名に合わせて修正
+                        st.switch_page("pages/6_案件詳細.py")
+
 
     # --- 「Load More」ボタン ---
     if display_count < len(all_ids):
