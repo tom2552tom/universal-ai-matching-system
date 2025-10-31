@@ -2237,3 +2237,241 @@ def evaluate_next_candidates(candidate_ids: list, source_doc: str, search_target
                 "type": "skip_log",
                 "message": f"候補「{name}」はスキップされました。(AI評価: {actual_grade})"
             }
+
+
+
+
+
+
+def rematch_job_with_keyword_filtering(job_id, target_rank='B', target_count=5):
+    """
+    【案件詳細ページ専用】
+    AIキーワード抽出による絞り込みを行い、最新の技術者から順にマッチング評価を実行する。
+    処理の全ステップをログとしてyieldするジェネレータ。
+    """
+    if not job_id:
+        yield "❌ 案件IDが指定されていません。"
+        return
+
+    rank_order = ['S', 'A', 'B', 'C', 'D']
+    try:
+        valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
+    except ValueError:
+        yield f"❌ 無効な目標ランクが指定されました: {target_rank}"
+        return
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # --- ステップ1: 案件情報の取得 ---
+            yield "📄 対象案件の元情報を取得しています..."
+            cursor.execute("SELECT source_data_json, document FROM jobs WHERE id = %s", (job_id,))
+            job_record = cursor.fetchone()
+            if not job_record or not job_record['source_data_json']:
+                yield f"❌ 案件ID:{job_id} の元情報が見つかりませんでした。"
+                return
+            
+            job_doc = job_record['document']
+            source_data = json.loads(job_record['source_data_json'])
+            original_text = source_data.get('body', '') + "".join([f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content')])
+
+            # --- ステップ2: 検索キーワードの抽出 ---
+            yield "🤖 検索の核となるキーワードをAIが抽出しています..."
+            search_keywords = []
+            try:
+                keyword_extraction_prompt = f"""
+                    以下の案件情報テキストから、技術者を探す上で重要となる検索キーワードを最大10個、カンマ区切りの単語リストとして抜き出してください。
+                    「必須」「歓迎」などの枕詞や、経験年数、単価などの付随情報は含めず、技術名や役職名などの単語のみを抽出してください。
+                    入力テキスト: --- {original_text} ---
+                    出力:
+                """
+                model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+                response = model.generate_content(keyword_extraction_prompt)
+                search_keywords = [kw.strip() for kw in response.text.strip().split(',') if kw.strip()]
+                if not search_keywords: raise ValueError("AI did not return keywords.")
+                yield f"  > 抽出キーワード: `{', '.join(search_keywords)}`"
+            except Exception as e:
+                yield f"⚠️ キーワードのAI抽出に失敗({e})。全技術者を対象に処理を続行します。"
+
+            # --- ステップ3: DB一次絞り込み (キーワードに一致する技術者IDを取得) ---
+            yield "🔍 キーワードに一致する技術者候補をDBからリストアップしています..."
+            if search_keywords:
+                query = "SELECT id FROM engineers WHERE is_hidden = 0 AND ("
+                or_conditions = [f"(document ILIKE %s OR name ILIKE %s)" for _ in search_keywords]
+                params = [f"%{kw}%" for kw in search_keywords for _ in (0, 1)]
+                query += " OR ".join(or_conditions)
+                query += ") ORDER BY id DESC" # 最新の技術者から
+                cursor.execute(query, tuple(params))
+            else:
+                cursor.execute("SELECT id FROM engineers WHERE is_hidden = 0 ORDER BY id DESC")
+            
+            candidate_ids = [item['id'] for item in cursor.fetchall()]
+
+            if not candidate_ids:
+                yield "⚠️ キーワードに一致する技術者が見つかりませんでした。処理を終了します。"
+                conn.commit()
+                return
+            yield f"  > **{len(candidate_ids)}名** の評価対象候補をリストアップしました。"
+            
+            # --- ステップ4: 既存マッチングのクリアと逐次評価 ---
+            cursor.execute("DELETE FROM matching_results WHERE job_id = %s", (job_id,))
+            yield f"🗑️ 案件ID:{job_id} の既存マッチング結果をクリアしました。"
+            yield "🔄 絞り込んだ候補者リストに対して、順にマッチング処理を開始します..."
+
+            candidate_records = get_items_by_ids_sync('engineers', candidate_ids) # 同期版で一括取得
+            
+            found_count = 0
+            processed_count = 0
+            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+            for engineer in candidate_records:
+                processed_count += 1
+                yield f"  `({processed_count}/{len(candidate_records)})` 技術者 **{engineer['name']}** とマッチング中..."
+                
+                llm_result = get_match_summary_with_llm(job_doc, engineer['document'])
+
+                if llm_result and 'summary' in llm_result:
+                    grade = llm_result.get('summary')
+                    if grade in valid_ranks:
+                        positive_points = json.dumps(llm_result.get('positive_points', []), ensure_ascii=False)
+                        concern_points = json.dumps(llm_result.get('concern_points', []), ensure_ascii=False)
+                        score = 0.0
+                        
+                        try:
+                            cursor.execute(
+                                'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                                (job_id, engineer['id'], score, now_str, grade, positive_points, concern_points)
+                            )
+                            yield f"    -> **<span style='color: #28a745;'>✅ ヒット！</span>** 評価: **{grade}** ... DBに保存しました。"
+                            found_count += 1
+                        except Exception as db_err:
+                            yield f"    -> <span style='color: #dc3545;'>❌ DB保存エラー</span>: {db_err}"
+                    else:
+                        yield f"    -> <span style='color: #ffc107;'>⏭️ スキップ</span> (評価: {grade})"
+                else:
+                    yield "    -> <span style='color: #dc3545;'>❌ LLM評価失敗</span>"
+
+                if found_count >= target_count:
+                    yield f"🎉 目標の {target_count} 件に到達したため、処理を終了します。"
+                    break
+            
+            if found_count < target_count:
+                yield f"ℹ️ すべての候補者の評価が完了しました。(ヒット数: {found_count}件)"
+
+        conn.commit()
+        yield "✅ すべての処理が正常に完了しました。"
+    except Exception as e:
+        conn.rollback()
+        yield f"❌ 再評価・再マッチング中に予期せぬエラーが発生しました: {e}"
+        import traceback
+        yield f"```\n{traceback.format_exc()}\n```"
+
+
+
+# backend.py の get_items_by_ids 関数をこちらに置き換えてください
+
+def get_items_by_ids_sync(item_type: str, ids: list) -> list:
+    """
+    【同期版・メモリ効率化】
+    大量のIDをバッチで取得し、最終的に全レコードの「リスト」を返す。
+    案件管理ページなど、一度に全データを必要とするUI用。
+    (以前の get_items_by_ids からリネーム)
+    """
+    if not ids or item_type not in ['jobs', 'engineers']:
+        return []
+
+    table_name = 'jobs' if item_type == 'jobs' else 'engineers'
+    BATCH_SIZE = 200
+    results_map = {}
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            for i in range(0, len(ids), BATCH_SIZE):
+                batch_ids = ids[i : i + BATCH_SIZE]
+                if not batch_ids:
+                    continue
+                
+                query = f"""
+                    SELECT 
+                        t.*, 
+                        u.username as assigned_username,
+                        fb_counts.feedback_count
+                    FROM {table_name} t
+                    LEFT JOIN users u ON t.assigned_user_id = u.id
+                    LEFT JOIN (
+                        SELECT 
+                            {'job_id' if item_type == 'jobs' else 'engineer_id'} as join_key, 
+                            COUNT(*) as feedback_count
+                        FROM matching_results
+                        WHERE feedback_status IS NOT NULL AND feedback_comment IS NOT NULL AND feedback_comment != ''
+                        GROUP BY join_key
+                    ) AS fb_counts ON t.id = fb_counts.join_key
+                    WHERE t.id = ANY(%s)
+                """
+                cursor.execute(query, (batch_ids,))
+                
+                batch_results = cursor.fetchall()
+                for row in batch_results:
+                    results_map[row['id']] = dict(row)
+
+    except Exception as e:
+        print(f"IDによるアイテム取得中にエラーが発生しました: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+    final_ordered_results = [results_map[id] for id in ids if id in results_map]
+    return final_ordered_results
+
+
+# 必要であれば、ストリーミング版も定義しておく
+# (現時点では直接呼び出されていませんが、将来のために残しておくと良いでしょう)
+def get_items_by_ids_stream(item_type: str, ids: list):
+    """
+    【ストリーミング版・ジェネレータ】
+    大量のIDをバッチで取得し、その進捗をyieldで報告する。
+    最終的に全レコードのリストをreturnで返す。
+    """
+    if not ids or item_type not in ['jobs', 'engineers']:
+        return []
+
+    table_name = 'jobs' if item_type == 'jobs' else 'engineers'
+    BATCH_SIZE = 200
+    results_map = {}
+    total_ids = len(ids)
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            for i in range(0, total_ids, BATCH_SIZE):
+                batch_ids = ids[i : i + BATCH_SIZE]
+                if not batch_ids:
+                    continue
+                
+                processed_count = min(i + BATCH_SIZE, total_ids)
+                yield f"  - DBから詳細データを取得中... ({processed_count} / {total_ids} 件)"
+                
+                query = f"""
+                    SELECT ... 
+                    WHERE t.id = ANY(%s)
+                """ # (クエリ本体は sync 版と同じ)
+                cursor.execute(query, (batch_ids,))
+                
+                batch_results = cursor.fetchall()
+                for row in batch_results:
+                    results_map[row['id']] = dict(row)
+        
+        yield f"  - ✅ 全 {total_ids} 件のデータ取得完了。"
+
+    except Exception as e:
+        yield f"❌ IDによるアイテム取得中にエラーが発生しました: {e}"
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+    final_ordered_results = [results_map[id] for id in ids if id in results_map]
+    return final_ordered_results
+
