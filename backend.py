@@ -2606,3 +2606,27 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
 
 
 
+
+def update_job_project_name(job_id: int, new_project_name: str) -> bool:
+    """
+    指定された案件IDの project_name を更新する。
+    """
+    # 新しい案件名が空文字列や空白のみの場合は更新しない
+    if not new_project_name or not new_project_name.strip():
+        print("新しい案件名が空のため、更新をスキップしました。")
+        return False
+        
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE jobs SET project_name = %s WHERE id = %s",
+                    (new_project_name.strip(), job_id)
+                )
+            conn.commit()
+            return True
+        except (Exception, psycopg2.Error) as e:
+            print(f"案件名の更新中にエラーが発生しました: {e}")
+            conn.rollback()
+            return False
+        

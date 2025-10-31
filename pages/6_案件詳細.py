@@ -101,15 +101,42 @@ finally:
 
 
 if job_data:
-    # --- タイトル表示 ---
+    # ★★★【ここからが修正の核】★★★
+    # --- タイトル・案件名編集セクション ---
     is_currently_hidden = job_data['is_hidden'] == 1
-    project_name = job_data['project_name'] or f"案件 (ID: {selected_id})"
-    title_display = f"💼 {project_name}"
+    current_project_name = job_data['project_name'] or "" # Noneの場合は空文字列に
+
+    # 非表示ステータスをタイトルに含める
+    title_display = "💼 案件詳細"
     if is_currently_hidden:
         title_display += " `非表示`"
     st.title(title_display)
     st.caption(f"ID: {selected_id}")
+
+    # 案件名を編集するためのフォーム
+    with st.form(key="project_name_edit_form"):
+        new_project_name = st.text_input(
+            "案件名",
+            value=current_project_name,
+            placeholder="案件名を入力してください"
+        )
+        submitted_name_change = st.form_submit_button("案件名を更新", use_container_width=True)
+
+        if submitted_name_change:
+            if new_project_name.strip() == current_project_name.strip():
+                st.toast("案件名に変更はありません。", icon="ℹ️")
+            elif be.update_job_project_name(selected_id, new_project_name):
+                st.success(f"案件名を「{new_project_name}」に更新しました。")
+                st.balloons()
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("案件名の更新に失敗しました。")
+    
     st.divider()
+    # ★★★【修正ここまで】★★★
+
+
 
     # --- 担当者情報セクション ---
     st.subheader("👤 担当者情報")
