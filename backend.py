@@ -311,14 +311,56 @@ def get_match_summary_with_llm(job_doc, engineer_doc):
         with st.spinner("AIがマッチング根拠を分析中..."):
             response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
         raw_text = response.text
-        start_index = raw_text.find('{'); end_index = raw_text.rfind('}')
-        if start_index != -1 and end_index != -1 and start_index < end_index:
-            json_str = raw_text[start_index : end_index + 1]
+
+        # ★★★【ここからが修正の核】★★★
+        # 1. 最初の '{' を探す
+        start_index = raw_text.find('{')
+        if start_index == -1:
+            print(f"ERROR: get_match_summary_with_llm - No JSON object found in response: {raw_text}")
+            return None
+
+        # 2. '{' と '}' の対応を数えて、最初の完全なJSONオブジェクトの終わりを見つける
+        brace_counter = 0
+        end_index = -1
+        for i in range(start_index, len(raw_text)):
+            char = raw_text[i]
+            if char == '{':
+                brace_counter += 1
+            elif char == '}':
+                brace_counter -= 1
+            
+            # brace_counterが0になった最初の地点がJSONの終わり
+            if brace_counter == 0:
+                end_index = i
+                break
+        
+        if end_index == -1:
+            print(f"ERROR: get_match_summary_with_llm - Incomplete JSON object in response: {raw_text}")
+            return None
+
+        json_str = raw_text[start_index : end_index + 1]
+        # ★★★【修正ここまで】★★★
+
+        # パースと修復のロジックは前回と同じ
+        try:
             return json.loads(json_str)
-        else:
-            st.error("評価の分析中にLLMが有効なJSONを返しませんでした。"); st.code(raw_text); return None
+        except json.JSONDecodeError as e:
+            print(f"WARN: Initial JSON parse failed: {e}. Attempting to repair...")
+            repaired_str = re.sub(r',\s*([\}\]])', r'\1', json_str)
+            repaired_str = re.sub(r'(?<!\\)\n', r'\\n', repaired_str)
+            try:
+                print("INFO: Retrying parse with repaired JSON string.")
+                return json.loads(repaired_str)
+            except json.JSONDecodeError as final_e:
+                print(f"ERROR: JSON repair failed. Final parse error: {final_e}")
+                print(f"Original JSON string: {json_str}")
+                return None
+
     except Exception as e:
-        st.error(f"根拠の分析中にエラー: {e}"); return None
+        print(f"ERROR: get_match_summary_with_llm - Exception during LLM call: {e}")
+        return None
+    
+    
 
 def update_index(index_path, items):
     embedding_model = load_embedding_model()
