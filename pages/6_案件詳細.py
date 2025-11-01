@@ -294,7 +294,47 @@ else:
     st.error("指定されたIDの案件情報が見つかりませんでした。")
 
 
+st.divider()
+st.header("🤖 AIによる自動マッチング依頼")
 
+# 現在の依頼状況を取得
+current_request = be.get_auto_match_request(selected_id, 'job')
+
+if current_request:
+    st.success(f"現在、この案件の自動マッチングが有効です（通知先: {current_request['notification_email']}）。新しい技術者情報が登録されると、`{current_request['target_rank']}` ランク以上でマッチした場合に通知が送信されます。")
+    if st.button("自動マッチングを停止する", type="secondary"):
+        if be.deactivate_auto_match_request(selected_id, 'job'):
+            st.success("自動マッチングを停止しました。")
+            st.rerun()
+else:
+    with st.form("auto_match_form"):
+        st.info("新しい技術者情報がシステムに登録された際に、この案件とのマッチングを自動で実行し、ヒットした場合にメールで通知します。")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            req_rank = st.selectbox("通知する最低ランク", ['S', 'A', 'B', 'C'], index=1)
+        with col2:
+            req_email = st.text_input("通知先のメールアドレス", placeholder="your.email@example.com")
+        
+        # ログイン機能があれば、ログインユーザーのIDを取得
+        # ここでは仮に user_id = 1 とする
+        current_user_id = 1 
+
+        submitted = st.form_submit_button("この条件で自動マッチングを依頼する", type="primary")
+
+        if submitted:
+            if not req_email:
+                st.error("通知先のメールアドレスを入力してください。")
+            else:
+                if be.add_or_update_auto_match_request(selected_id, 'job', req_rank, req_email, current_user_id):
+                    st.success("自動マッチング依頼を登録しました！")
+                    st.rerun()
+                else:
+                    st.error("依頼の登録に失敗しました。")
+
+
+
+                    
 
 
 

@@ -1742,19 +1742,22 @@ def _extract_price_from_string(price_str: str) -> float | None:
             return None
     return None
 
+
+# backend.py の get_filtered_item_ids 関数をこちらに置き換えてください
+
 def get_filtered_item_ids(
     item_type: str, 
     keyword: str = "", 
     assigned_user_ids: list = None,
     has_matches_only: bool = False,
+    auto_match_only: bool = False,
     sort_column: str = "登録日", 
     sort_order: str = "降順", 
     show_hidden: bool = False
 ) -> list:
     """
-    【担当者フィルター修正・最終版 v2】
-    - 担当者フィルターのロジックを簡素化し、確実性を向上。
-    - psycopg2がリストを正しく扱えるように修正。
+    【auto_match_only フィルター修正版】
+    item_typeの単数形・複数形の不整合を解消。
     """
     if item_type not in ['jobs', 'engineers']: 
         return []
@@ -1762,35 +1765,30 @@ def get_filtered_item_ids(
     table_name = 'jobs' if item_type == 'jobs' else 'engineers'
     name_column = "project_name" if table_name == "jobs" else "name"
     
-    # 基本クエリとパラメータリスト
-    base_query = f"SELECT e.id FROM {table_name} e"
+    query = f"SELECT DISTINCT e.id FROM {table_name} e"
     joins = ""
     where_clauses = []
     params = []
-
-    # --- 各フィルター条件の組み立て ---
 
     if not show_hidden:
         where_clauses.append("e.is_hidden = 0")
 
     if keyword:
-        # キーワード検索のために users テーブルをJOINする必要がある場合
-        if '担当者名' in sort_column or any(kw for kw in keyword.split() if kw): # キーワードがある場合はJOIN
-             joins += " LEFT JOIN users u ON e.assigned_user_id = u.id"
+        joins += " LEFT JOIN users u ON e.assigned_user_id = u.id"
         keywords_list = [k.strip() for k in keyword.split() if k.strip()]
+        keyword_clauses = []
         for kw in keywords_list:
-            where_clauses.append(f"(e.document ILIKE %s OR e.{name_column} ILIKE %s OR u.username ILIKE %s)")
+            keyword_clauses.append(f"(e.document ILIKE %s OR e.{name_column} ILIKE %s OR u.username ILIKE %s)")
             param = f'%{kw}%'
             params.extend([param, param, param])
+        where_clauses.append(f"({' AND '.join(keyword_clauses)})")
 
-    # ★★★【ここからが担当者フィルターの修正の核】★★★
     if assigned_user_ids:
         real_user_ids = [uid for uid in assigned_user_ids if uid != -1]
         include_unassigned = -1 in assigned_user_ids
         
         user_filter_parts = []
         if real_user_ids:
-            # `IN %s` を使い、引数としてタプルを渡すのがpsycopg2の正しい作法
             user_filter_parts.append("e.assigned_user_id IN %s")
             params.append(tuple(real_user_ids))
         if include_unassigned:
@@ -1798,22 +1796,44 @@ def get_filtered_item_ids(
         
         if user_filter_parts:
             where_clauses.append(f"({' OR '.join(user_filter_parts)})")
-    # ★★★【修正ここまで】★★★
 
     if has_matches_only:
         join_key = 'job_id' if item_type == 'jobs' else 'engineer_id'
         where_clauses.append(f"EXISTS (SELECT 1 FROM matching_results mr WHERE mr.{join_key} = e.id AND mr.is_hidden = 0)")
 
+    # ★★★【ここからが修正の核】★★★
+    if auto_match_only:
+        # item_type ('jobs' or 'engineers') から末尾の 's' を取り除き、単数形 ('job' or 'engineer') にする
+        singular_item_type = item_type.rstrip('s')
+        
+        where_clauses.append(f"""
+            EXISTS (
+                SELECT 1 FROM auto_matching_requests amr 
+                WHERE amr.item_id = e.id 
+                  AND amr.item_type = %s 
+                  AND amr.is_active = TRUE
+            )
+        """)
+        params.append(singular_item_type) # 単数形をパラメータとして渡す
+    # ★★★【修正ここまで】★★★
+
     # --- クエリの最終組み立て ---
-    query = base_query + joins
+    final_query = query + joins
     if where_clauses:
-        query += " WHERE " + " AND ".join(where_clauses)
+        final_query = final_query.replace("SELECT DISTINCT e.id", "SELECT e.id") # DISTINCTは最後に追加
+        final_query += " WHERE " + " AND ".join(where_clauses)
     
     # --- ソート順の決定 ---
     sort_joins = ""
-    if sort_column == "担当者名" and "LEFT JOIN users u" not in joins:
+    if sort_column == "担当者名" and "LEFT JOIN users u" not in final_query:
         sort_joins = " LEFT JOIN users u ON e.assigned_user_id = u.id"
     
+    # JOINが発生する場合、結果が重複する可能性があるのでDISTINCTを付ける
+    if joins or sort_joins:
+        final_query = final_query.replace("SELECT e.id", "SELECT DISTINCT e.id")
+
+    final_query += sort_joins
+
     sort_column_map = {"登録日": "e.id", "プロジェクト名": f"e.{name_column}", "氏名": f"e.{name_column}", "担当者名": "u.username"}
     order_by_column = sort_column_map.get(sort_column, "e.id")
     
@@ -1821,8 +1841,7 @@ def get_filtered_item_ids(
     order_by_direction = order_map.get(sort_order, "DESC")
     nulls_order = "NULLS LAST" if order_by_direction == "DESC" else "NULLS FIRST"
     
-    # SELECT DISTINCT を追加して重複を除去
-    final_query = query.replace("SELECT e.id", "SELECT DISTINCT e.id") + sort_joins + f" ORDER BY {order_by_column} {order_by_direction} {nulls_order}"
+    final_query += f" ORDER BY {order_by_column} {order_by_direction} {nulls_order}"
 
     # --- DB実行 ---
     conn = get_db_connection()
@@ -1832,10 +1851,9 @@ def get_filtered_item_ids(
             return [item[0] for item in cursor.fetchall()]
     except Exception as e:
         print(f"IDリストの取得中にエラー: {e}")
-        # デバッグ用に実行しようとしたクエリを出力
         try:
-            print("--- FAILED QUERY ---")
-            print(cursor.mogrify(final_query, tuple(params)))
+            print("--- FAILED QUERY (get_filtered_item_ids) ---")
+            print(cursor.mogrify(final_query, tuple(params)).decode('utf-8'))
             print("--------------------")
         except:
             pass
@@ -1843,7 +1861,7 @@ def get_filtered_item_ids(
     finally:
         if conn:
             conn.close()
-            
+
 
 
 
@@ -2439,23 +2457,46 @@ def rematch_job_with_keyword_filtering(job_id, target_rank='B', target_count=5):
         yield f"```\n{traceback.format_exc()}\n```"
 
 
-
-# backend.py の get_items_by_ids 関数をこちらに置き換えてください
-
 def get_items_by_ids_sync(item_type: str, ids: list) -> list:
     """
-    【同期版・メモリ効率化】
-    大量のIDをバッチで取得し、最終的に全レコードの「リスト」を返す。
-    案件管理ページなど、一度に全データを必要とするUI用。
-    (以前の get_items_by_ids からリネーム)
+    【不具合修正・最終版】
+    - マッチング件数と、自動マッチング依頼がアクティブかどうかの両方を取得する。
+    - item_type を単数形に変換してSQLに渡すことで、JOINの不整合を解消。
     """
     if not ids or item_type not in ['jobs', 'engineers']:
         return []
 
     table_name = 'jobs' if item_type == 'jobs' else 'engineers'
+    
+    # 案件(jobs)なら'job_id'、技術者(engineers)なら'engineer_id'を動的に設定
+    match_join_key = 'job_id' if item_type == 'jobs' else 'engineer_id'
+
+    query = f"""
+        SELECT 
+            t.*, 
+            u.username as assigned_username,
+            COALESCE(mc.match_count, 0) as match_count,
+            CASE 
+                WHEN amr.is_active = TRUE THEN TRUE
+                ELSE FALSE
+            END as auto_match_active
+        FROM {table_name} t
+        LEFT JOIN users u ON t.assigned_user_id = u.id
+        LEFT JOIN (
+            SELECT 
+                {match_join_key} as item_id, 
+                COUNT(*) as match_count
+            FROM matching_results
+            WHERE is_hidden = 0
+            GROUP BY item_id
+        ) AS mc ON t.id = mc.item_id
+        LEFT JOIN auto_matching_requests amr 
+            ON t.id = amr.item_id AND amr.item_type = %s
+        WHERE t.id = ANY(%s)
+    """
+
     BATCH_SIZE = 200
     results_map = {}
-
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
@@ -2465,27 +2506,12 @@ def get_items_by_ids_sync(item_type: str, ids: list) -> list:
                     continue
                 
                 # ★★★【ここからが修正の核】★★★
-                query = f"""
-                    SELECT 
-                        t.*, 
-                        u.username as assigned_username,
-                        COALESCE(mc.match_count, 0) as match_count -- マッチング件数を取得(NULLの場合は0に)
-                    FROM {table_name} t
-                    LEFT JOIN users u ON t.assigned_user_id = u.id
-                    LEFT JOIN (
-                        -- このサブクエリで、各案件/技術者ごとの有効なマッチング件数を事前に計算する
-                        SELECT 
-                            {'job_id' if item_type == 'jobs' else 'engineer_id'} as item_id, 
-                            COUNT(*) as match_count
-                        FROM matching_results
-                        WHERE is_hidden = 0 -- 非表示でないマッチングのみをカウント
-                        GROUP BY item_id
-                    ) AS mc ON t.id = mc.item_id
-                    WHERE t.id = ANY(%s)
-                """
-                # ★★★【修正ここまで】★★★
+                # item_type ('jobs' or 'engineers') から末尾の 's' を取り除き、
+                # 単数形 ('job' or 'engineer') にしてからクエリに渡す。
+                singular_item_type = item_type.rstrip('s')
                 
-                cursor.execute(query, (batch_ids,))
+                cursor.execute(query, (singular_item_type, batch_ids))
+                # ★★★【修正ここまで】★★★
                 
                 batch_results = cursor.fetchall()
                 for row in batch_results:
@@ -2493,6 +2519,13 @@ def get_items_by_ids_sync(item_type: str, ids: list) -> list:
 
     except Exception as e:
         print(f"IDによるアイテム取得中にエラーが発生しました: {e}")
+        try:
+            print("--- FAILED QUERY (get_items_by_ids_sync) ---")
+            singular_item_type = item_type.rstrip('s')
+            print(cursor.mogrify(query, (singular_item_type, batch_ids,)))
+            print("--------------------")
+        except:
+            pass
         return []
     finally:
         if conn:
@@ -2500,6 +2533,8 @@ def get_items_by_ids_sync(item_type: str, ids: list) -> list:
 
     final_ordered_results = [results_map[id] for id in ids if id in results_map]
     return final_ordered_results
+
+
 
 
 # 必要であれば、ストリーミング版も定義しておく
@@ -2714,6 +2749,252 @@ def update_job_project_name(job_id: int, new_project_name: str) -> bool:
             return True
         except (Exception, psycopg2.Error) as e:
             print(f"案件名の更新中にエラーが発生しました: {e}")
+            conn.rollback()
+            return False
+
+
+
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+
+# backend.py の add_or_update_auto_match_request 関数をこちらに置き換えてください
+
+def add_or_update_auto_match_request(item_id, item_type, target_rank, email, user_id):
+    """
+    【UPSERT修正版】
+    自動マッチング依頼を登録または更新する。
+    - 新規登録時: last_processed_id に現在の最新IDを設定。
+    - 更新時: もし last_processed_id が NULL ならば、現在の最新IDで更新する。
+    """
+    conn = get_db_connection()
+    if not conn:
+        return False
+
+    try:
+        with conn.cursor() as cur:
+            # --- ステップ1: 現在の最新IDを取得 ---
+            cur.execute("SELECT MAX(id) FROM jobs")
+            current_max_job_id = (res := cur.fetchone()) and res['max'] or 0
+            
+            cur.execute("SELECT MAX(id) FROM engineers")
+            current_max_engineer_id = (res := cur.fetchone()) and res['max'] or 0
+
+            # --- ステップ2: 依頼をDBに登録/更新 (UPSERT) ---
+            # ★★★【ここからが修正の核】★★★
+            sql = """
+                INSERT INTO auto_matching_requests (
+                    item_id, item_type, target_rank, notification_email, created_by_user_id, 
+                    is_active, last_processed_job_id, last_processed_engineer_id
+                )
+                VALUES (%s, %s, %s, %s, %s, TRUE, %s, %s)
+                ON CONFLICT (item_id, item_type) 
+                DO UPDATE SET 
+                    target_rank = EXCLUDED.target_rank,
+                    notification_email = EXCLUDED.notification_email,
+                    is_active = TRUE,
+                    created_by_user_id = EXCLUDED.created_by_user_id,
+                    -- 既存のレコードを更新する際に、もし last_processed_id が NULL ならば、
+                    -- 現在の最新IDで更新する。既に値が入っていれば変更しない。
+                    last_processed_job_id = COALESCE(auto_matching_requests.last_processed_job_id, EXCLUDED.last_processed_job_id),
+                    last_processed_engineer_id = COALESCE(auto_matching_requests.last_processed_engineer_id, EXCLUDED.last_processed_engineer_id)
+                RETURNING last_processed_job_id, last_processed_engineer_id;
+            """
+            cur.execute(sql, (
+                item_id, item_type, target_rank, email, user_id, 
+                current_max_job_id, current_max_engineer_id
+            ))
+            
+            # 実際にDBに書き込まれた値を取得
+            result = cur.fetchone()
+            actual_last_job_id = result['last_processed_job_id'] if result else 'N/A'
+            actual_last_eng_id = result['last_processed_engineer_id'] if result else 'N/A'
+            # ★★★【修正ここまで】★★★
+            
+        conn.commit()
+        # 実際にDBに書き込まれた値でログを出力
+        print(f"✅ Successfully UPSERTED auto-match request for {item_type} ID: {item_id}.")
+        print(f"   DB value for last_processed_job_id: {actual_last_job_id}")
+        print(f"   DB value for last_processed_engineer_id: {actual_last_eng_id}")
+        return True
+        
+    except (Exception, psycopg2.Error) as e:
+        print(f"❌ Error in add_or_update_auto_match_request: {e}")
+        conn.rollback()
+        return False
+        
+    finally:
+        if conn:
+            conn.close()
+
+
+
+
+
+def deactivate_auto_match_request(item_id: int, item_type: str) -> bool:
+    """
+    指定された item_id と item_type に一致する自動マッチング依頼を
+    非アクティブ（is_active = FALSE）にする。
+    """
+    # 1. 実行するSQL文を定義
+    sql = """
+        UPDATE auto_matching_requests 
+        SET is_active = FALSE 
+        WHERE item_id = %s AND item_type = %s;
+    """
+    
+    # 2. データベースに接続
+    conn = get_db_connection()
+    if not conn:
+        return False
+        
+    try:
+        # 3. カーソルを作成し、クエリを実行
+        with conn.cursor() as cur:
+            # ★★★【修正点1】★★★
+            # SQL文が必要とする引数のみ（2つ）を渡す
+            cur.execute(sql, (item_id, item_type))
+            
+        # 4. 変更をコミット
+        conn.commit()
+        
+        print(f"✅ Deactivated auto-match request for {item_type} ID: {item_id}")
+        return True
+        
+    except (Exception, psycopg2.Error) as e:
+        # ★★★【修正点2】★★★
+        # エラーメッセージをこの関数専用のものに修正
+        print(f"❌ Error deactivating auto_match_request for {item_type} ID: {item_id}. Error: {e}")
+        conn.rollback()
+        return False
+        
+    finally:
+        # 5. データベース接続を閉じる
+        if conn:
+            conn.close()
+
+
+        
+
+def get_auto_match_request(item_id: int, item_type: str) -> dict | None:
+    """
+    指定された item_id と item_type に一致する、アクティブな自動マッチング依頼を
+    データベースから1件だけ取得して返す。
+    存在しない場合は None を返す。
+    """
+    # 1. 取得したいレコードを特定するためのSQL文を定義
+    #    WHERE句で条件を絞り込み、LIMIT 1 で確実に1行だけを取得するようにする
+    sql = """
+        SELECT * 
+        FROM auto_matching_requests 
+        WHERE item_id = %s AND item_type = %s AND is_active = TRUE
+        LIMIT 1;
+    """
+    
+    # 戻り値用の変数を None で初期化
+    result_data = None
+
+    # 2. データベースに接続
+    conn = get_db_connection()
+    if not conn:
+        # 接続に失敗した場合は何もできないので None を返す
+        return None
+        
+    try:
+        # 3. カーソルを作成し、クエリを実行
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (item_id, item_type))
+            
+            # 4. fetchone() で結果を1行だけ取得
+            result_data = cursor.fetchone()
+            
+    except (Exception, psycopg2.Error) as e:
+        print(f"Error in get_auto_match_request: {e}")
+        # エラーが発生した場合も None を返す
+        return None
+    finally:
+        # 5. データベース接続を閉じる
+        if conn:
+            conn.close()
+
+    # 6. 取得したデータ（辞書 or None）を返す
+    if result_data:
+        # DictCursorが返すDictRowオブジェクトを、通常の辞書に変換して返すとより安全
+        return dict(result_data)
+    else:
+        # レコードが見つからなかった場合は None を返す
+        return None
+    
+
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+import streamlit as st # st.secrets を使うためにインポートが必要
+
+# --- メール通知機能 ---
+def send_email_notification(recipient_email, subject, body):
+    try:
+        # st.secrets.セクション名.キー名 の形式でアクセス
+        SMTP_SERVER = st.secrets.smtp.server
+        SMTP_PORT = st.secrets.smtp.port
+        SMTP_USER = st.secrets.smtp.user
+        SMTP_PASSWORD = st.secrets.smtp.password
+        FROM_EMAIL = st.secrets.smtp.from_email
+        
+        msg = MIMEText(body, 'plain', 'utf-8')
+        msg['Subject'] = Header(subject, 'utf-8')
+        msg['From'] = FROM_EMAIL
+        msg['To'] = recipient_email
+
+        # smtplib.SMTP を使ってサーバーに接続
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            # サーバーに挨拶 (EHLO) を送り、STARTTLSをサポートしているか確認
+            server.ehlo()
+            # STARTTLSコマンドで暗号化通信を開始
+            server.starttls()
+            # 再度挨拶を送る
+            server.ehlo()
+            # ログイン
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            # メッセージを送信
+            server.send_message(msg)
+        
+        print(f"✅ Notification email sent to {recipient_email}")
+        return True
+        
+    except KeyError as e:
+        print(f"❌ Email sending failed: SMTP secret key '{e}' not found in [smtp] section.")
+        return False
+    except Exception as e:
+        print(f"❌ Email sending failed: {e}")
+        return False
+    
+
+def update_auto_match_last_processed_ids(request_id, last_job_id, last_engineer_id):
+    """自動マッチング依頼の、最後に処理したIDを更新する。"""
+    updates = []
+    params = []
+    if last_job_id:
+        updates.append("last_processed_job_id = %s")
+        params.append(last_job_id)
+    if last_engineer_id:
+        updates.append("last_processed_engineer_id = %s")
+        params.append(last_engineer_id)
+
+    if not updates:
+        return True # 更新対象がなければ何もしない
+
+    params.append(request_id)
+    sql = f"UPDATE auto_matching_requests SET {', '.join(updates)} WHERE id = %s"
+    
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql, tuple(params))
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating last processed IDs: {e}")
             conn.rollback()
             return False
         

@@ -298,6 +298,58 @@ else:
 
 
 st.divider()
+# --- AIによる自動マッチング依頼 ---
+st.header("🤖 AIによる自動マッチング依頼")
+
+# 現在の依頼状況を取得
+current_request = be.get_auto_match_request(selected_id, 'engineer')
+
+if current_request:
+    with st.container(border=True):
+        st.success(f"現在、この技術者の自動マッチングが有効です（通知先: {current_request['notification_email']}）。新しい案件情報が登録されると、`{current_request['target_rank']}` ランク以上でマッチした場合に通知が送信されます。")
+        if st.button("自動マッチングを停止する", type="secondary", use_container_width=True, key=f"stop_auto_match_eng_{selected_id}"):
+            if be.deactivate_auto_match_request(selected_id, 'engineer'):
+                st.success("自動マッチングを停止しました。")
+                time.sleep(1); st.rerun()
+            else:
+                st.error("自動マッチングの停止に失敗しました。")
+else:
+    with st.container(border=True):
+        with st.form(f"auto_match_form_eng_{selected_id}"):
+            st.info("新しい案件情報がシステムに登録された際に、この技術者とのマッチングを自動で実行し、ヒットした場合にメールで通知します。")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                req_rank = st.selectbox("通知する最低ランク", ['S', 'A', 'B', 'C'], index=1)
+            with col2:
+                # ここでは仮のログインユーザー情報を利用
+                # 実際の運用では st.session_state.email などを参照する
+                login_user_email = "default.user@example.com" 
+                req_email = st.text_input("通知先のメールアドレス", value=login_user_email)
+            
+            # ログイン機能があれば、ログインユーザーのIDを取得
+            # ここでは仮に user_id = 1 とする
+            current_user_id = 1 
+
+            submitted = st.form_submit_button("この条件で自動マッチングを依頼する", type="primary", use_container_width=True)
+
+            if submitted:
+                if not req_email:
+                    st.error("通知先のメールアドレスを入力してください。")
+                else:
+                    if be.add_or_update_auto_match_request(selected_id, 'engineer', req_rank, req_email, current_user_id):
+                        st.success("自動マッチング依頼を登録しました！")
+                        time.sleep(1); st.rerun()
+                    else:
+                        st.error("依頼の登録に失敗しました。")
+
+
+
+
+
+
+
+st.divider()
 st.header("⚙️ AI再評価＋マッチング")
 
 # --- UIと状態管理 ---

@@ -16,12 +16,13 @@ st.markdown("登録されている技術者の一覧表示、検索、並び替�
 ITEMS_PER_PAGE = 20
 
 # --- セッションステートの初期化 ---
-# このページ専用のキーを使い、案件管理ページと状態が衝突しないようにする
+# このページ専用のキーを使い、他のページと状態が衝突しないようにする
 if 'engineer_search_params' not in st.session_state:
     st.session_state.engineer_search_params = {
         "keyword": "",
         "user_ids": [],
         "has_matches_only": False,
+        "auto_match_only": False,
         "show_hidden": False,
         "sort_column": "登録日",
         "sort_order": "降順"
@@ -37,7 +38,6 @@ with st.expander("絞り込み・並び替え", expanded=True):
     with st.form(key="engineer_search_form"):
         params = st.session_state.engineer_search_params
         
-        # --- フォーム内のウィジェット定義 ---
         search_keyword = st.text_input("キーワード", value=params["keyword"], placeholder="氏名、スキル、経歴などで検索")
         
         all_users = be.get_all_users()
@@ -46,30 +46,29 @@ with st.expander("絞り込み・並び替え", expanded=True):
         default_users = [id_to_username[uid] for uid in params["user_ids"] if uid in id_to_username]
         selected_usernames = st.multiselect("担当者", options=list(user_map.keys()), default=default_users, placeholder="担当者を選択（指定なしは全員対象）")
         
-        has_matches_only = st.checkbox("🤝 マッチング結果がある技術者のみ表示", value=params["has_matches_only"])
+        col1, col2 = st.columns(2)
+        with col1:
+            has_matches_only = st.checkbox("🤝 マッチング結果がある技術者のみ表示", value=params["has_matches_only"])
+        with col2:
+            auto_match_only = st.checkbox("🤖 自動マッチング依頼中のみ表示", value=params["auto_match_only"])
         
-        col_sort, col_order, col_hidden = st.columns(3)
-        with col_sort:
-            # 技術者管理用のソートオプション
+        col3, col4, col5 = st.columns(3)
+        with col3:
             sort_options = ["登録日", "氏名", "担当者名"]
             sort_column = st.selectbox("並び替え", sort_options, index=sort_options.index(params["sort_column"]))
-        with col_order:
+        with col4:
             order_options = ["降順", "昇順"]
             sort_order = st.selectbox("順序", order_options, index=order_options.index(params["sort_order"]))
-        with col_hidden:
+        with col5:
             show_hidden = st.checkbox("非表示の技術者も表示する", value=params["show_hidden"])
 
-        # --- フォーム送信ボタン ---
         submitted = st.form_submit_button("この条件で検索", type="primary", use_container_width=True)
 
         if submitted:
             st.session_state.engineer_search_params = {
-                "keyword": search_keyword,
-                "user_ids": [user_map[name] for name in selected_usernames],
-                "has_matches_only": has_matches_only,
-                "show_hidden": show_hidden,
-                "sort_column": sort_column,
-                "sort_order": sort_order
+                "keyword": search_keyword, "user_ids": [user_map[name] for name in selected_usernames],
+                "has_matches_only": has_matches_only, "auto_match_only": auto_match_only,
+                "show_hidden": show_hidden, "sort_column": sort_column, "sort_order": sort_order
             }
             st.session_state.execute_engineer_search = True
             st.session_state.engineer_display_count = ITEMS_PER_PAGE
@@ -84,10 +83,11 @@ if st.session_state.all_engineer_ids is None or st.session_state.get("execute_en
     params = st.session_state.engineer_search_params
     with st.spinner("検索中..."):
         all_ids = be.get_filtered_item_ids(
-            item_type='engineers', # ★★★ item_type を 'engineers' に変更 ★★★
+            item_type='engineers',
             keyword=params["keyword"],
             assigned_user_ids=params["user_ids"],
             has_matches_only=params["has_matches_only"],
+            auto_match_only=params["auto_match_only"],
             sort_column=params["sort_column"],
             sort_order=params["sort_order"],
             show_hidden=params["show_hidden"]
@@ -102,9 +102,7 @@ else:
     display_count = st.session_state.engineer_display_count
     ids_to_display = all_ids[:display_count]
     
-    if not ids_to_display:
-        st.info("これ以上表示する技術者がいません。")
-    else:
+    if ids_to_display:
         engineers_to_display = be.get_items_by_ids_sync('engineers', ids_to_display)
         
         st.header(f"検索結果: **{len(all_ids)}** 件中、**{len(engineers_to_display)}** 件を表示中")
@@ -124,20 +122,48 @@ else:
                     main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
                     st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:100] + "...")
 
+                
+                # ★★★【ここからが修正の核】★★★
                 with col2:
+                    # チップ風のHTMLを生成するヘルパー関数
+                    def create_chip_html(icon, label):
+                        style = """
+                            display: inline-flex;
+                            align-items: center;
+                            background-color: #31333F;
+                            color: #FAFAFA;
+                            padding: 4px 10px;
+                            border-radius: 16px;
+                            font-size: 0.8rem;
+                            margin-right: 6px;
+                            margin-bottom: 6px;
+                            border: 1px solid #4A4A4A;
+                        """
+                        return f'<span style="{style}">{icon} {label}</span>'
+
+                    chips_html = ""
+                    # 自動マッチ依頼アイコン
+                    if engineer.get('auto_match_active'):
+                        chips_html += create_chip_html("🤖", "自動マッチ依頼中")
+                    
+                    # マッチング件数
                     match_count = engineer.get('match_count', 0)
                     if match_count > 0:
-                        st.markdown(f"**🤝 `{match_count}`** 件のマッチング")
+                        chips_html += create_chip_html("🤝", f"{match_count} 件")
+                    
+                    if chips_html:
+                        st.markdown(chips_html, unsafe_allow_html=True)
                     
                     assignee = engineer.get('assigned_username') or "未担当"
-                    st.markdown(f"**担当:** {assignee}")
+                    # 担当者情報の表示位置を調整
+                    st.markdown(f"<div style='margin-top: 8px;'><b>担当:</b> {assignee}</div>", unsafe_allow_html=True)
+                    # ★★★【修正ここまで】★★★
 
                 with col3:
                     if st.button("詳細を見る", key=f"eng_detail_{engineer['id']}", use_container_width=True):
                         st.session_state['selected_engineer_id'] = engineer['id']
                         st.switch_page("pages/5_技術者詳細.py")
 
-        # --- 「Load More」ボタン ---
         if display_count < len(all_ids):
             st.divider()
             if st.button(f"さらに {min(ITEMS_PER_PAGE, len(all_ids) - display_count)} 件読み込む", use_container_width=True):

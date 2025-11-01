@@ -1,4 +1,4 @@
-# pages/4_案件管理.py (コールバック廃止・最終完成版)
+# pages/4_案件管理.py (最終完成版)
 
 import streamlit as st
 import backend as be
@@ -16,12 +16,13 @@ st.markdown("登録されている案件の一覧表示、検索、並び替え�
 ITEMS_PER_PAGE = 20
 
 # --- セッションステートの初期化 ---
+# このページ専用のキーを使い、他のページと状態が衝突しないようにする
 if 'job_search_params' not in st.session_state:
-    # 検索条件をまとめて辞書で管理
     st.session_state.job_search_params = {
         "keyword": "",
         "user_ids": [],
         "has_matches_only": False,
+        "auto_match_only": False, # 自動マッチングフィルターの初期値
         "show_hidden": False,
         "sort_column": "登録日",
         "sort_order": "降順"
@@ -34,8 +35,7 @@ if 'job_display_count' not in st.session_state:
 
 # --- UIセクション: 検索フォーム ---
 with st.expander("絞り込み・並び替え", expanded=True):
-    with st.form(key="search_form"):
-        # 現在の検索条件を読み込み
+    with st.form(key="job_search_form"):
         params = st.session_state.job_search_params
         
         # --- フォーム内のウィジェット定義 ---
@@ -47,16 +47,22 @@ with st.expander("絞り込み・並び替え", expanded=True):
         default_users = [id_to_username[uid] for uid in params["user_ids"] if uid in id_to_username]
         selected_usernames = st.multiselect("担当者", options=list(user_map.keys()), default=default_users, placeholder="担当者を選択（指定なしは全員対象）")
         
-        has_matches_only = st.checkbox("🤝 マッチング結果がある案件のみ表示", value=params["has_matches_only"])
+        # --- オプションのチェックボックス ---
+        col1, col2 = st.columns(2)
+        with col1:
+            has_matches_only = st.checkbox("🤝 マッチング結果がある案件のみ表示", value=params["has_matches_only"])
+        with col2:
+            auto_match_only = st.checkbox("🤖 自動マッチング依頼中のみ表示", value=params["auto_match_only"])
         
-        col_sort, col_order, col_hidden = st.columns(3)
-        with col_sort:
+        # --- ソートと非表示設定 ---
+        col3, col4, col5 = st.columns(3)
+        with col3:
             sort_options = ["登録日", "プロジェクト名", "担当者名"]
             sort_column = st.selectbox("並び替え", sort_options, index=sort_options.index(params["sort_column"]))
-        with col_order:
+        with col4:
             order_options = ["降順", "昇順"]
             sort_order = st.selectbox("順序", order_options, index=order_options.index(params["sort_order"]))
-        with col_hidden:
+        with col5:
             show_hidden = st.checkbox("非表示の案件も表示する", value=params["show_hidden"])
 
         # --- フォーム送信ボタン ---
@@ -68,14 +74,15 @@ with st.expander("絞り込み・並び替え", expanded=True):
                 "keyword": search_keyword,
                 "user_ids": [user_map[name] for name in selected_usernames],
                 "has_matches_only": has_matches_only,
+                "auto_match_only": auto_match_only,
                 "show_hidden": show_hidden,
                 "sort_column": sort_column,
                 "sort_order": sort_order
             }
-            # 検索実行フラグとページ表示件数をリセット
+            # 検索実行フラグと表示件数をリセット
             st.session_state.execute_search = True
             st.session_state.job_display_count = ITEMS_PER_PAGE
-            st.rerun() # 変更を反映し、検索ロジックをキックするために再実行
+            st.rerun()
 
 
 # --- データ取得ロジック ---
@@ -91,6 +98,7 @@ if st.session_state.all_job_ids is None or st.session_state.get("execute_search"
             keyword=params["keyword"],
             assigned_user_ids=params["user_ids"],
             has_matches_only=params["has_matches_only"],
+            auto_match_only=params["auto_match_only"],
             sort_column=params["sort_column"],
             sort_order=params["sort_order"],
             show_hidden=params["show_hidden"]
@@ -109,6 +117,10 @@ else:
         st.info("これ以上表示する案件がありません。")
     else:
         jobs_to_display = be.get_items_by_ids_sync('jobs', ids_to_display)
+
+        # --- ↓↓↓ この行を追加してデバッグ ---
+        #st.write(jobs_to_display) 
+        # --- ↑↑↑ -------------------------
         
         st.header(f"検索結果: **{len(all_ids)}** 件中、**{len(jobs_to_display)}** 件を表示中")
 
@@ -128,12 +140,36 @@ else:
                     st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:100] + "...")
 
                 with col2:
+                    
+                    # チップ風のHTMLを生成するヘルパー関数
+                    def create_chip_html(icon, label):
+                        style = """
+                            display: inline-flex;
+                            align-items: center;
+                            background-color: #31333F; /* Streamlitのダークテーマに合わせた背景色 */
+                            color: #FAFAFA;
+                            padding: 4px 8px;
+                            border-radius: 20px; /* 角を丸くする */
+                            font-size: 0.85rem;
+                            margin-right: 5px;
+                            margin-bottom: 5px;
+                        """
+                        return f'<span style="{style}">{icon} {label}</span>'
+
+                    chips_html = ""
+                    if job.get('auto_match_active'):
+                        chips_html += create_chip_html("🤖", "自動マッチ依頼中")
+                    
                     match_count = job.get('match_count', 0)
                     if match_count > 0:
-                        st.markdown(f"**🤝 `{match_count}`** 件のマッチング")
+                        chips_html += create_chip_html("🤝", f"{match_count} 件")
+                    
+                    if chips_html:
+                        st.markdown(chips_html, unsafe_allow_html=True)
                     
                     assignee = job.get('assigned_username') or "未担当"
-                    st.markdown(f"**担当:** {assignee}")
+                    # 担当者情報の表示位置を調整
+                    st.markdown(f"<div style='margin-top: 8px;'><b>担当:</b> {assignee}</div>", unsafe_allow_html=True)
 
                 with col3:
                     if st.button("詳細を見る", key=f"job_detail_{job['id']}", use_container_width=True):
