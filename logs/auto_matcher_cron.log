@@ -174,3 +174,127 @@ Traceback (most recent call last):
     with be.get_db_connection() as conn, conn.cursor() as cur:
          ~~~~~~~~~~~~~~~~~~~~^^
 TypeError: 'NoneType' object does not support the context manager protocol
+2025-11-01 15:25:14.479 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:25:14.678 
+  [33m[1mWarning:[0m to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run /Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py [ARGUMENTS]
+2025-11-01 15:25:14.679 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:25:14.679 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:25:14.679 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:25:14.684 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:25:14.684 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:25:14.684 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:25:14.684 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+--- Auto-matcher batch started at 2025-11-01 15:25:14.683939 ---
+Traceback (most recent call last):
+  File "/Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py", line 99, in <module>
+    main()
+    ~~~~^^
+  File "/Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py", line 19, in main
+    with be.get_db_connection() as conn, conn.cursor() as cur:
+         ~~~~~~~~~~~~~~~~~~~~^^
+TypeError: 'NoneType' object does not support the context manager protocol
+2025-11-01 15:30:13.473 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:30:13.661 
+  [33m[1mWarning:[0m to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run /Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py [ARGUMENTS]
+2025-11-01 15:30:13.662 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:30:13.662 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:30:13.662 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:30:13.686 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:30:13.686 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:30:13.686 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:30:13.686 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+--- Auto-matcher batch started at 2025-11-01 15:30:13.685652 ---
+Traceback (most recent call last):
+  File "/Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py", line 99, in <module>
+    main()
+    ~~~~^^
+  File "/Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py", line 19, in main
+    with be.get_db_connection() as conn, conn.cursor() as cur:
+         ~~~~~~~~~~~~~~~~~~~~^^
+TypeError: 'NoneType' object does not support the context manager protocol
+2025-11-01 15:35:13.560 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:35:13.775 
+  [33m[1mWarning:[0m to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run /Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py [ARGUMENTS]
+2025-11-01 15:35:13.775 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:35:13.775 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:35:13.776 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:35:13.781 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:35:13.781 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:35:13.781 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:35:13.781 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+--- Auto-matcher batch started at 2025-11-01 15:35:13.780836 ---
+Traceback (most recent call last):
+  File "/Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py", line 99, in <module>
+    main()
+    ~~~~^^
+  File "/Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py", line 19, in main
+    with be.get_db_connection() as conn, conn.cursor() as cur:
+         ~~~~~~~~~~~~~~~~~~~~^^
+TypeError: 'NoneType' object does not support the context manager protocol
+2025-11-01 15:40:13.049 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:40:13.275 
+  [33m[1mWarning:[0m to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run /Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py [ARGUMENTS]
+2025-11-01 15:40:13.275 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:40:13.275 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:40:13.275 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+--- Auto-matcher batch started at 2025-11-01 15:40:13.279391 ---
+CRITICAL: DATABASE_URL is not configured in the script. Please paste the full connection string.
+2025-11-01 15:45:11.736 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:45:11.901 
+  [33m[1mWarning:[0m to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run /Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py [ARGUMENTS]
+2025-11-01 15:45:11.902 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:45:11.902 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:45:11.902 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+--- Auto-matcher batch started at 2025-11-01 15:45:11.908040 ---
+Request for Job ID 2644: No new engineers to process.
+--- Auto-matcher batch finished at 2025-11-01 15:45:13.445720 ---
+2025-11-01 15:50:14.903 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:50:15.132 
+  [33m[1mWarning:[0m to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run /Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py [ARGUMENTS]
+2025-11-01 15:50:15.132 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:50:15.133 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:50:15.133 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+--- Auto-matcher batch started at 2025-11-01 15:50:15.141430 ---
+No active auto-matching requests. Exiting.
+2025-11-01 15:55:12.295 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:55:12.453 
+  [33m[1mWarning:[0m to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run /Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py [ARGUMENTS]
+2025-11-01 15:55:12.453 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:55:12.453 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 15:55:12.453 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+--- Auto-matcher batch started at 2025-11-01 15:55:12.458954 ---
+Request for Job ID 2644: No new engineers to process.
+--- Auto-matcher batch finished at 2025-11-01 15:55:14.155194 ---
+2025-11-01 16:00:14.137 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 16:00:14.303 
+  [33m[1mWarning:[0m to view this Streamlit app on a browser, run it with the following
+  command:
+
+    streamlit run /Users/tomokazuhatanaka/Documents/GitHub/universal-ai-matching-system/run_auto_matcher.py [ARGUMENTS]
+2025-11-01 16:00:14.303 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 16:00:14.303 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+2025-11-01 16:00:14.303 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.
+--- Auto-matcher batch started at 2025-11-01 16:00:14.308472 ---
+Request for Job ID 2644: No new engineers to process.
+--- Auto-matcher batch finished at 2025-11-01 16:00:15.940863 ---

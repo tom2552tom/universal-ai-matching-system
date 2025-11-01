@@ -2948,6 +2948,7 @@ def send_email_notification(recipient_email, subject, body):
 
         # smtplib.SMTP を使ってサーバーに接続
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.set_debuglevel(1) 
             # サーバーに挨拶 (EHLO) を送り、STARTTLSをサポートしているか確認
             server.ehlo()
             # STARTTLSコマンドで暗号化通信を開始
@@ -2998,3 +2999,57 @@ def update_auto_match_last_processed_ids(request_id, last_job_id, last_engineer_
             conn.rollback()
             return False
         
+
+def create_or_update_match_record(job_id, engineer_id, score, grade, llm_result):
+    """
+    matching_resultsテーブルにレコードを挿入または更新する（UPSERT）。
+    成功した場合は、作成/更新されたレコードのIDを返す。
+    """
+    # llm_resultからポジティブ/懸念点をJSON文字列に変換
+    positive_points = json.dumps(llm_result.get('positive_points', []), ensure_ascii=False)
+    concern_points = json.dumps(llm_result.get('concern_points', []), ensure_ascii=False)
+    now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # ON CONFLICT句を使ったUPSERT文
+    sql = """
+        INSERT INTO matching_results (
+            job_id, engineer_id, score, created_at, grade, 
+            positive_points, concern_points, status
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, '新規')
+        ON CONFLICT (job_id, engineer_id) 
+        DO UPDATE SET
+            score = EXCLUDED.score,
+            grade = EXCLUDED.grade,
+            positive_points = EXCLUDED.positive_points,
+            concern_points = EXCLUDED.concern_points,
+            created_at = EXCLUDED.created_at, -- 更新日時も最新にする
+            status = '新規' -- 再評価時はステータスをリセット
+        RETURNING id;
+    """
+    
+    conn = get_db_connection()
+    if not conn:
+        return None
+        
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql, (
+                job_id, engineer_id, score, now_str, grade, 
+                positive_points, concern_points
+            ))
+            result = cur.fetchone()
+        conn.commit()
+        
+        # RETURNINGで返されたIDを返す
+        return result['id'] if result else None
+        
+    except (Exception, psycopg2.Error) as e:
+        print(f"Error in create_or_update_match_record: {e}")
+        conn.rollback()
+        return None
+        
+    finally:
+        if conn:
+            conn.close()
+
