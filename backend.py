@@ -1742,11 +1742,19 @@ def _extract_price_from_string(price_str: str) -> float | None:
             return None
     return None
 
-
-def get_filtered_item_ids(item_type: str, keyword: str = "", assigned_user_ids: list = None, include_unassigned: bool = False, sort_column: str = "登録日", sort_order: str = "降順", show_hidden: bool = False) -> list:
+def get_filtered_item_ids(
+    item_type: str, 
+    keyword: str = "", 
+    assigned_user_ids: list = None,
+    has_matches_only: bool = False,
+    sort_column: str = "登録日", 
+    sort_order: str = "降順", 
+    show_hidden: bool = False
+) -> list:
     """
-    【再々修正版】
-    「未割り当て(IS NULL)」と「担当者ID(ANY)」のOR検索ロジックを正しく実装する。
+    【担当者フィルター修正・最終版 v2】
+    - 担当者フィルターのロジックを簡素化し、確実性を向上。
+    - psycopg2がリストを正しく扱えるように修正。
     """
     if item_type not in ['jobs', 'engineers']: 
         return []
@@ -1754,79 +1762,88 @@ def get_filtered_item_ids(item_type: str, keyword: str = "", assigned_user_ids: 
     table_name = 'jobs' if item_type == 'jobs' else 'engineers'
     name_column = "project_name" if table_name == "jobs" else "name"
     
-    query = f"SELECT e.id FROM {table_name} e LEFT JOIN users u ON e.assigned_user_id = u.id"
-    
-    params = []
+    # 基本クエリとパラメータリスト
+    base_query = f"SELECT e.id FROM {table_name} e"
+    joins = ""
     where_clauses = []
+    params = []
+
+    # --- 各フィルター条件の組み立て ---
 
     if not show_hidden:
         where_clauses.append("e.is_hidden = 0")
 
     if keyword:
-        keywords_list = [k.strip() for k in re.split(r'[,\s　、]+', keyword) if k.strip()]
-        if keywords_list:
-            for kw in keywords_list:
-                where_clauses.append(f"(e.document ILIKE %s OR e.{name_column} ILIKE %s OR u.username ILIKE %s)")
-                param = f'%{kw}%'
-                params.extend([param, param, param])
+        # キーワード検索のために users テーブルをJOINする必要がある場合
+        if '担当者名' in sort_column or any(kw for kw in keyword.split() if kw): # キーワードがある場合はJOIN
+             joins += " LEFT JOIN users u ON e.assigned_user_id = u.id"
+        keywords_list = [k.strip() for k in keyword.split() if k.strip()]
+        for kw in keywords_list:
+            where_clauses.append(f"(e.document ILIKE %s OR e.{name_column} ILIKE %s OR u.username ILIKE %s)")
+            param = f'%{kw}%'
+            params.extend([param, param, param])
 
-    # ▼▼▼【ここが修正の核となる部分】▼▼▼
-    
-    # 担当者関連の絞り込み条件を一時的に格納するリスト
-    user_filter_conditions = []
-    
-    # 1. 実在の担当者IDが選択されている場合
+    # ★★★【ここからが担当者フィルターの修正の核】★★★
     if assigned_user_ids:
-        user_filter_conditions.append("e.assigned_user_id = ANY(%s)")
-        params.append(assigned_user_ids)
-    
-    # 2. 「未割り当て」が選択されている場合
-    if include_unassigned:
-        user_filter_conditions.append("e.assigned_user_id IS NULL")
+        real_user_ids = [uid for uid in assigned_user_ids if uid != -1]
+        include_unassigned = -1 in assigned_user_ids
+        
+        user_filter_parts = []
+        if real_user_ids:
+            # `IN %s` を使い、引数としてタプルを渡すのがpsycopg2の正しい作法
+            user_filter_parts.append("e.assigned_user_id IN %s")
+            params.append(tuple(real_user_ids))
+        if include_unassigned:
+            user_filter_parts.append("e.assigned_user_id IS NULL")
+        
+        if user_filter_parts:
+            where_clauses.append(f"({' OR '.join(user_filter_parts)})")
+    # ★★★【修正ここまで】★★★
 
-    # 担当者関連の条件が1つでもあれば、それらをORで結合してWHERE句に追加
-    if user_filter_conditions:
-        where_clauses.append(f"({' OR '.join(user_filter_conditions)})")
+    if has_matches_only:
+        join_key = 'job_id' if item_type == 'jobs' else 'engineer_id'
+        where_clauses.append(f"EXISTS (SELECT 1 FROM matching_results mr WHERE mr.{join_key} = e.id AND mr.is_hidden = 0)")
 
-    # ▲▲▲【修正ここまで】▲▲▲
-
+    # --- クエリの最終組み立て ---
+    query = base_query + joins
     if where_clauses:
         query += " WHERE " + " AND ".join(where_clauses)
-
-    # --- ソート順の決定 (ロジックを少し修正) ---
-    sort_column_map = {
-        "登録日": "e.id",  # "e.created_at" から "e.id" に変更
-        "プロジェクト名": "e.project_name",
-        "氏名": "e.name",
-        "担当者名": "u.username"
-    }
-    # 案件/技術者に応じて不要なキーを削除
-    if item_type == 'jobs':
-        sort_column_map.pop('氏名', None)
-    else: # engineers
-        sort_column_map.pop('プロジェクト名', None)
-        
-    order_map = {"降順": "DESC", "昇順": "ASC"}
-    order_by_column = sort_column_map.get(sort_column, "e.id")
-    nulls_order = "NULLS LAST" if sort_order == "降順" else "NULLS FIRST"
-    order_by_direction = order_map.get(sort_order, "DESC")
     
-    query += f" ORDER BY {order_by_column} {order_by_direction} {nulls_order}"
+    # --- ソート順の決定 ---
+    sort_joins = ""
+    if sort_column == "担当者名" and "LEFT JOIN users u" not in joins:
+        sort_joins = " LEFT JOIN users u ON e.assigned_user_id = u.id"
+    
+    sort_column_map = {"登録日": "e.id", "プロジェクト名": f"e.{name_column}", "氏名": f"e.{name_column}", "担当者名": "u.username"}
+    order_by_column = sort_column_map.get(sort_column, "e.id")
+    
+    order_map = {"降順": "DESC", "昇順": "ASC"}
+    order_by_direction = order_map.get(sort_order, "DESC")
+    nulls_order = "NULLS LAST" if order_by_direction == "DESC" else "NULLS FIRST"
+    
+    # SELECT DISTINCT を追加して重複を除去
+    final_query = query.replace("SELECT e.id", "SELECT DISTINCT e.id") + sort_joins + f" ORDER BY {order_by_column} {order_by_direction} {nulls_order}"
 
-    # --- DB実行 (変更なし) ---
+    # --- DB実行 ---
     conn = get_db_connection()
     try:
         with conn.cursor() as cursor:
-            # デバッグ用に最終的なクエリとパラメータを出力
-            # print("Executing Query:", cursor.mogrify(query, tuple(params)))
-            cursor.execute(query, tuple(params))
+            cursor.execute(final_query, tuple(params))
             return [item[0] for item in cursor.fetchall()]
     except Exception as e:
         print(f"IDリストの取得中にエラー: {e}")
+        # デバッグ用に実行しようとしたクエリを出力
+        try:
+            print("--- FAILED QUERY ---")
+            print(cursor.mogrify(final_query, tuple(params)))
+            print("--------------------")
+        except:
+            pass
         return []
     finally:
         if conn:
             conn.close()
+            
 
 
 
