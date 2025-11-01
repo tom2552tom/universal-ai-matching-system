@@ -2295,15 +2295,28 @@ def rematch_job_with_keyword_filtering(job_id, target_rank='B', target_count=5):
 
             # --- ステップ3: DB一次絞り込み (キーワードに一致する技術者IDを取得) ---
             yield "🔍 キーワードに一致する技術者候補をDBからリストアップしています..."
+
+            # ★★★【ここからが修正の核】★★★
+            CANDIDATE_LIMIT = 1000 # 評価対象の上限数を定義
+
+            base_query = "SELECT id FROM engineers WHERE is_hidden = 0"
+            where_clauses = []
+            params = []
+
             if search_keywords:
-                query = "SELECT id FROM engineers WHERE is_hidden = 0 AND ("
                 or_conditions = [f"(document ILIKE %s OR name ILIKE %s)" for _ in search_keywords]
-                params = [f"%{kw}%" for kw in search_keywords for _ in (0, 1)]
-                query += " OR ".join(or_conditions)
-                query += ") ORDER BY id DESC" # 最新の技術者から
-                cursor.execute(query, tuple(params))
-            else:
-                cursor.execute("SELECT id FROM engineers WHERE is_hidden = 0 ORDER BY id DESC")
+                where_clauses.append(f"({ ' OR '.join(or_conditions) })")
+                params.extend([f"%{kw}%" for kw in search_keywords for _ in (0, 1)])
+            
+            if where_clauses:
+                base_query += " AND " + " AND ".join(where_clauses)
+            
+            # ORDER BYで最新順に並べ、LIMITで上限を設定
+            final_query = f"{base_query} ORDER BY id DESC LIMIT {CANDIDATE_LIMIT}"
+            
+            cursor.execute(final_query, tuple(params))
+            # ★★★【修正ここまで】★★★
+            
             
             candidate_ids = [item['id'] for item in cursor.fetchall()]
 
