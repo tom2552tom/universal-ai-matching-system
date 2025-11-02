@@ -9,10 +9,143 @@ from datetime import datetime
 import ui_components as ui
 import requests
 from streamlit_lottie import st_lottie
+import json # ★ jsonをインポート
+import html # ★ HTMLエスケープのために追加
+
+# ★★★【ここからが修正の核】★★★
+# --- YouTubeライブチャット風ログ用のCSSとJavaScript (スクロール対応版) ---
+CHAT_LOG_HTML = """
+<style>
+    .chat-container {
+        height: 400px;
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column-reverse; /* メッセージを下に溜める */
+        font-family: 'Segoe UI', 'Meiryo', sans-serif;
+        /* ★ 変更点 1: スクロールを有効にする */
+        overflow-y: auto;
+    }
+    /* スクロールバーのスタイル（任意） */
+    .chat-container::-webkit-scrollbar {
+        width: 8px;
+    }
+    .chat-container::-webkit-scrollbar-track {
+        background: #1a1a1a;
+        border-radius: 10px;
+    }
+    .chat-container::-webkit-scrollbar-thumb {
+        background-color: #555;
+        border-radius: 10px;
+        border: 2px solid #1a1a1a;
+    }
+    .chat-message {
+        display: flex;
+        align-items: flex-start;
+        background-color: #262730;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.6rem;
+        animation: slide-and-fade-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+        opacity: 0;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transition: transform 0.2s ease;
+    }
+    .chat-message:hover {
+        transform: scale(1.01);
+    }
+    .chat-message .icon {
+        font-size: 1.2rem;
+        margin-right: 0.8rem;
+        line-height: 1.5;
+    }
+    .chat-message .content-wrapper {
+        display: flex;
+        flex-direction: column;
+    }
+    .chat-message .source {
+        font-size: 0.8rem;
+        font-weight: bold;
+        color: #aaa;
+        margin-bottom: 0.2rem;
+    }
+    .chat-message.input .source { color: #3498db; }
+    .chat-message.processing .source { color: #2ecc71; }
+    
+    .chat-message .text {
+        font-size: 0.95rem;
+        color: #fafafa;
+        line-height: 1.5;
+    }
+    .chat-message .text strong {
+        color: #f1c40f;
+        font-weight: 600;
+    }
+    
+    @keyframes slide-and-fade-in {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+<div id="chat-log-box" class="chat-container">
+    <!-- メッセージはJSでここに追加される -->
+</div>
+<script>
+    const chatBox = document.getElementById('chat-log-box');
+    const newLogs = %s; 
+
+    const existingIds = new Set();
+    chatBox.querySelectorAll('.chat-message').forEach(el => {
+        existingIds.add(el.id);
+    });
+
+    newLogs.forEach((log, index) => {
+        const logId = `log-${log.timestamp}`;
+        if (!existingIds.has(logId)) {
+            const msgEl = document.createElement('div');
+            msgEl.id = logId;
+            msgEl.className = `chat-message ${log.type}`;
+            
+            msgEl.innerHTML = `
+                <span class="icon">${log.icon}</span>
+                <div class="content-wrapper">
+                    <span class="source">${log.source_text}</span>
+                    <span class="text">${log.html_content}</span>
+                </div>
+            `;
+            
+            setTimeout(() => {
+                chatBox.prepend(msgEl);
+                // ★ 変更点 3: 新しいメッセージが来たら一番下にスクロール
+                // flex-direction: column-reverse のため、scrollTop = 0 が一番下になる
+                chatBox.scrollTop = 0;
+            }, index * 250);
+        }
+    });
+
+    /* ★ 変更点 2: 古いログを削除する処理を無効化
+    while (chatBox.children.length > 20) {
+        chatBox.lastChild.remove();
+    }
+    */
+</script>
+"""
+# ★★★【修正ここまで】★★★
+
 
 # --- ページの基本設定 ---
 st.set_page_config(page_title="リアルタイム分析", layout="wide", initial_sidebar_state="collapsed")
 ui.apply_global_styles()
+if not ui.check_password():
+    st.stop() # 認証が通らない場合、ここで処理を停止
 
 # --- アニメーション用のJavaScriptとCSS ---
 # ページ冒頭で一度だけ定義する
@@ -136,6 +269,41 @@ for col, (label, value) in zip(kpi_cols, kpi_map.items()):
 
 st.divider()
 
+
+
+# ★★★【ここからが修正の核】★★★
+with st.expander("⚙️ リアルタイム活動ログ（クリックで展開）", expanded=False):
+    log_feed_data = []
+    for log in dashboard_data.get('live_log_feed', []):
+        log_entry = {"timestamp": log['created_at'].isoformat()}
+        
+        # ★ 変更点: JSに渡すデータを新しいデザインに合わせて変更
+        if log['log_type'] == 'input':
+            item_name = log.get('project_name') or log.get('engineer_name', 'N/A')
+            # HTMLインジェクションを防ぐためにエスケープ
+            safe_item_name = html.escape(item_name)
+            
+            log_entry['type'] = 'input'
+            log_entry['icon'] = '📥'
+            log_entry['source_text'] = 'NEW DATA'
+            log_entry['html_content'] = f"新しいデータ <strong>{safe_item_name}</strong> が登録されました。"
+
+        elif log['log_type'] == 'processing':
+            project_name = html.escape(log.get('project_name', 'N/A'))
+            engineer_name = html.escape(log.get('engineer_name', 'N/A'))
+            rank = html.escape(log.get('grade', 'N/A'))
+
+            log_entry['type'] = 'processing'
+            log_entry['icon'] = '✅'
+            log_entry['source_text'] = 'AI MATCH'
+            log_entry['html_content'] = f"HIT! <strong>{project_name}</strong> ⇔ <strong>{engineer_name}</strong> (Rank: {rank})"
+        
+        log_feed_data.append(log_entry)
+
+    log_feed_json = json.dumps(log_feed_data)
+    st.components.v1.html(CHAT_LOG_HTML % log_feed_json, height=420)
+# ★★★【修正ここまで】★★★
+st.divider()
 
 # ==================================
 # === ビジネス成果エリア (OUTPUT) ===

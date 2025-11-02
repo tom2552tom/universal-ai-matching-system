@@ -3180,7 +3180,9 @@ def get_live_dashboard_data():
         "active_auto_request_count": 0, # ★ 新しいKPIキー
         "active_auto_requests": [], # ★ 新しいリストキー
         "top_performers": [],
-        "recent_matches": []
+        "recent_matches": [],
+        "live_log_feed": []
+        
     }
     
 
@@ -3343,6 +3345,50 @@ def get_live_dashboard_data():
             """)
             data["active_auto_requests"] = cur.fetchall()
             # ★★★【修正ここまで】★★★
+
+
+            # ★★★ 最新のAIアクティビティログと新規登録ログを取得 ★★★
+            cur.execute("""
+                SELECT * FROM (
+                    (SELECT 
+                        'processing' as log_type, 
+                        j.project_name, 
+                        e.name as engineer_name, 
+                        r.grade, 
+                        r.created_at -- この列は TIMESTAMP WITH TIME ZONE 型
+                    FROM matching_results r
+                    JOIN jobs j ON r.job_id = j.id
+                    JOIN engineers e ON r.engineer_id = e.id
+                    ORDER BY r.created_at DESC
+                    LIMIT 5)
+                    UNION ALL
+                    (SELECT 
+                        'input' as log_type, 
+                        project_name, 
+                        NULL, 
+                        NULL, 
+                        created_at::timestamp with time zone -- TEXT型をTIMESTAMP型にキャスト
+                    FROM jobs
+                    ORDER BY id DESC
+                    LIMIT 5)
+                    UNION ALL
+                    (SELECT 
+                        'input' as log_type, 
+                        NULL, 
+                        name, 
+                        NULL, 
+                        created_at::timestamp with time zone -- TEXT型をTIMESTAMP型にキャスト
+                    FROM engineers
+                    ORDER BY id DESC
+                    LIMIT 5)
+                ) AS combined_logs
+                ORDER BY created_at DESC
+                LIMIT 10;
+            """)
+            
+            data["live_log_feed"] = cur.fetchall()
+
+
 
 
 
