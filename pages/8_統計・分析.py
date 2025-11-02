@@ -1,4 +1,4 @@
-# pages/0_ライブモニタリング.py (縦型レイアウト改善版)
+# pages/0_ライブモニタリング.py (最終レイアウト版)
 
 import streamlit as st
 import backend as be
@@ -7,14 +7,15 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 import ui_components as ui
+import requests
+from streamlit_lottie import st_lottie
 
 # --- ページの基本設定 ---
 st.set_page_config(page_title="リアルタイム分析", layout="wide", initial_sidebar_state="collapsed")
 ui.apply_global_styles()
 
-
 # --- アニメーション用のJavaScriptとCSS ---
-# JavaScriptコード
+# ページ冒頭で一度だけ定義する
 JS_COUNTER_CODE = """
 <script>
 function animateValue(obj, start, end, duration) {
@@ -27,7 +28,6 @@ function animateValue(obj, start, end, duration) {
     };
     window.requestAnimationFrame(step);
 }
-// DOMContentLoadedを使い、ページの要素が読み込まれてからスクリプトを実行
 document.addEventListener("DOMContentLoaded", function() {
     const metrics = parent.document.querySelectorAll('.animated-metric');
     metrics.forEach(metric => {
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if (obj) {
             const startValue = parseInt(obj.textContent.replace(/,/g, '')) || 0;
             if (startValue !== targetValue) {
-                animateValue(obj, startValue, targetValue, 800); // 0.8秒でアニメーション
+                animateValue(obj, startValue, targetValue, 800);
             }
         }
     });
@@ -45,38 +45,24 @@ document.addEventListener("DOMContentLoaded", function() {
 """
 st.components.v1.html(JS_COUNTER_CODE, height=0)
 
-# カスタムメトリック用のCSS
 st.markdown("""
 <style>
 .custom-metric {
-    border: 1px solid #444;
-    border-radius: 8px;
-    padding: 1rem;
-    text-align: center;
-    background-color: #262730;
-    height: 100%; /* 高さを揃える */
+    border: 1px solid #444; border-radius: 8px; padding: 1rem;
+    text-align: center; background-color: #262730; height: 100%;
 }
-.custom-metric .label {
-    font-size: 0.9rem;
-    color: #a0a0a0;
-    margin-bottom: 0.5rem;
-}
-.custom-metric .value {
-    font-size: 2.5rem;
-    font-weight: bold;
-    line-height: 1.2;
-    color: #fafafa;
-}
+.custom-metric .label { font-size: 0.9rem; color: #a0a0a0; margin-bottom: 0.5rem; }
+.custom-metric .value { font-size: 2.5rem; font-weight: bold; line-height: 1.2; color: #fafafa; }
 </style>
 """, unsafe_allow_html=True)
 
 
-
-
-# --- タイトル ---
-st.title("🚀 AIシステム リアルタイム分析")
-st.caption(f"最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
+# --- Lottieアニメーション読み込み関数 ---
+@st.cache_data
+def load_lottie_url(url: str):
+    r = requests.get(url)
+    if r.status_code != 200: return None
+    return r.json()
 
 # --- データ取得 ---
 @st.cache_data(ttl=5)
@@ -84,64 +70,69 @@ def get_dashboard_data_cached():
     return be.get_live_dashboard_data()
 dashboard_data = get_dashboard_data_cached()
 
+
+# ==================================
+# === ヘッダーエリア ===
+# ==================================
+col_title, col_counter = st.columns([3, 2]) # カラムの比率を調整
+
+with col_title:
+    st.title("🚀 AIシステム リアルタイム分析")
+    st.caption(f"最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+with col_counter:
+    # 垂直位置を調整するためのスペーサー
+    st.write("") 
+    
+    with st.container(border=True):
+        col_anim, col_val = st.columns([1, 2]) # アニメーションの比率を少し広げる
+
+        with col_anim:
+            lottie_url = "https://lottie.host/6944da1c-9801-4b65-a942-df7837fc1157/eFcKKThSu1.json"
+            lottie_json = load_lottie_url(lottie_url)
+            if lottie_json:
+                st_lottie(lottie_json, speed=1, height=100, width=100, key="ai_robot") 
+
+        with col_val:
+            total_ai_activities = sum(dashboard_data.get('ai_activity_counts', {}).values())
+            st.markdown("###### 本日のAI総思考回数")
+            # style内の text-align を 'center' に変更
+            st.markdown(f"""
+                <div class="animated-metric" data-value="{total_ai_activities}" style="text-align: center;">
+                    <div class="value" style="font-size: 2.5rem; color: #28a745; line-height: 1.2;">{total_ai_activities:,}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            # ★★★【修正ここまで】★★★
+
 st.divider()
+
 
 # ==================================
 # === サマリーKPIエリア ===
 # ==================================
 st.header("📊 今日の活動サマリー")
 
-# ★★★【ここからが修正の核】★★★
-# カスタムメトリックを表示するヘルパー関数
-def animated_metric(label, value, help_text=""):
-    # JSと連携するためのカスタムHTMLを生成
+def animated_metric(label, value):
     st.markdown(f"""
         <div class="custom-metric">
-            <div class="label" title="{help_text}">{label}</div>
+            <div class="label">{label}</div>
             <div class="animated-metric" data-value="{value}">
                 <div class="value">{value:,}</div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-# 5つのKPIを横に並べて表示
-col1, col2, col3 = st.columns(3)
-with col1:
-    animated_metric("本日登録の案件数", dashboard_data.get('jobs_today', 0))
-with col2:
-    animated_metric("本日登録の技術者数", dashboard_data.get('engineers_today', 0))
-#with col3:
-#    animated_metric("現在の提案件数", dashboard_data.get('proposal_count_total', 0))
-with col3:    
-    animated_metric("マッチング件数", dashboard_data.get('new_matches_today', 0))
-#with col5:
-#    animated_metric("本日の採用決定数", dashboard_data.get('adopted_count_today', 0))
-# ★★★【修正ここまで】★★★
-
-
-st.divider()
-
-# ==================================
-# === AI活動のライブ表示エリア ===
-# ==================================
-st.header("🤖 AI稼働状況")
-with st.container(border=True):
-    
-    ai_activities = dashboard_data.get('ai_activity_counts', {})
-    total_evals = sum(ai_activities.values())
-
-    ai_evals_today = dashboard_data.get('ai_evaluations_today', 0)
-    
-    st.markdown("##### 本日のAI実行回数")
-    # アニメーション付きカウンター
-    st.markdown(f"""
-        <div class="animated-metric" data-value="{total_evals}" style="text-align: center;">
-            <div style="font-size: 4.5rem; font-weight: bold; color: #28a745; line-height: 1.1;">{total_evals:,}</div>
-        </div>
-    """, unsafe_allow_html=True)
-    
-
-    st.caption("AIが案件と技術者のマッチング評価を行った累計回数です。バックグラウンドで稼働しています。")
+# 4つのKPIを横に並べて表示
+kpi_cols = st.columns(3)
+kpi_map = {
+    "本日登録の案件数": dashboard_data.get('jobs_today', 0),
+    "本日登録の技術者数": dashboard_data.get('engineers_today', 0),
+    #"現在の総提案件数": dashboard_data.get('proposal_count_total', 0),
+    "本日の採用決定数": dashboard_data.get('adopted_count_today', 0)
+}
+for col, (label, value) in zip(kpi_cols, kpi_map.items()):
+    with col:
+        animated_metric(label, value)
 
 st.divider()
 
@@ -149,22 +140,22 @@ st.divider()
 # ==================================
 # === ビジネス成果エリア (OUTPUT) ===
 # ==================================
-st.header("📈 ビジネス成果")
+st.header("📈 マッチングの進捗状況")
 
 # ファネルチャートと担当者ランキングを横に並べる
 col_funnel, col_rank = st.columns([2, 1], gap="large")
 
 with col_funnel:
-    st.subheader("マッチングファネル")
+    st.subheader("ステータス別の状況")
     funnel_data = dashboard_data.get('funnel_data', {})
     funnel_stages = ["新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", "採用"]
     funnel_df = pd.DataFrame({
-        "ステージ": [stage for stage in funnel_stages if stage in funnel_data],
+        "ステータス": [stage for stage in funnel_stages if stage in funnel_data],
         "件数": [funnel_data.get(stage, 0) for stage in funnel_stages if stage in funnel_data]
     })
     
     if not funnel_df.empty:
-        fig = px.funnel(funnel_df, x='件数', y='ステージ', orientation='h')
+        fig = px.funnel(funnel_df, x='件数', y='ステータス', orientation='h')
         fig.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=10))
         st.plotly_chart(fig, use_container_width=True)
     else:
