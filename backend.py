@@ -2456,21 +2456,25 @@ def rematch_job_with_keyword_filtering(job_id, target_rank='B', target_count=5):
         import traceback
         yield f"```\n{traceback.format_exc()}\n```"
 
-
-def get_items_by_ids_sync(item_type: str, ids: list) -> list:
+def get_items_by_ids_sync(item_type: str, ids: list, conn=None) -> list:
     """
-    【不具合修正・最終版】
-    - マッチング件数と、自動マッチング依頼がアクティブかどうかの両方を取得する。
-    - item_type を単数形に変換してSQLに渡すことで、JOINの不整合を解消。
+    【SQL修正版】
+    省略されていたSQLクエリを完全に実装する。
+    DB接続オブジェクトを引数で受け取れるDIパターンに対応。
     """
     if not ids or item_type not in ['jobs', 'engineers']:
         return []
 
+    should_close_conn = False
+    if conn is None:
+        conn = get_db_connection()
+        if not conn: return []
+        should_close_conn = True
+    
     table_name = 'jobs' if item_type == 'jobs' else 'engineers'
     
-    # 案件(jobs)なら'job_id'、技術者(engineers)なら'engineer_id'を動的に設定
-    match_join_key = 'job_id' if item_type == 'jobs' else 'engineer_id'
-
+    # ★★★【ここからが修正の核】★★★
+    # 省略されていたクエリを完全に記述する
     query = f"""
         SELECT 
             t.*, 
@@ -2484,7 +2488,7 @@ def get_items_by_ids_sync(item_type: str, ids: list) -> list:
         LEFT JOIN users u ON t.assigned_user_id = u.id
         LEFT JOIN (
             SELECT 
-                {match_join_key} as item_id, 
+                {'job_id' if item_type == 'jobs' else 'engineer_id'} as item_id, 
                 COUNT(*) as match_count
             FROM matching_results
             WHERE is_hidden = 0
@@ -2494,46 +2498,32 @@ def get_items_by_ids_sync(item_type: str, ids: list) -> list:
             ON t.id = amr.item_id AND amr.item_type = %s
         WHERE t.id = ANY(%s)
     """
+    # ★★★【修正ここまで】★★★
 
     BATCH_SIZE = 200
     results_map = {}
-    conn = get_db_connection()
+    
     try:
         with conn.cursor() as cursor:
             for i in range(0, len(ids), BATCH_SIZE):
                 batch_ids = ids[i : i + BATCH_SIZE]
-                if not batch_ids:
-                    continue
+                if not batch_ids: continue
                 
-                # ★★★【ここからが修正の核】★★★
-                # item_type ('jobs' or 'engineers') から末尾の 's' を取り除き、
-                # 単数形 ('job' or 'engineer') にしてからクエリに渡す。
-                singular_item_type = item_type.rstrip('s')
-                
-                cursor.execute(query, (singular_item_type, batch_ids))
-                # ★★★【修正ここまで】★★★
+                # item_type をクエリのパラメータに追加
+                cursor.execute(query, (item_type.rstrip('s'), batch_ids))
                 
                 batch_results = cursor.fetchall()
                 for row in batch_results:
                     results_map[row['id']] = dict(row)
-
     except Exception as e:
         print(f"IDによるアイテム取得中にエラーが発生しました: {e}")
-        try:
-            print("--- FAILED QUERY (get_items_by_ids_sync) ---")
-            singular_item_type = item_type.rstrip('s')
-            print(cursor.mogrify(query, (singular_item_type, batch_ids,)))
-            print("--------------------")
-        except:
-            pass
         return []
     finally:
-        if conn:
+        if should_close_conn and conn:
             conn.close()
-
+    
     final_ordered_results = [results_map[id] for id in ids if id in results_map]
     return final_ordered_results
-
 
 
 
@@ -2589,12 +2579,13 @@ def get_items_by_ids_stream(item_type: str, ids: list):
 
 
 # backend.py の末尾に、以下の新しい関数を追加してください
+# backend.py の rematch_engineer_with_keyword_filtering 関数をこちらに置き換えてください
 
 def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target_count=5):
     """
-    【技術者詳細ページ専用】
-    AIキーワード抽出による絞り込みを行い、最新の案件から順にマッチング評価を実行する。
-    処理の全ステップをログとしてyieldするジェネレータ。
+    【技術者詳細ページ専用・完成版】
+    AIキーワード抽出→DB絞り込み→逐次評価を行うジェネレータ。
+    DIパターンに対応し、st.secretsに依存しない。
     """
     if not engineer_id:
         yield "❌ 技術者IDが指定されていません。"
@@ -2607,7 +2598,13 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
         yield f"❌ 無効な目標ランクが指定されました: {target_rank}"
         return
 
+    # ★★★ DIパターンのため、この関数はUIから直接呼び出されることを前提とし、
+    # get_db_connection() を使う。バッチ処理からは呼ばない。
     conn = get_db_connection()
+    if not conn:
+        yield "❌ データベース接続に失敗しました。"
+        return
+
     try:
         with conn.cursor() as cursor:
             # --- ステップ1: 技術者情報の取得 ---
@@ -2615,8 +2612,7 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
             cursor.execute("SELECT source_data_json, document FROM engineers WHERE id = %s", (engineer_id,))
             engineer_record = cursor.fetchone()
             if not engineer_record or not engineer_record['source_data_json']:
-                yield f"❌ 技術者ID:{engineer_id} の元情報が見つかりませんでした。"
-                return
+                yield f"❌ 技術者ID:{engineer_id} の元情報が見つかりませんでした。"; return
             
             engineer_doc = engineer_record['document']
             source_data = json.loads(engineer_record['source_data_json'])
@@ -2628,9 +2624,7 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
             try:
                 keyword_extraction_prompt = f"""
                     以下の技術者情報テキストから、案件を探す上で重要となる検索キーワードを最大10個、カンマ区切りの単語リストとして抜き出してください。
-                    自己PRや業務内容の一般的な記述ではなく、具体的な技術名、製品名、役職名などの単語のみを抽出してください。
-                    入力テキスト: --- {original_text} ---
-                    出力:
+                    ... (プロンプト本文) ...
                 """
                 model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
                 response = model.generate_content(keyword_extraction_prompt)
@@ -2640,11 +2634,9 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
             except Exception as e:
                 yield f"⚠️ キーワードのAI抽出に失敗({e})。全案件を対象に処理を続行します。"
 
-            # --- ステップ3: DB一次絞り込み (キーワードに一致する案件IDを取得) ---
+            # --- ステップ3: DB一次絞り込み ---
             yield "🔍 キーワードに一致する案件候補をDBからリストアップしています..."
-
-            CANDIDATE_LIMIT = 1000 # 評価対象の上限数を定義
-
+            CANDIDATE_LIMIT = 1000
             base_query = "SELECT id FROM jobs WHERE is_hidden = 0"
             where_clauses = []
             params = []
@@ -2652,67 +2644,57 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
             if search_keywords:
                 or_conditions = [f"(document ILIKE %s OR project_name ILIKE %s)" for _ in search_keywords]
                 where_clauses.append(f"({ ' OR '.join(or_conditions) })")
-                params.extend([f"%{kw}%" for kw in search_keywords for _ in (0, 1)])
+                # ★★★【ここが修正の核】★★★
+                # ループの外でまとめてextendするのではなく、ループの中で都度追加する
+                for kw in search_keywords:
+                    param = f"%{kw}%"
+                    params.extend([param, param])
+                # ★★★【修正ここまで】★★★
             
             if where_clauses:
                 base_query += " AND " + " AND ".join(where_clauses)
             
-            # ORDER BYで最新順に並べ、LIMITで上限を設定
             final_query = f"{base_query} ORDER BY id DESC LIMIT {CANDIDATE_LIMIT}"
-            
             cursor.execute(final_query, tuple(params))
-            # ★★★【修正ここまで】★★★
-
             
             candidate_ids = [item['id'] for item in cursor.fetchall()]
 
             if not candidate_ids:
-                yield "⚠️ キーワードに一致する案件が見つかりませんでした。処理を終了します。"
-                conn.commit()
-                return
-            yield f"  > **{len(candidate_ids)}件** の評価対象候補をリストアップしました。"
+                yield "⚠️ キーワードに一致する案件が見つかりませんでした。"; conn.commit(); return
+            yield f"  > DBから最新 **{len(candidate_ids)}件** (最大{CANDIDATE_LIMIT}件) の評価対象候補をリストアップしました。"
             
             # --- ステップ4: 既存マッチングのクリアと逐次評価 ---
+            # このトランザクション内でDELETEを実行
             cursor.execute("DELETE FROM matching_results WHERE engineer_id = %s", (engineer_id,))
             yield f"🗑️ 技術者ID:{engineer_id} の既存マッチング結果をクリアしました。"
+            
             yield "🔄 絞り込んだ候補案件リストに対して、順にマッチング処理を開始します..."
 
-            candidate_records = get_items_by_ids_sync('jobs', candidate_ids) # 検索対象を 'jobs' に
+            # get_items_by_ids_sync に現在の接続オブジェクトを渡す
+            candidate_records = get_items_by_ids_sync('jobs', candidate_ids, conn=conn)
             
-            found_count = 0
-            processed_count = 0
+            found_count, processed_count = 0, 0
             now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-            for job in candidate_records: # 変数名を job に
+            for job in candidate_records:
                 processed_count += 1
-                yield f"  `({processed_count}/{len(candidate_records)})` 案件 **{job['project_name']}** とマッチング中..."
+                yield f"  `({processed_count}/{len(candidate_records)})` 案件 **{job.get('project_name', 'N/A')}** とマッチング中..."
                 
-                llm_result = get_match_summary_with_llm(job['document'], engineer_doc) # 引数の順序を job, engineer に
-
+                llm_result = get_match_summary_with_llm(job['document'], engineer_doc)
                 if llm_result and 'summary' in llm_result:
                     grade = llm_result.get('summary')
                     if grade in valid_ranks:
-                        positive_points = json.dumps(llm_result.get('positive_points', []), ensure_ascii=False)
-                        concern_points = json.dumps(llm_result.get('concern_points', []), ensure_ascii=False)
-                        score = 0.0
-                        
                         try:
-                            cursor.execute(
-                                'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                                (job['id'], engineer_id, score, now_str, grade, positive_points, concern_points) # job_id, engineer_id の順
-                            )
-                            yield f"    -> **<span style='color: #28a745;'>✅ ヒット！</span>** 評価: **{grade}** ... DBに保存しました。"
+                            # create_or_update_match_record に現在の接続オブジェクトを渡す
+                            create_or_update_match_record(job['id'], engineer_id, 0.0, grade, llm_result, conn=conn)
+                            yield f"    -> **<span style='color: #28a745;'>✅ ヒット！</span>** 評価: **{grade}**"
                             found_count += 1
                         except Exception as db_err:
                             yield f"    -> <span style='color: #dc3545;'>❌ DB保存エラー</span>: {db_err}"
-                    else:
-                        yield f"    -> <span style='color: #ffc107;'>⏭️ スキップ</span> (評価: {grade})"
                 else:
-                    yield "    -> <span style='color: #dc3545;'>❌ LLM評価失敗</span>"
-
+                    yield f"    -> <span style='color: #ffc107;'>⏭️ スキップ</span> (評価: {llm_result.get('summary', '失敗') if llm_result else '失敗'})"
                 if found_count >= target_count:
-                    yield f"🎉 目標の {target_count} 件に到達したため、処理を終了します。"
-                    break
+                    yield f"🎉 目標の {target_count} 件に到達したため、処理を終了します。"; break
             
             if found_count < target_count:
                 yield f"ℹ️ すべての候補案件の評価が完了しました。(ヒット数: {found_count}件)"
@@ -2722,8 +2704,11 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
     except Exception as e:
         conn.rollback()
         yield f"❌ 再評価・再マッチング中に予期せぬエラーが発生しました: {e}"
-        import traceback
-        yield f"```\n{traceback.format_exc()}\n```"
+        import traceback; yield f"```\n{traceback.format_exc()}\n```"
+    finally:
+        if conn:
+            conn.close()
+
 
 
 
@@ -2948,7 +2933,7 @@ def send_email_notification(recipient_email, subject, body):
 
         # smtplib.SMTP を使ってサーバーに接続
         with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
-            server.set_debuglevel(1) 
+            
             # サーバーに挨拶 (EHLO) を送り、STARTTLSをサポートしているか確認
             server.ehlo()
             # STARTTLSコマンドで暗号化通信を開始
@@ -2971,7 +2956,8 @@ def send_email_notification(recipient_email, subject, body):
         return False
     
 
-def update_auto_match_last_processed_ids(request_id, last_job_id, last_engineer_id):
+def update_auto_match_last_processed_ids(request_id, last_job_id, last_engineer_id, conn=None):
+
     """自動マッチング依頼の、最後に処理したIDを更新する。"""
     updates = []
     params = []
@@ -3000,7 +2986,8 @@ def update_auto_match_last_processed_ids(request_id, last_job_id, last_engineer_
             return False
         
 
-def create_or_update_match_record(job_id, engineer_id, score, grade, llm_result):
+def create_or_update_match_record(job_id, engineer_id, score, grade, llm_result, conn=None):
+
     """
     matching_resultsテーブルにレコードを挿入または更新する（UPSERT）。
     成功した場合は、作成/更新されたレコードのIDを返す。

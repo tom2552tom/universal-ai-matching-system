@@ -14,3 +14,4 @@ venv/
 *.faiss
 logs/email_cron.log
 logs/auto_matcher_cron.log
+logs/auto_matcher_cron.log
