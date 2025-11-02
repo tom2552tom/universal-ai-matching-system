@@ -3176,7 +3176,9 @@ def get_live_dashboard_data():
             "新規": 0, "提案準備中": 0, "提案中": 0, 
             "クライアント面談": 0, "結果待ち": 0, "採用": 0
         },
-         "proposal_count_total": 0,
+        "proposal_count_total": 0,
+        "active_auto_request_count": 0, # ★ 新しいKPIキー
+        "active_auto_requests": [], # ★ 新しいリストキー
         "top_performers": [],
         "recent_matches": []
     }
@@ -3293,7 +3295,56 @@ def get_live_dashboard_data():
                 (f"{today_str}%",)
             )
             data["engineers_today"] = cur.fetchone()['count']
-            
+
+
+            cur.execute("""
+                SELECT COUNT(*) 
+                FROM auto_matching_requests 
+                WHERE is_active = TRUE;
+            """)
+            data["active_auto_request_count"] = cur.fetchone()['count']
+
+            # 2. アクティブな自動マッチング依頼の最新5件
+            #    UNION ALLを使って、jobsとengineersの両方から情報を取得
+            cur.execute("""
+                SELECT * FROM (
+                    (SELECT 
+                        req.id, req.item_id, req.item_type, req.target_rank, req.notification_email,
+                        j.project_name as item_name,
+                        j.document, -- AI要約を取得
+                        COALESCE(mc.match_count, 0) as match_count, -- マッチング件数を取得
+                        req.created_at
+                    FROM auto_matching_requests req
+                    JOIN jobs j ON req.item_id = j.id AND req.item_type = 'job'
+                    LEFT JOIN (
+                        SELECT job_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY job_id
+                    ) mc ON j.id = mc.job_id
+                    WHERE req.is_active = TRUE
+                    ORDER BY req.created_at DESC
+                    LIMIT 5)
+                    UNION ALL
+                    (SELECT 
+                        req.id, req.item_id, req.item_type, req.target_rank, req.notification_email,
+                        e.name as item_name,
+                        e.document, -- AI要約を取得
+                        COALESCE(mc.match_count, 0) as match_count, -- マッチング件数を取得
+                        req.created_at
+                    FROM auto_matching_requests req
+                    JOIN engineers e ON req.item_id = e.id AND req.item_type = 'engineer'
+                    LEFT JOIN (
+                        SELECT engineer_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY engineer_id
+                    ) mc ON e.id = mc.engineer_id
+                    WHERE req.is_active = TRUE
+                    ORDER BY req.created_at DESC
+                    LIMIT 5)
+                ) AS combined_requests
+                ORDER BY created_at DESC
+                LIMIT 5;
+            """)
+            data["active_auto_requests"] = cur.fetchall()
+            # ★★★【修正ここまで】★★★
+
+
 
 
 

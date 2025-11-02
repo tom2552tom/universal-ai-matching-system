@@ -86,7 +86,6 @@ with col2:
         label="登録技術者数",
         value=f"{dashboard_data.get('engineers_today', 0)} 件"
     )
-# ★★★【修正ここまで】★★★
 
 with col3:
     st.metric(
@@ -107,6 +106,8 @@ with col5:
         label="採用決定数",
         value=f"{adopted_count_today} 件"
     )
+
+
 
 st.divider()
 
@@ -205,6 +206,73 @@ with col_process:
             for match in recent_matches:
                 log_text += f"✅ HIT! [案件] {match['project_name']} ⇔ [技術者] {match['engineer_name']} (ランク: {match['grade']})\n"
             st.code(log_text, language="log")
+
+
+# ★★★【ここからが新しいセクション】★★★
+st.divider()
+
+
+
+# ★★★【ここからが修正の核】★★★
+# バックエンドから総数を取得
+active_request_count = dashboard_data.get('active_auto_request_count', 0)
+
+# ヘッダーに総数を表示
+st.header(f"🤖 現在有効な自動マッチング依頼 ({active_request_count} 件)")
+
+active_requests = dashboard_data.get('active_auto_requests', [])
+
+if not active_requests:
+    st.info("現在、アクティブな自動マッチング依頼はありません。")
+else:
+    # リスト表示部分は変更なし
+    st.caption(f"最新 {len(active_requests)} 件を表示しています。")
+    
+    # ★★★【ここからが修正の核】★★★
+    for req in active_requests:
+        item_type = req['item_type']
+        item_id = req['item_id']
+        
+        # アイコンとリンク先ページを決定
+        if item_type == 'job':
+            item_type_icon = "💼"
+            page_path = "pages/6_案件詳細.py"
+            session_key = "selected_job_id"
+        else:
+            item_type_icon = "👤"
+            page_path = "pages/5_技術者詳細.py"
+            session_key = "selected_engineer_id"
+
+        item_name = req['item_name']
+        target_rank = req['target_rank']
+        match_count = req['match_count']
+        
+        # AI要約のプレビューを生成
+        doc_parts = req.get('document', '').split('\n---\n', 1)
+        main_doc_preview = (doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]).replace('\n', ' ').strip()
+        main_doc_preview = main_doc_preview[:100] + "..." if len(main_doc_preview) > 100 else main_doc_preview
+
+        with st.container(border=True):
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                # タイトルをクリック可能にする
+                if st.button(f"**{item_type_icon} {item_name}** (ID: {item_id})", key=f"req_title_{req['id']}", use_container_width=True):
+                    st.session_state[session_key] = item_id
+                    st.switch_page(page_path)
+                
+                # AI要約のプレビュー
+                st.caption(main_doc_preview)
+            
+            with col2:
+                # チップ風に情報を表示
+                chips_html = ""
+                chips_html += f"<span style='...'>🎯 {target_rank}以上</span>" # スタイルは適宜調整
+                if match_count > 0:
+                    chips_html += f"<span style='...'>🤝 {match_count}件</span>"
+                st.markdown(chips_html, unsafe_allow_html=True)
+
+# ★★★【修正ここまで】★★★
+
 
 
 # --- 自動リフレッシュ ---
