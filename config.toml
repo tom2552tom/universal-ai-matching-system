@@ -3,7 +3,7 @@
 [theme]
 
 # "light"テーマをベースにする
-base = "light"
+#base = "light"
 
 # 主要なウィジェットの色を、落ち着いた青色に設定します
 primaryColor = "#0d6efd"
