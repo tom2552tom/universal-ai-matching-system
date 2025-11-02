@@ -16,7 +16,7 @@ import re
 
 # --- グローバル設定 ---
 # Streamlit CloudのURLなど、デプロイ先のベースURLをここに記述
-APP_BASE_URL = "https://tom2552tom-universal-ai-matching-system-1--tiqfde.streamlit.app"
+APP_BASE_URL = "https://universal-ai-matching.streamlit.app"
 # 一度にDBから取得・処理する新規レコードの数
 BATCH_SIZE = 100
 
