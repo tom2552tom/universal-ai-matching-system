@@ -13,6 +13,9 @@ import json # ★ jsonをインポート
 import html # ★ HTMLエスケープのために追加
 import random # ★★★ ランダム選択のために追加 ★★★
 
+
+
+
 AI_COMMENTS = [
     "今日も順調に稼働中です！何かお探しですか？",
     "新しい案件、見逃していませんか？リストをチェック！",
@@ -24,71 +27,103 @@ AI_COMMENTS = [
     "何か面白い情報は見つかりましたか？",
 ]
 
+
 CHAT_LOG_HTML = """
 <style>
-    /* (CSSのスタイル定義は変更なし) */
-    .chat-container {
-        height: 400px; background-color: #1a1a1a; border: 1px solid #333; border-radius: 12px;
-        padding: 1rem; display: flex; flex-direction: column-reverse; font-family: 'Segoe UI', 'Meiryo', sans-serif;
-        overflow-y: auto;
+    .chat-container-wrapper {
+        position: relative;
+        /* ★ 変更点 1: 幅を親要素の100%に設定 */
+        width: 100%;
+        /* ★ 変更点 2: paddingやborderを幅の内側に含める（安全策）*/
+        box-sizing: border-box;
     }
+    .chat-container {
+        height: 375px;
+        background-color: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        font-family: 'Segoe UI', 'Meiryo', sans-serif;
+    }
+    .chat-container::after {
+        content: '';
+        display: block;
+        height: 0.5rem;
+        flex-shrink: 0;
+    }
+    /* (以降のCSSとJavaScriptは変更なし) */
     .chat-container::-webkit-scrollbar { width: 8px; }
     .chat-container::-webkit-scrollbar-track { background: #1a1a1a; border-radius: 10px; }
     .chat-container::-webkit-scrollbar-thumb { background-color: #555; border-radius: 10px; border: 2px solid #1a1a1a; }
-    .chat-message {
-        display: flex; align-items: flex-start; background-color: #262730; padding: 0.75rem 1rem;
-        border-radius: 8px; margin-bottom: 0.6rem;
-        animation: slide-and-fade-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-        opacity: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
+    a.chat-message { display: flex; align-items: flex-start; background-color: #31333F; border: 1px solid #4A4D59; padding: 0.75rem 1rem; border-radius: 8px; margin-top: 0.6rem; animation: slide-in-from-bottom 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; opacity: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: background-color 0.2s ease, transform 0.2s ease; text-decoration: none; color: inherit; cursor: pointer; }
+    a.chat-message:hover { background-color: #404452; transform: scale(1.01); }
     .chat-message .icon { font-size: 1.2rem; margin-right: 0.8rem; line-height: 1.5; }
     .chat-message .content-wrapper { display: flex; flex-direction: column; }
     .chat-message .source { font-size: 0.8rem; font-weight: bold; color: #aaa; margin-bottom: 0.2rem; }
-    .chat-message.input .source { color: #3498db; }
-    .chat-message.processing .source { color: #2ecc71; }
-    .chat-message .text { font-size: 0.95rem; color: #fafafa; line-height: 1.5; }
+    .chat-message.input .source { color: #58a6ff; }
+    .chat-message.processing .source { color: #56d364; }
+    .chat-message .text { font-size: 0.95rem; color: #e6edf3; line-height: 1.5; }
     .chat-message .text strong { color: #f1c40f; font-weight: 600; }
-    @keyframes slide-and-fade-in {
-        from { opacity: 0; transform: translateY(30px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+    .new-message-toast { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); background-color: #3498db; color: white; padding: 0.5rem 1rem; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer; z-index: 10; font-size: 0.9rem; font-weight: bold; animation: toast-in 0.3s ease-out forwards; opacity: 0; }
+    @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    @keyframes slide-in-from-bottom { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 </style>
-<div id="chat-log-box" class="chat-container">
-    <!-- メッセージはJSでここに追加される -->
+<div class="chat-container-wrapper">
+    <div id="chat-log-box" class="chat-container"></div>
+    <div id="new-message-toast" class="new-message-toast" style="display: none;">⬇️ 新着メッセージ</div>
 </div>
 <script>
     const chatBox = document.getElementById('chat-log-box');
-    const newLogs = %s; 
+    const newMsgToast = document.getElementById('new-message-toast');
+    
+    __LOG_DATA_PLACEHOLDER__
 
     const existingIds = new Set();
-    chatBox.querySelectorAll('.chat-message').forEach(el => {
-        existingIds.add(el.id);
-    });
-
-    newLogs.forEach((log, index) => {
+    chatBox.querySelectorAll('.chat-message').forEach(el => { existingIds.add(el.id); });
+    const scrollBottomOffset = chatBox.scrollHeight - chatBox.clientHeight - chatBox.scrollTop;
+    const scrollThreshold = 50;
+    const isScrolledToBottom = scrollBottomOffset < scrollThreshold;
+    newLogs.slice().reverse().forEach((log, index) => {
         const logId = `log-${log.timestamp}`;
         if (!existingIds.has(logId)) {
-            // ★ 変更点: クリックできないシンプルな div 要素に戻す
-            const msgEl = document.createElement('div');
+            const msgEl = document.createElement('a');
             msgEl.id = logId;
             msgEl.className = `chat-message ${log.type}`;
-            
-            msgEl.innerHTML = `
-                <span class="icon">${log.icon}</span>
-                <div class="content-wrapper">
-                    <span class="source">${log.source_text}</span>
-                    <span class="text">${log.html_content}</span>
-                </div>
-            `;
-            
+            msgEl.href = '#';
+            if (log.link_data) {
+                msgEl.onclick = (event) => {
+                    event.preventDefault();
+                    Streamlit.setComponentValue(log.link_data);
+                };
+            } else {
+                msgEl.style.cursor = 'default';
+                msgEl.onclick = (event) => event.preventDefault();
+            }
+            msgEl.innerHTML = `<span class="icon">${log.icon}</span><div class="content-wrapper"><span class="source">${log.source_text}</span><span class="text">${log.html_content}</span></div>`;
             setTimeout(() => {
-                chatBox.prepend(msgEl);
-                chatBox.scrollTop = 0;
-            }, index * 250);
+                chatBox.appendChild(msgEl);
+                if (isScrolledToBottom) {
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                } else {
+                    newMsgToast.style.display = 'block';
+                }
+            }, index * 200);
         }
     });
+    newMsgToast.onclick = () => { chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' }); };
+    chatBox.onscroll = () => {
+        const currentScrollBottomOffset = chatBox.scrollHeight - chatBox.clientHeight - chatBox.scrollTop;
+        if (currentScrollBottomOffset < scrollThreshold) { newMsgToast.style.display = 'none'; }
+    };
 </script>
 """
+
+
+
+
 
 # ★★★【修正ここまで】★★★
 
@@ -314,56 +349,50 @@ st.divider()
 
 
 
-
-# ★★★【ここからが修正の核】★★★
 with st.expander("⚙️ リアルタイム活動ログ（クリックで展開）", expanded=False):
     log_feed_data = []
-    # バックエンドから取得したログデータをJSに渡せる形式に整形
     for log in dashboard_data.get('live_log_feed', []):
         log_entry = {"timestamp": log['created_at'].isoformat()}
-        link_data = None 
-
+        link_data = None
         if log['log_type'] == 'input':
             item_name = log.get('project_name') or log.get('engineer_name', 'N/A')
             safe_item_name = html.escape(item_name)
-            
             log_entry['type'] = 'input'
             log_entry['icon'] = '📥'
             log_entry['source_text'] = 'NEW DATA'
             log_entry['html_content'] = f"新しいデータ <strong>{safe_item_name}</strong> が登録されました。"
-            
-            if 'job_id' in log:
+            if log.get('job_id'):
                 link_data = {"type": "job", "id": log['job_id']}
-            elif 'engineer_id' in log:
+            elif log.get('engineer_id'):
                 link_data = {"type": "engineer", "id": log['engineer_id']}
-
         elif log['log_type'] == 'processing':
             project_name = html.escape(log.get('project_name', 'N/A'))
             engineer_name = html.escape(log.get('engineer_name', 'N/A'))
             rank = html.escape(log.get('grade', 'N/A'))
-
             log_entry['type'] = 'processing'
             log_entry['icon'] = '✅'
             log_entry['source_text'] = 'AI MATCH'
             log_entry['html_content'] = f"HIT! <strong>{project_name}</strong> ⇔ <strong>{engineer_name}</strong> (Rank: {rank})"
-            
-            if 'job_id' in log:
+            if log.get('job_id'):
                 link_data = {"type": "job", "id": log['job_id']}
-        
         log_entry['link_data'] = link_data
         log_feed_data.append(log_entry)
 
     log_feed_json = json.dumps(log_feed_data)
-    #st.json(log_feed_json) 
-
-    # ★ 変更点 1: コンポーネントに一意の `key` を設定
-    clicked_log = st.components.v1.html(
-        CHAT_LOG_HTML % log_feed_json, 
-        height=420,
-        #key="realtime_log_component" # ← このキーが重要
+    
+    # ★★★【ここからが修正の核】★★★
+    # プレースホルダーを実際のJavaScriptコードに置き換える
+    final_html = CHAT_LOG_HTML.replace(
+        '__LOG_DATA_PLACEHOLDER__', 
+        f'const newLogs = {log_feed_json};'
     )
+    
+    clicked_log = st.components.v1.html(
+        final_html,
+        height=420
+    )
+    # ★★★【修正ここまで】★★★
 
-    # ★ 変更点 2: 返り値が辞書であることを確認してから処理を実行
     if clicked_log and isinstance(clicked_log, dict):
         if clicked_log.get("type") == "job":
             st.session_state['selected_job_id'] = clicked_log.get("id")
@@ -371,11 +400,6 @@ with st.expander("⚙️ リアルタイム活動ログ（クリックで展開�
         elif clicked_log.get("type") == "engineer":
             st.session_state['selected_engineer_id'] = clicked_log.get("id")
             st.switch_page("pages/5_技術者詳細.py")
-        
-        # ★ 重要: 処理後にコンポーネントの値をリセットして、再実行時に意図せず再遷移するのを防ぐ
-        st.rerun()
-
-# ★★★【修正ここまで】★★★
 
 
 
