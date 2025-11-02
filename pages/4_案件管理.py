@@ -158,7 +158,7 @@ else:
 
                     chips_html = ""
                     if job.get('auto_match_active'):
-                        chips_html += create_chip_html("🤖", "自動マッチ依頼中")
+                        chips_html += create_chip_html("🤖", "自動マッチ")
                     
                     match_count = job.get('match_count', 0)
                     if match_count > 0:

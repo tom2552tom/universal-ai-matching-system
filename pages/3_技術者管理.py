@@ -144,7 +144,7 @@ else:
                     chips_html = ""
                     # 自動マッチ依頼アイコン
                     if engineer.get('auto_match_active'):
-                        chips_html += create_chip_html("🤖", "自動マッチ依頼中")
+                        chips_html += create_chip_html("🤖", "自動マッチ")
                     
                     # マッチング件数
                     match_count = engineer.get('match_count', 0)
