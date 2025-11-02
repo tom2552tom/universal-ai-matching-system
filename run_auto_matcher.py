@@ -29,7 +29,7 @@ def initialize_and_get_config():
     config = {}
     try:
         # 1. Google APIキー
-        GOOGLE_API_KEY = "AIzaSyC46t0x01KwILNwK1a3U2DO5cm0blvztOU"
+        GOOGLE_API_KEY = "AIzaSyA4Vv_MWpMZ-2y8xGslYQJ9yvcBY9Pc-VA"
         genai.configure(api_key=GOOGLE_API_KEY)
         print("INFO: Google Generative AI API configured for batch process.")
 
