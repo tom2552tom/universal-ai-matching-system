@@ -1887,3 +1887,184 @@ E0000 00:00:1762114205.310150 5346089 alts_credentials.cc:93] ALTS creds ignored
 2025-11-02 12:20:02.665255 | Request for Engineer ID 24632: No new jobs to process.
 2025-11-02 12:20:02.665398 | --- Auto-matcher batch finished ---
 
+2025-11-02 12:25:00.974731 | --- Script execution started ---
+2025-11-02 12:25:00.975538 | Importing libraries...
+2025-11-02 12:25:02.125158 | Libraries imported successfully.
+2025-11-02 12:25:02.125375 | __main__ block entered. Calling main().
+2025-11-02 12:25:02.125438 | --- Auto-matcher batch started ---
+2025-11-02 12:25:02.125550 | INFO: Google Generative AI API configured.
+2025-11-02 12:25:02.125610 | INFO: Configuration loaded successfully.
+2025-11-02 12:25:03.050165 | Request for Job ID 16501: No new engineers to process.
+2025-11-02 12:25:03.050362 | Request for Engineer ID 24632: No new jobs to process.
+2025-11-02 12:25:03.050443 | --- Auto-matcher batch finished ---
+
+2025-11-02 12:30:00.391627 | --- Script execution started ---
+2025-11-02 12:30:00.392226 | Importing libraries...
+2025-11-02 12:30:01.499804 | Libraries imported successfully.
+2025-11-02 12:30:01.499936 | __main__ block entered. Calling main().
+2025-11-02 12:30:01.500020 | --- Auto-matcher batch started ---
+2025-11-02 12:30:01.500149 | INFO: Google Generative AI API configured.
+2025-11-02 12:30:01.500260 | INFO: Configuration loaded successfully.
+2025-11-02 12:30:02.437974 | Request for Job ID 16501: No new engineers to process.
+2025-11-02 12:30:02.438170 | Request for Engineer ID 24632: No new jobs to process.
+2025-11-02 12:30:02.438246 | --- Auto-matcher batch finished ---
+
+2025-11-02 12:35:00.940153 | --- Script execution started ---
+2025-11-02 12:35:00.940991 | Importing libraries...
+2025-11-02 12:35:02.021151 | Libraries imported successfully.
+2025-11-02 12:35:02.021304 | __main__ block entered. Calling main().
+2025-11-02 12:35:02.021370 | --- Auto-matcher batch started ---
+2025-11-02 12:35:02.021465 | INFO: Google Generative AI API configured.
+2025-11-02 12:35:02.021527 | INFO: Configuration loaded successfully.
+2025-11-02 12:35:03.017087 | Request for Job ID 16501: No new engineers to process.
+2025-11-02 12:35:03.017514 | Request for Engineer ID 24632: No new jobs to process.
+2025-11-02 12:35:03.023439 | --- Auto-matcher batch finished ---
+
+2025-11-02 12:40:00.341033 | --- Script execution started ---
+2025-11-02 12:40:00.341396 | Importing libraries...
+2025-11-02 12:40:01.600954 | Libraries imported successfully.
+2025-11-02 12:40:01.601102 | __main__ block entered. Calling main().
+2025-11-02 12:40:01.601175 | --- Auto-matcher batch started ---
+2025-11-02 12:40:01.601307 | INFO: Google Generative AI API configured.
+2025-11-02 12:40:01.601408 | INFO: Configuration loaded successfully.
+2025-11-02 12:40:03.022140 | Request for Job ID 16501: No new engineers to process.
+2025-11-02 12:40:03.022384 | Request for Engineer ID 24632: No new jobs to process.
+2025-11-02 12:40:03.022499 | --- Auto-matcher batch finished ---
+
+2025-11-02 12:45:01.001391 | --- Script execution started ---
+2025-11-02 12:45:01.002196 | Importing libraries...
+2025-11-02 12:45:02.058247 | Libraries imported successfully.
+2025-11-02 12:45:02.058457 | __main__ block entered. Calling main().
+2025-11-02 12:45:02.058528 | --- Auto-matcher batch started ---
+2025-11-02 12:45:02.058648 | INFO: Google Generative AI API configured.
+2025-11-02 12:45:02.058715 | INFO: Configuration loaded successfully.
+2025-11-02 12:45:02.953288 | 
+Processing request for Job ID 16501 against new engineers (ID > 24644)
+2025-11-02 12:45:03.740765 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762116305.477508 5371364 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 12:45:07.318222 |     ✅ HIT! Job(16501) vs Eng(24645) -> Rank C. Match ID: 962
+2025-11-02 12:45:09.588800 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 12:45:10.621543 | Updated last processed IDs for request 13.
+2025-11-02 12:45:10.622142 | Request for Engineer ID 24632: No new jobs to process.
+2025-11-02 12:45:10.622301 | --- Auto-matcher batch finished ---
+
+2025-11-02 12:50:00.593842 | --- Script execution started ---
+2025-11-02 12:50:00.594555 | Importing libraries...
+2025-11-02 12:50:01.712601 | Libraries imported successfully.
+2025-11-02 12:50:01.712751 | __main__ block entered. Calling main().
+2025-11-02 12:50:01.712820 | --- Auto-matcher batch started ---
+2025-11-02 12:50:01.712928 | INFO: Google Generative AI API configured.
+2025-11-02 12:50:01.712993 | INFO: Configuration loaded successfully.
+2025-11-02 12:50:02.644005 | Request for Job ID 16501: No new engineers to process.
+2025-11-02 12:50:02.644239 | Request for Engineer ID 24632: No new jobs to process.
+2025-11-02 12:50:02.644346 | --- Auto-matcher batch finished ---
+
+2025-11-02 12:55:00.351945 | --- Script execution started ---
+2025-11-02 12:55:00.352553 | Importing libraries...
+2025-11-02 12:55:01.502099 | Libraries imported successfully.
+2025-11-02 12:55:01.502245 | __main__ block entered. Calling main().
+2025-11-02 12:55:01.502313 | --- Auto-matcher batch started ---
+2025-11-02 12:55:01.502408 | INFO: Google Generative AI API configured.
+2025-11-02 12:55:01.502471 | INFO: Configuration loaded successfully.
+2025-11-02 12:55:02.511541 | Request for Job ID 16501: No new engineers to process.
+2025-11-02 12:55:02.511809 | Request for Engineer ID 24632: No new jobs to process.
+2025-11-02 12:55:02.511963 | --- Auto-matcher batch finished ---
+
+2025-11-02 13:00:01.168386 | --- Script execution started ---
+2025-11-02 13:00:01.169156 | Importing libraries...
+2025-11-02 13:00:02.357664 | Libraries imported successfully.
+2025-11-02 13:00:02.357964 | __main__ block entered. Calling main().
+2025-11-02 13:00:02.358443 | --- Auto-matcher batch started ---
+2025-11-02 13:00:02.358584 | INFO: Google Generative AI API configured.
+2025-11-02 13:00:02.359008 | INFO: Configuration loaded successfully.
+2025-11-02 13:00:03.733475 | Request for Job ID 16501: No new engineers to process.
+2025-11-02 13:00:03.733750 | Request for Engineer ID 24632: No new jobs to process.
+2025-11-02 13:00:03.733870 | --- Auto-matcher batch finished ---
+
+2025-11-02 13:05:00.931412 | --- Script execution started ---
+2025-11-02 13:05:00.932311 | Importing libraries...
+2025-11-02 13:05:01.961802 | Libraries imported successfully.
+2025-11-02 13:05:01.961933 | __main__ block entered. Calling main().
+2025-11-02 13:05:01.962000 | --- Auto-matcher batch started ---
+2025-11-02 13:05:01.962087 | INFO: Google Generative AI API configured.
+2025-11-02 13:05:01.962150 | INFO: Configuration loaded successfully.
+2025-11-02 13:05:02.924171 | No active auto-matching requests. Exiting.
+2025-11-02 13:10:00.909091 | --- Script execution started ---
+2025-11-02 13:10:00.909947 | Importing libraries...
+2025-11-02 13:10:01.917925 | Libraries imported successfully.
+2025-11-02 13:10:01.918061 | __main__ block entered. Calling main().
+2025-11-02 13:10:01.918128 | --- Auto-matcher batch started ---
+2025-11-02 13:10:01.918254 | INFO: Google Generative AI API configured.
+2025-11-02 13:10:01.918318 | INFO: Configuration loaded successfully.
+2025-11-02 13:10:02.772490 | No active auto-matching requests. Exiting.
+2025-11-02 13:15:01.046937 | --- Script execution started ---
+2025-11-02 13:15:01.047798 | Importing libraries...
+2025-11-02 13:15:02.136558 | Libraries imported successfully.
+2025-11-02 13:15:02.136721 | __main__ block entered. Calling main().
+2025-11-02 13:15:02.136796 | --- Auto-matcher batch started ---
+2025-11-02 13:15:02.136896 | INFO: Google Generative AI API configured.
+2025-11-02 13:15:02.136962 | INFO: Configuration loaded successfully.
+2025-11-02 13:15:03.024474 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-02 13:15:03.024654 | --- Auto-matcher batch finished ---
+
+2025-11-02 13:20:00.970443 | --- Script execution started ---
+2025-11-02 13:20:00.971195 | Importing libraries...
+2025-11-02 13:20:02.141013 | Libraries imported successfully.
+2025-11-02 13:20:02.141160 | __main__ block entered. Calling main().
+2025-11-02 13:20:02.141303 | --- Auto-matcher batch started ---
+2025-11-02 13:20:02.141430 | INFO: Google Generative AI API configured.
+2025-11-02 13:20:02.141532 | INFO: Configuration loaded successfully.
+2025-11-02 13:20:03.058272 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-02 13:20:03.058681 | --- Auto-matcher batch finished ---
+
+2025-11-02 13:25:00.862050 | --- Script execution started ---
+2025-11-02 13:25:00.862942 | Importing libraries...
+2025-11-02 13:25:01.806648 | Libraries imported successfully.
+2025-11-02 13:25:01.806784 | __main__ block entered. Calling main().
+2025-11-02 13:25:01.806851 | --- Auto-matcher batch started ---
+2025-11-02 13:25:01.806939 | INFO: Google Generative AI API configured.
+2025-11-02 13:25:01.807001 | INFO: Configuration loaded successfully.
+2025-11-02 13:25:02.674997 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-02 13:25:02.675400 | --- Auto-matcher batch finished ---
+
+2025-11-02 13:30:01.053807 | --- Script execution started ---
+2025-11-02 13:30:01.056646 | Importing libraries...
+2025-11-02 13:30:02.327021 | Libraries imported successfully.
+2025-11-02 13:30:02.327279 | __main__ block entered. Calling main().
+2025-11-02 13:30:02.327352 | --- Auto-matcher batch started ---
+2025-11-02 13:30:02.327469 | INFO: Google Generative AI API configured.
+2025-11-02 13:30:02.327533 | INFO: Configuration loaded successfully.
+2025-11-02 13:30:03.210202 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-02 13:30:03.210460 | --- Auto-matcher batch finished ---
+
+2025-11-02 13:35:00.528628 | --- Script execution started ---
+2025-11-02 13:35:00.529413 | Importing libraries...
+2025-11-02 13:35:01.779273 | Libraries imported successfully.
+2025-11-02 13:35:01.779415 | __main__ block entered. Calling main().
+2025-11-02 13:35:01.779482 | --- Auto-matcher batch started ---
+2025-11-02 13:35:01.779579 | INFO: Google Generative AI API configured.
+2025-11-02 13:35:01.779641 | INFO: Configuration loaded successfully.
+2025-11-02 13:35:02.706109 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-02 13:35:02.706260 | --- Auto-matcher batch finished ---
+
+2025-11-02 13:40:00.946516 | --- Script execution started ---
+2025-11-02 13:40:00.950269 | Importing libraries...
+2025-11-02 13:40:02.462213 | Libraries imported successfully.
+2025-11-02 13:40:02.462437 | __main__ block entered. Calling main().
+2025-11-02 13:40:02.462510 | --- Auto-matcher batch started ---
+2025-11-02 13:40:02.462605 | INFO: Google Generative AI API configured.
+2025-11-02 13:40:02.462671 | INFO: Configuration loaded successfully.
+2025-11-02 13:40:03.370597 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-02 13:40:03.370833 | --- Auto-matcher batch finished ---
+
+2025-11-02 13:45:00.498053 | --- Script execution started ---
+2025-11-02 13:45:00.498192 | Importing libraries...
+2025-11-02 13:45:02.587079 | Libraries imported successfully.
+2025-11-02 13:45:02.587276 | __main__ block entered. Calling main().
+2025-11-02 13:45:02.587371 | --- Auto-matcher batch started ---
+2025-11-02 13:45:02.587487 | INFO: Google Generative AI API configured.
+2025-11-02 13:45:02.587558 | INFO: Configuration loaded successfully.
+2025-11-02 13:45:03.558502 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-02 13:45:03.558732 | --- Auto-matcher batch finished ---
+

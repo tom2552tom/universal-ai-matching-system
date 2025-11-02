@@ -3401,3 +3401,33 @@ def get_live_dashboard_data():
             conn.close()
             
     return data
+
+
+
+
+
+def generate_text(prompt: str, max_tokens: int = 150) -> str:
+    """
+    Gemini APIを呼び出し、プロンプトに対する応答を生成する関数。
+    """
+
+    # --- Gemini APIの初期設定 ---
+    # この部分はファイルの先頭や適切な場所で行う
+    try:
+        
+        gemini_model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+
+        response = gemini_model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                max_output_tokens=max_tokens,
+                temperature=0.7 # 創造性の度合い
+            )
+        )
+        return response.text.strip()
+    
+    except Exception as e:
+        # st.secretsが読み込めない場合などのエラーハンドリング
+        print(f"Gemini APIの初期化に失敗しました: {e}")
+        gemini_model = None
+

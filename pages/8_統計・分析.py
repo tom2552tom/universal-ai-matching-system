@@ -11,6 +11,18 @@ import requests
 from streamlit_lottie import st_lottie
 import json # ★ jsonをインポート
 import html # ★ HTMLエスケープのために追加
+import random # ★★★ ランダム選択のために追加 ★★★
+
+AI_COMMENTS = [
+    "今日も順調に稼働中です！何かお探しですか？",
+    "新しい案件、見逃していませんか？リストをチェック！",
+    "データベースの健康状態は良好です。",
+    "マッチング精度向上のため、日々学習しています。",
+    "良い出会いは、素早いアクションから生まれます。",
+    "お疲れ様です。一息つきませんか？",
+    "現在、最高の候補者を探しています…お待ちください。",
+    "何か面白い情報は見つかりましたか？",
+]
 
 CHAT_LOG_HTML = """
 <style>
@@ -84,6 +96,7 @@ CHAT_LOG_HTML = """
 # --- ページの基本設定 ---
 st.set_page_config(page_title="リアルタイム分析", layout="wide", initial_sidebar_state="collapsed")
 ui.apply_global_styles()
+
 if not ui.check_password():
     st.stop() # 認証が通らない場合、ここで処理を停止
 
@@ -144,41 +157,123 @@ def get_dashboard_data_cached():
 dashboard_data = get_dashboard_data_cached()
 
 
+
+
+# ★★★【ここからが追加する関数の定義】★★★
+@st.cache_data(ttl=60) # 10分間 (600秒) 結果をキャッシュする
+def generate_dynamic_ai_advice(dashboard_data_json_str):
+    """
+    LLM（Gemini）を呼び出して、状況に応じた動的なアドバイスを生成する。
+    コストとパフォーマンスのため、結果はキャッシュされる。
+    """
+    try:
+        # dashboard_dataをJSON文字列から辞書に戻す
+        data = json.loads(dashboard_data_json_str)
+
+        # AIに渡すための状況サマリーを作成
+        context_summary = {
+            "今日の案件登録数": data.get('jobs_today', 0),
+            "今日の技術者登録数": data.get('engineers_today', 0),
+            "今日の採用決定数": data.get('adopted_count_today', 0),
+            "現在の自動マッチング依頼数": data.get('active_auto_request_count', 0),
+            "現在の時刻": datetime.now().strftime('%H:%M'),
+        }
+
+        # AIへの指示（プロンプト）
+        prompt = f"""
+        あなたは、企業の営業担当者やリクルーターが利用するAIマッチングシステムの優秀なアシスタントです。
+        以下のシステム状況を分析し、ユーザーのモチベーションを高め、次にしてほしい行動を優しく促すような、短くて気の利いたアドバイスを生成してください。
+
+        # 制約条件:
+        - 非常に簡潔に、40字以内で記述してください。
+        - 親しみやすいですが、プロフェッショナルなトーンを保ってください。
+        - 生成するのはアドバイスの文章のみです。余計な前置きや記号は含めないでください。
+
+        # システムの現在の状況:
+        {json.dumps(context_summary, indent=2, ensure_ascii=False)}
+
+        # アドバイスの例:
+        - 新しい案件がまだ未チェックですよ！
+        - 採用決定おめでとうございます！素晴らしい成果です！
+        - 午後もこの調子で頑張りましょう！
+
+        # アドバイスを生成してください:
+        """
+
+        # --- 重要：ご自身の環境に合わせて修正してください ---
+        # バックエンドのGemini呼び出し関数を使用します。
+        # "be.ask_gemini" の部分を、backend.pyに実際に存在する関数名に置き換えてください。
+        advice = be.generate_text(prompt, max_tokens=60) # 例: be.generate_text に修正
+
+        # AIの応答が空でないことを確認
+        if advice and advice.strip():
+            return advice.strip()
+        else:
+            # AIが空の応答を返した場合、固定のメッセージにフォールバック
+            return random.choice(AI_COMMENTS)
+
+    except Exception as e:
+        # APIエラーなど、何らかの例外が発生した場合
+        print(f"AIアドバイスの生成に失敗しました: {e}")
+        # 固定のメッセージを返すことで、エラーをユーザーに見せない（フォールバック）
+        return random.choice(AI_COMMENTS)
+
+# ★★★【ここまでが追加する関数の定義】★★★
+
+
 # ==================================
 # === ヘッダーエリア ===
 # ==================================
-col_title, col_counter = st.columns([3, 2]) # カラムの比率を調整
+col_title, col_ai_comment = st.columns([3, 2])
 
 with col_title:
     st.title("🚀 AIシステム リアルタイム分析")
     st.caption(f"最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-with col_counter:
-    # 垂直位置を調整するためのスペーサー
+with col_ai_comment:
     st.write("") 
-    
     with st.container(border=True):
-        col_anim, col_val = st.columns([1, 2]) # アニメーションの比率を少し広げる
-
+        col_anim, col_text = st.columns([1, 2], gap="small")
         with col_anim:
+            # (Lottieアニメーションのコードは変更なし)
             lottie_url = "https://lottie.host/6944da1c-9801-4b65-a942-df7837fc1157/eFcKKThSu1.json"
             lottie_json = load_lottie_url(lottie_url)
             if lottie_json:
                 st_lottie(lottie_json, speed=1, height=100, width=100, key="ai_robot") 
 
-        with col_val:
-            total_ai_activities = sum(dashboard_data.get('ai_activity_counts', {}).values())
-            st.markdown("###### 本日のAI総思考回数")
-            # style内の text-align を 'center' に変更
-            st.markdown(f"""
-                <div class="animated-metric" data-value="{total_ai_activities}" style="text-align: center;">
-                    <div class="value" style="font-size: 2.5rem; color: #28a745; line-height: 1.2;">{total_ai_activities:,}</div>
-                </div>
-            """, unsafe_allow_html=True)
+        with col_text:
+            st.markdown("###### 🤖 AIからのアドバイス")
+            
+
+            # ★★★【ここからが修正の核】★★★
+
+            # 1. コンテンツを表示するための空のプレースホルダーを作成
+            advice_placeholder = st.empty()
+
+            # datetimeオブジェクトをJSONシリアライズ可能にするためのカスタムエンコーダー
+            def datetime_encoder(obj):
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+
+            try:
+                dashboard_data_str = json.dumps(dashboard_data, default=datetime_encoder)
+                advice = generate_dynamic_ai_advice(dashboard_data_str)
+                
+                # 2. プレースホルダーを使ってコンテンツを描画
+                advice_placeholder.info(f"**{advice}**")
+
+                
+
+            except Exception as e:
+                # json.dumpsで予期せぬエラーが発生した場合のフォールバック
+                st.error("AIアドバイスの表示中にエラーが発生しました。")
+                print(f"AIアドバイス表示エラー: {e}")
+
             # ★★★【修正ここまで】★★★
 
-st.divider()
 
+st.divider()
 
 # ==================================
 # === サマリーKPIエリア ===
@@ -186,6 +281,7 @@ st.divider()
 st.header("📊 今日の活動サマリー")
 
 def animated_metric(label, value):
+    # (この関数の内容は変更なし)
     st.markdown(f"""
         <div class="custom-metric">
             <div class="label">{label}</div>
@@ -195,19 +291,28 @@ def animated_metric(label, value):
         </div>
     """, unsafe_allow_html=True)
 
-# 4つのKPIを横に並べて表示
-kpi_cols = st.columns(3)
+# ★★★【ここからが修正の核】★★★
+# 4つのKPIを横に並べて表示するために st.columns(4) に変更
+kpi_cols = st.columns(4) 
+
+# AI総思考回数を計算
+total_ai_activities = sum(dashboard_data.get('ai_activity_counts', {}).values())
+
+# kpi_mapに「本日のAI総思考回数」を追加
 kpi_map = {
     "本日登録の案件数": dashboard_data.get('jobs_today', 0),
     "本日登録の技術者数": dashboard_data.get('engineers_today', 0),
-    #"現在の総提案件数": dashboard_data.get('proposal_count_total', 0),
-    "本日の採用決定数": dashboard_data.get('adopted_count_today', 0)
+    "本日の採用決定数": dashboard_data.get('adopted_count_today', 0),
+    "本日のAI総思考回数": total_ai_activities
 }
+# ★★★【修正ここまで】★★★
 for col, (label, value) in zip(kpi_cols, kpi_map.items()):
     with col:
         animated_metric(label, value)
 
 st.divider()
+
+
 
 
 # ★★★【ここからが修正の核】★★★
@@ -313,44 +418,6 @@ with col_rank:
             st.markdown(f"{icon} {performer['username']} : **{performer['adoption_count']}** 件")
 
 st.divider()
-
-# ==================================
-# === リアルタイム活動ログエリア ===
-# ==================================
-st.header("⚙️ リアルタイム活動ログ")
-
-# ログ表示エリアを2つに分ける
-col_input, col_process = st.columns(2, gap="large")
-
-with col_input:
-    st.subheader("📥 データ登録 (INPUT)")
-    with st.container(height=300, border=True):
-        # デモ用にランダムなログを表示
-        demo_logs_input = [
-            "INFO: 新着メールをチェック中...",
-            "SUCCESS: (株)ABC商事からのメールを発見。",
-            "INFO: 添付ファイル「【急募】インフラエンジニア.docx」を解析中...",
-            "INFO: AIが内容を「案件情報」と判断しました。",
-            "SUCCESS: DBへの登録が完了しました (Job ID: 16501)。"
-        ]
-        st.code("\n".join(demo_logs_input), language="log")
-
-with col_process:
-    st.subheader("🤖 AIマッチング (PROCESSING)")
-    with st.container(height=300, border=True):
-        recent_matches = dashboard_data.get('recent_matches', [])
-        if not recent_matches:
-            st.info("まだマッチングログがありません。")
-        else:
-            log_text = ""
-            for match in recent_matches:
-                log_text += f"✅ HIT! [案件] {match['project_name']} ⇔ [技術者] {match['engineer_name']} (ランク: {match['grade']})\n"
-            st.code(log_text, language="log")
-
-
-# ★★★【ここからが新しいセクション】★★★
-st.divider()
-
 
 
 # ★★★【ここからが修正の核】★★★
