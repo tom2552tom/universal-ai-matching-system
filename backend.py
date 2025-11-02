@@ -3167,6 +3167,8 @@ def get_live_dashboard_data():
 
     data = {
         "processed_items_today": 0,
+        "jobs_today": 0,
+        "engineers_today": 0,
         "new_matches_today": 0,
         "adopted_count_today": 0,
         "ai_activity_counts": {}, 
@@ -3174,6 +3176,7 @@ def get_live_dashboard_data():
             "新規": 0, "提案準備中": 0, "提案中": 0, 
             "クライアント面談": 0, "結果待ち": 0, "採用": 0
         },
+         "proposal_count_total": 0,
         "top_performers": [],
         "recent_matches": []
     }
@@ -3269,6 +3272,28 @@ def get_live_dashboard_data():
             for row in cur.fetchall():
                 data["ai_activity_counts"][row['activity_type']] = row['count']
 
+
+            cur.execute("""
+                SELECT COUNT(*) 
+                FROM matching_results 
+                WHERE status IN ('提案準備中', '提案中');
+            """)
+            data["proposal_count_total"] = cur.fetchone()['count']
+
+            today_str = datetime.now().strftime('%Y-%m-%d')
+            
+            cur.execute(
+                "SELECT COUNT(*) FROM jobs WHERE created_at LIKE %s", 
+                (f"{today_str}%",)
+            )
+            data["jobs_today"] = cur.fetchone()['count']
+            
+            cur.execute(
+                "SELECT COUNT(*) FROM engineers WHERE created_at LIKE %s",
+                (f"{today_str}%",)
+            )
+            data["engineers_today"] = cur.fetchone()['count']
+            
 
 
 

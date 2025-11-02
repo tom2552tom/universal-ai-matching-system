@@ -72,23 +72,39 @@ st.divider()
 st.header("📊 今日の活動サマリー")
 
 # 3つの主要なKPIを横に並べて強調
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 , col5 = st.columns(5)
+
+# ★★★【ここからが修正の核】★★★
 with col1:
     st.metric(
-        label="本日登録された新規データ",
-        value=f"{dashboard_data.get('processed_items_today', 0)} 件"
+        label="登録案件数",
+        value=f"{dashboard_data.get('jobs_today', 0)} 件"
     )
+
 with col2:
     st.metric(
-        label="本日生成された新規マッチング",
+        label="登録技術者数",
+        value=f"{dashboard_data.get('engineers_today', 0)} 件"
+    )
+# ★★★【修正ここまで】★★★
+
+with col3:
+    st.metric(
+        label="マッチング件数",
         value=f"{dashboard_data.get('new_matches_today', 0)} 件"
     )
-with col3:
-    # ファネルデータから「採用」の件数を取得
-    adopted_count_today = dashboard_data.get('adopted_count_today', 0)
 
+with col4:
     st.metric(
-        label="本日の採用決定数",
+        label="提案件数",
+        value=f"{dashboard_data.get('proposal_count_total', 0)} 件",
+        help="ステータスが「提案準備中」または「提案中」の総数です。"
+    )
+
+with col5:
+    adopted_count_today = dashboard_data.get('adopted_count_today', 0)
+    st.metric(
+        label="採用決定数",
         value=f"{adopted_count_today} 件"
     )
 
@@ -97,7 +113,7 @@ st.divider()
 # ==================================
 # === AI活動のライブ表示エリア ===
 # ==================================
-st.header("🤖 AIエンジン稼働状況")
+st.header("🤖 AI稼働状況")
 with st.container(border=True):
     
     ai_activities = dashboard_data.get('ai_activity_counts', {})
@@ -105,7 +121,7 @@ with st.container(border=True):
 
     ai_evals_today = dashboard_data.get('ai_evaluations_today', 0)
     
-    st.markdown("##### 本日のAI評価実行回数")
+    st.markdown("##### 本日のAI実行回数")
     # アニメーション付きカウンター
     st.markdown(f"""
         <div class="animated-metric" data-value="{total_evals}" style="text-align: center;">
