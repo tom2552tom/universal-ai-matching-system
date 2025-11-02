@@ -13,47 +13,63 @@ st.set_page_config(page_title="リアルタイム分析", layout="wide", initial
 ui.apply_global_styles()
 
 
-
-# ★★★【ここからが修正の核】★★★
-# --- アニメーション用のHTML/CSS/JavaScript ---
-# 数字をアニメーションさせるためのJavaScript
+# --- アニメーション用のJavaScriptとCSS ---
+# JavaScriptコード
 JS_COUNTER_CODE = """
 <script>
-// この関数は、指定されたオブジェクトの数値をアニメーションさせます
 function animateValue(obj, start, end, duration) {
     let startTimestamp = null;
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        // 現在の値を計算して表示
         obj.innerHTML = Math.floor(progress * (end - start) + start).toLocaleString();
-        // アニメーションが完了していなければ、次のフレームを要求
-        if (progress < 1) {
-            window.requestAnimationFrame(step);
-        }
+        if (progress < 1) { window.requestAnimationFrame(step); }
     };
     window.requestAnimationFrame(step);
 }
-
-// ページ内のすべての 'animated-metric' クラスを持つ要素に対して処理を実行
-const metrics = parent.document.querySelectorAll('.animated-metric');
-metrics.forEach(metric => {
-    const targetValue = parseInt(metric.getAttribute('data-value'));
-    const obj = metric.querySelector('div'); // 最初のdivタグ（数字を表示する場所）を取得
-    if (obj) {
-        // 現在表示されている数値を取得（なければ0）
-        const startValue = parseInt(obj.textContent.replace(/,/g, '')) || 0;
-        // 現在の数値から目標値まで、500ミリ秒かけてアニメーション
-        if (startValue !== targetValue) {
-            animateValue(obj, startValue, targetValue, 500);
+// DOMContentLoadedを使い、ページの要素が読み込まれてからスクリプトを実行
+document.addEventListener("DOMContentLoaded", function() {
+    const metrics = parent.document.querySelectorAll('.animated-metric');
+    metrics.forEach(metric => {
+        const targetValue = parseInt(metric.getAttribute('data-value'));
+        const obj = metric.querySelector('div.value');
+        if (obj) {
+            const startValue = parseInt(obj.textContent.replace(/,/g, '')) || 0;
+            if (startValue !== targetValue) {
+                animateValue(obj, startValue, targetValue, 800); // 0.8秒でアニメーション
+            }
         }
-    }
+    });
 });
 </script>
 """
-# HTMLコンポーネントとしてJavaScriptをページのヘッドに埋め込む
 st.components.v1.html(JS_COUNTER_CODE, height=0)
-# ★★★【修正ここまで】★★★
+
+# カスタムメトリック用のCSS
+st.markdown("""
+<style>
+.custom-metric {
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    background-color: #262730;
+    height: 100%; /* 高さを揃える */
+}
+.custom-metric .label {
+    font-size: 0.9rem;
+    color: #a0a0a0;
+    margin-bottom: 0.5rem;
+}
+.custom-metric .value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    line-height: 1.2;
+    color: #fafafa;
+}
+</style>
+""", unsafe_allow_html=True)
+
 
 
 
@@ -61,8 +77,12 @@ st.components.v1.html(JS_COUNTER_CODE, height=0)
 st.title("🚀 AIシステム リアルタイム分析")
 st.caption(f"最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
+
 # --- データ取得 ---
-dashboard_data = be.get_live_dashboard_data()
+@st.cache_data(ttl=5)
+def get_dashboard_data_cached():
+    return be.get_live_dashboard_data()
+dashboard_data = get_dashboard_data_cached()
 
 st.divider()
 
@@ -71,42 +91,32 @@ st.divider()
 # ==================================
 st.header("📊 今日の活動サマリー")
 
-# 3つの主要なKPIを横に並べて強調
-col1, col2, col3, col4 , col5 = st.columns(5)
-
 # ★★★【ここからが修正の核】★★★
+# カスタムメトリックを表示するヘルパー関数
+def animated_metric(label, value, help_text=""):
+    # JSと連携するためのカスタムHTMLを生成
+    st.markdown(f"""
+        <div class="custom-metric">
+            <div class="label" title="{help_text}">{label}</div>
+            <div class="animated-metric" data-value="{value}">
+                <div class="value">{value:,}</div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+# 5つのKPIを横に並べて表示
+col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric(
-        label="登録案件数",
-        value=f"{dashboard_data.get('jobs_today', 0)} 件"
-    )
-
+    animated_metric("本日登録の案件数", dashboard_data.get('jobs_today', 0))
 with col2:
-    st.metric(
-        label="登録技術者数",
-        value=f"{dashboard_data.get('engineers_today', 0)} 件"
-    )
-
-with col3:
-    st.metric(
-        label="マッチング件数",
-        value=f"{dashboard_data.get('new_matches_today', 0)} 件"
-    )
-
-with col4:
-    st.metric(
-        label="提案件数",
-        value=f"{dashboard_data.get('proposal_count_total', 0)} 件",
-        help="ステータスが「提案準備中」または「提案中」の総数です。"
-    )
-
-with col5:
-    adopted_count_today = dashboard_data.get('adopted_count_today', 0)
-    st.metric(
-        label="採用決定数",
-        value=f"{adopted_count_today} 件"
-    )
-
+    animated_metric("本日登録の技術者数", dashboard_data.get('engineers_today', 0))
+#with col3:
+#    animated_metric("現在の提案件数", dashboard_data.get('proposal_count_total', 0))
+with col3:    
+    animated_metric("マッチング件数", dashboard_data.get('new_matches_today', 0))
+#with col5:
+#    animated_metric("本日の採用決定数", dashboard_data.get('adopted_count_today', 0))
+# ★★★【修正ここまで】★★★
 
 
 st.divider()
