@@ -23,7 +23,7 @@ font = "sans serif"
 
 [app]
 title = "Universal AIマッチング"
-version = "1.0.3"  #
+version = "1.0.4"  #
 
 [email_processing]
 fetch_limit = 100
