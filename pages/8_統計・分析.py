@@ -1,145 +1,196 @@
-# pages/8_統計・分析.py
+# pages/0_ライブモニタリング.py (縦型レイアウト改善版)
 
 import streamlit as st
-import plotly.express as px
+import backend as be
+import time
 import pandas as pd
-from backend import get_dashboard_data
+import plotly.express as px
+from datetime import datetime
 import ui_components as ui
 
-from backend import (
-    init_database, 
-    load_embedding_model, 
-    fetch_and_process_emails,
-    load_app_config  # load_app_config をインポートリストに追加
-)
-
-config = load_app_config()
-APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
-st.set_page_config(page_title=f"{APP_TITLE} | 統計・分析ダッシュボード", layout="wide")
+# --- ページの基本設定 ---
+st.set_page_config(page_title="リアルタイム分析", layout="wide", initial_sidebar_state="collapsed")
 ui.apply_global_styles()
 
-st.title("📊 統計・分析ダッシュボード")
-st.write("このページでは、システム全体の活動状況やマッチングの品質を可視化します。")
+
+
+# ★★★【ここからが修正の核】★★★
+# --- アニメーション用のHTML/CSS/JavaScript ---
+# 数字をアニメーションさせるためのJavaScript
+JS_COUNTER_CODE = """
+<script>
+// この関数は、指定されたオブジェクトの数値をアニメーションさせます
+function animateValue(obj, start, end, duration) {
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        // 現在の値を計算して表示
+        obj.innerHTML = Math.floor(progress * (end - start) + start).toLocaleString();
+        // アニメーションが完了していなければ、次のフレームを要求
+        if (progress < 1) {
+            window.requestAnimationFrame(step);
+        }
+    };
+    window.requestAnimationFrame(step);
+}
+
+// ページ内のすべての 'animated-metric' クラスを持つ要素に対して処理を実行
+const metrics = parent.document.querySelectorAll('.animated-metric');
+metrics.forEach(metric => {
+    const targetValue = parseInt(metric.getAttribute('data-value'));
+    const obj = metric.querySelector('div'); // 最初のdivタグ（数字を表示する場所）を取得
+    if (obj) {
+        // 現在表示されている数値を取得（なければ0）
+        const startValue = parseInt(obj.textContent.replace(/,/g, '')) || 0;
+        // 現在の数値から目標値まで、500ミリ秒かけてアニメーション
+        if (startValue !== targetValue) {
+            animateValue(obj, startValue, targetValue, 500);
+        }
+    }
+});
+</script>
+"""
+# HTMLコンポーネントとしてJavaScriptをページのヘッドに埋め込む
+st.components.v1.html(JS_COUNTER_CODE, height=0)
+# ★★★【修正ここまで】★★★
+
+
+
+# --- タイトル ---
+st.title("🚀 AIシステム リアルタイム分析")
+st.caption(f"最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 # --- データ取得 ---
-try:
-    # ▼▼▼【ここが修正箇所です】▼▼▼
-    summary_metrics, rank_counts, time_series_df, assignee_counts_df, match_rank_by_assignee = get_dashboard_data()
-except Exception as e:
-    st.error(f"データの読み込み中にエラーが発生しました: {e}")
-    st.exception(e)
-    st.stop()
+dashboard_data = be.get_live_dashboard_data()
 
-# --- 1. サマリー指標（KPI）の表示 ---
-st.header("サマリー指標")
+st.divider()
+
+# ==================================
+# === サマリーKPIエリア ===
+# ==================================
+st.header("📊 今日の活動サマリー")
+
+# 3つの主要なKPIを横に並べて強調
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric("総案件登録数", summary_metrics["total_jobs"], f"{summary_metrics['jobs_this_month']} (今月)")
+    st.metric(
+        label="本日登録された新規データ",
+        value=f"{dashboard_data.get('processed_items_today', 0)} 件"
+    )
 with col2:
-    st.metric("総技術者登録数", summary_metrics["total_engineers"], f"{summary_metrics['engineers_this_month']} (今月)")
+    st.metric(
+        label="本日生成された新規マッチング",
+        value=f"{dashboard_data.get('new_matches_today', 0)} 件"
+    )
 with col3:
-    st.metric("総マッチング生成数", summary_metrics["total_matches"])
+    # ファネルデータから「採用」の件数を取得
+    adopted_count_today = dashboard_data.get('adopted_count_today', 0)
+
+    st.metric(
+        label="本日の採用決定数",
+        value=f"{adopted_count_today} 件"
+    )
 
 st.divider()
 
-# --- 2. マッチング品質分析 ---
-st.header("マッチング品質分析")
-col1, col2 = st.columns(2)
-with col1:
-    fig_pie = px.pie(
-        values=rank_counts.values,
-        names=rank_counts.index,
-        title="AI評価ランクの割合",
-        color=rank_counts.index,
-        color_discrete_map={ 'S': '#FF4B4B', 'A': '#FF8C00', 'B': '#1E90FF', 'C': '#90EE90', 'D': '#D3D3D3' },
-        category_orders={"names": ['S', 'A', 'B', 'C', 'D']}
-    )
-    fig_pie.update_layout(legend_title_text='AIランク')
-    st.plotly_chart(fig_pie, use_container_width=True)
-with col2:
-    fig_bar = px.bar(
-        x=rank_counts.index,
-        y=rank_counts.values,
-        title="AI評価ランクごとの件数",
-        labels={'x': 'AIランク', 'y': '件数'},
-        text=rank_counts.values,
-        color=rank_counts.index,
-        color_discrete_map={ 'S': '#FF4B4B', 'A': '#FF8C00', 'B': '#1E90FF', 'C': '#90EE90', 'D': '#D3D3D3' }
-    )
-    fig_bar.update_traces(textposition='outside')
-    st.plotly_chart(fig_bar, use_container_width=True)
+# ==================================
+# === AI活動のライブ表示エリア ===
+# ==================================
+st.header("🤖 AIエンジン稼働状況")
+with st.container(border=True):
+    
+    ai_activities = dashboard_data.get('ai_activity_counts', {})
+    total_evals = sum(ai_activities.values())
+
+    ai_evals_today = dashboard_data.get('ai_evaluations_today', 0)
+    
+    st.markdown("##### 本日のAI評価実行回数")
+    # アニメーション付きカウンター
+    st.markdown(f"""
+        <div class="animated-metric" data-value="{total_evals}" style="text-align: center;">
+            <div style="font-size: 4.5rem; font-weight: bold; color: #28a745; line-height: 1.1;">{total_evals:,}</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+
+    st.caption("AIが案件と技術者のマッチング評価を行った累計回数です。バックグラウンドで稼働しています。")
 
 st.divider()
 
-# --- 3. 時系列分析 ---
-st.header("活動状況の推移")
-try:
-    if not time_series_df.empty:
-        min_date, max_date = time_series_df.index.min().date(), time_series_df.index.max().date()
-        col1, col2 = st.columns(2)
-        with col1:
-            start_date = st.date_input("開始日", min_date, min_value=min_date, max_value=max_date, key="start_date_selector")
-        with col2:
-            end_date = st.date_input("終了日", max_date, min_value=min_date, max_value=max_date, key="end_date_selector")
 
-        if start_date > end_date:
-            st.error("開始日は終了日より前の日付を選択してください。")
+# ==================================
+# === ビジネス成果エリア (OUTPUT) ===
+# ==================================
+st.header("📈 ビジネス成果")
+
+# ファネルチャートと担当者ランキングを横に並べる
+col_funnel, col_rank = st.columns([2, 1], gap="large")
+
+with col_funnel:
+    st.subheader("マッチングファネル")
+    funnel_data = dashboard_data.get('funnel_data', {})
+    funnel_stages = ["新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", "採用"]
+    funnel_df = pd.DataFrame({
+        "ステージ": [stage for stage in funnel_stages if stage in funnel_data],
+        "件数": [funnel_data.get(stage, 0) for stage in funnel_stages if stage in funnel_data]
+    })
+    
+    if not funnel_df.empty:
+        fig = px.funnel(funnel_df, x='件数', y='ステージ', orientation='h')
+        fig.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=10))
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("ファネルデータがありません。")
+
+with col_rank:
+    st.subheader("トップパフォーマー")
+    st.caption("今月の採用件数ランキング")
+    top_performers = dashboard_data.get('top_performers', [])
+    if not top_performers:
+        st.info("今月の採用実績はまだありません。")
+    else:
+        rank_icons = ["🥇", "🥈", "🥉"]
+        for i, performer in enumerate(top_performers):
+            icon = rank_icons[i] if i < len(rank_icons) else f"**{i+1}.**"
+            st.markdown(f"{icon} {performer['username']} : **{performer['adoption_count']}** 件")
+
+st.divider()
+
+# ==================================
+# === リアルタイム活動ログエリア ===
+# ==================================
+st.header("⚙️ リアルタイム活動ログ")
+
+# ログ表示エリアを2つに分ける
+col_input, col_process = st.columns(2, gap="large")
+
+with col_input:
+    st.subheader("📥 データ登録 (INPUT)")
+    with st.container(height=300, border=True):
+        # デモ用にランダムなログを表示
+        demo_logs_input = [
+            "INFO: 新着メールをチェック中...",
+            "SUCCESS: (株)ABC商事からのメールを発見。",
+            "INFO: 添付ファイル「【急募】インフラエンジニア.docx」を解析中...",
+            "INFO: AIが内容を「案件情報」と判断しました。",
+            "SUCCESS: DBへの登録が完了しました (Job ID: 16501)。"
+        ]
+        st.code("\n".join(demo_logs_input), language="log")
+
+with col_process:
+    st.subheader("🤖 AIマッチング (PROCESSING)")
+    with st.container(height=300, border=True):
+        recent_matches = dashboard_data.get('recent_matches', [])
+        if not recent_matches:
+            st.info("まだマッチングログがありません。")
         else:
-            filtered_df = time_series_df[(time_series_df.index.date >= start_date) & (time_series_df.index.date <= end_date)]
-            period = st.radio("集計単位", ['日別', '週別', '月別'], horizontal=True, key="time_series_period")
-            
-            resample_map = {'日別': 'D', '週別': 'W-MON', '月別': 'M'}
-            period_label_map = {'日別': '日', '週別': '週', '月別': '月'}
-            
-            display_df = filtered_df.resample(resample_map[period]).sum() if period != '日別' else filtered_df
-
-            if not display_df.empty:
-                fig_line = px.line(
-                    display_df, x=display_df.index, y=display_df.columns,
-                    title=f"{period_label_map[period]}ごとの活動推移",
-                    labels={'value': '件数', 'created_at': '日付', 'variable': '項目'},
-                    markers=True
-                )
-                fig_line.update_layout(legend_title_text='項目')
-                st.plotly_chart(fig_line, use_container_width=True)
-            else:
-                st.warning("選択された期間にデータがありません。")
-    else:
-        st.info("時系列分析を行うためのデータがまだありません。")
-except Exception as e:
-    st.error(f"時系列グラフの描画中にエラーが発生しました: {e}")
-    st.exception(e)
-
-st.divider()
-
-# --- 4. 担当者別分析 ---
-st.header("担当者別分析")
-col1, col2 = st.columns(2)
-with col1:
-    if not match_rank_by_assignee.empty:
-        df_melted = match_rank_by_assignee.reset_index().melt(id_vars='responsible_person', var_name='ランク', value_name='件数')
-        fig_assignee_rank = px.bar(
-            df_melted, x='responsible_person', y='件数', color='ランク',
-            title='担当者別 マッチングランク分布',
-            labels={'responsible_person': '担当者'},
-            category_orders={"ランク": ["S", "A", "B", "C", "D"]},
-            color_discrete_map={ 'S': '#FF4B4B', 'A': '#FF8C00', 'B': '#1E90FF', 'C': '#90EE90', 'D': '#D3D3D3' }
-        )
-        fig_assignee_rank.update_layout(barmode='stack')
-        st.plotly_chart(fig_assignee_rank, use_container_width=True)
-    else:
-        st.info("担当者別のマッチングランクデータがありません。")
-with col2:
-    if not assignee_counts_df.empty:
-        fig_assignee_count = px.bar(
-            assignee_counts_df, x=assignee_counts_df.index, y=['案件担当数', '技術者担当数'],
-            title='担当者別 担当件数',
-            labels={'value': '件数', 'variable': '項目', 'index': '担当者'},
-            barmode='group'
-        )
-        st.plotly_chart(fig_assignee_count, use_container_width=True)
-    else:
-        st.info("担当者別の担当件数データがありません。")
+            log_text = ""
+            for match in recent_matches:
+                log_text += f"✅ HIT! [案件] {match['project_name']} ⇔ [技術者] {match['engineer_name']} (ランク: {match['grade']})\n"
+            st.code(log_text, language="log")
 
 
-ui.display_footer()
+# --- 自動リフレッシュ ---
+time.sleep(10)
+st.rerun()

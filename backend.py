@@ -158,6 +158,20 @@ def split_text_with_llm(text_content: str) -> (dict | None, list):
     文書を分類し、情報抽出を行う。進捗を st.write で表示し、
     最終的に (結果, ログリスト) のタプルを返す。
     """
+    logs = []
+
+    conn = get_db_connection() # この関数はUIから呼ばれる前提
+    if not conn:
+        logs.append("❌ DB接続エラーにより、処理を中断しました。")
+        return None, logs
+    
+    with conn.cursor() as cur:
+            # --- 1. 文書タイプの分類 ---
+            # ★★★ AIアクティビティログを記録 (分類) ★★★
+            cur.execute("INSERT INTO ai_activity_log (activity_type) VALUES ('classification')")
+            conn.commit()
+
+
     # この関数内で発生したログを収集するためのリスト
     # UI表示とは別に、呼び出し元に返す
     logs_for_caller = []
@@ -918,7 +932,7 @@ def update_engineer_source_json(engineer_id, new_json_str):
             conn.commit(); return True
         except (Exception, psycopg2.Error) as e: print(f"技術者のJSONデータ更新エラー: {e}"); conn.rollback(); return False
 
-def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_name, project_name):
+def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_name, project_name, conn=None):
     if not all([job_summary, engineer_summary, engineer_name, project_name]): return "情報が不足しているため、提案メールを生成できませんでした。"
     prompt = f"""
         あなたは、クライアントに優秀な技術者を提案する、経験豊富なIT営業担当者です。
@@ -945,6 +959,11 @@ def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_nam
         それでは、上記の指示に基づいて、最適な提案メールを作成してください。
     """
     try:
+
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO ai_activity_log (activity_type) VALUES ('proposal_generation')")
+        conn.commit()
+
         model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         response = model.generate_content(prompt)
         return response.text
@@ -1070,9 +1089,23 @@ def _build_meta_info_string(item_type, item_data):
 
 def update_match_status(match_id, new_status):
     if not match_id or not new_status: return False
+
+    # SQL文を修正し、status_updated_at カラムに NOW() を設定する
+    sql = """
+        UPDATE matching_results 
+        SET 
+            status = %s, 
+            status_updated_at = NOW() 
+        WHERE id = %s;
+    """
+    # ★★★【修正ここまで】★★★
+
+    
     with get_db_connection() as conn:
         try:
-            with conn.cursor() as cursor: cursor.execute("UPDATE matching_results SET status = %s WHERE id = %s", (new_status, match_id))
+            with conn.cursor() as cursor: 
+                cursor.execute(sql, (new_status, match_id))
+            #cursor.execute("UPDATE matching_results SET status = %s WHERE id = %s", (new_status, match_id))
             conn.commit(); return True
         except (Exception, psycopg2.Error) as e:
             print(f"ステータスの更新エラー: {e}"); conn.rollback(); return False
@@ -2354,6 +2387,14 @@ def rematch_job_with_keyword_filtering(job_id, target_rank='B', target_count=5):
 
             # --- ステップ2: 検索キーワードの抽出 ---
             yield "🤖 検索の核となるキーワードをAIが抽出しています..."
+
+            # ★★★ AIアクティビティログを記録 (キーワード抽出) ★★★
+            try:
+                cursor.execute("INSERT INTO ai_activity_log (activity_type) VALUES ('keyword_extraction')")
+                # ここではまだコミットしない（トランザクションの一部とする）
+            except Exception as log_err:
+                yield f"  - ⚠️ AIアクティビティログの記録に失敗: {log_err}"
+
             search_keywords = []
             try:
                 keyword_extraction_prompt = f"""
@@ -2418,6 +2459,17 @@ def rematch_job_with_keyword_filtering(job_id, target_rank='B', target_count=5):
                 processed_count += 1
                 yield f"  `({processed_count}/{len(candidate_records)})` 技術者 **{engineer['name']}** とマッチング中..."
                 
+                # ★★★【ここからが修正の核】★★★
+                # AI評価の実行前に、アクティビティログを記録する
+                try:
+                    cursor.execute(
+                        "INSERT INTO ai_activity_log (activity_type) VALUES ('evaluation')"
+                    )
+                    # このINSERTはトランザクションの一部なので、ここではまだcommitしない
+                except Exception as log_err:
+                    yield f"  - ⚠️ AIアクティビティログの記録に失敗: {log_err}"
+                # ★★★【修正ここまで】★★★
+
                 llm_result = get_match_summary_with_llm(job_doc, engineer['document'])
 
                 if llm_result and 'summary' in llm_result:
@@ -2680,6 +2732,16 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
                 processed_count += 1
                 yield f"  `({processed_count}/{len(candidate_records)})` 案件 **{job.get('project_name', 'N/A')}** とマッチング中..."
                 
+                # ★★★【ここからが修正の核】★★★
+                # AI評価の実行前に、アクティビティログを記録する
+                try:
+                    cursor.execute(
+                        "INSERT INTO ai_activity_log (activity_type) VALUES ('evaluation')"
+                    )
+                except Exception as log_err:
+                    yield f"  - ⚠️ AIアクティビティログの記録に失敗: {log_err}"
+                # ★★★【修正ここまで】★★★
+
                 llm_result = get_match_summary_with_llm(job['document'], engineer_doc)
                 if llm_result and 'summary' in llm_result:
                     grade = llm_result.get('summary')
@@ -3095,4 +3157,125 @@ def clear_matches_for_engineer(engineer_id: int, conn=None) -> bool:
         if should_close_conn and conn:
             conn.close()
 
+# backend.py の get_live_dashboard_data 関数をこちらに置き換えてください
 
+@st.cache_data(ttl=10)
+def get_live_dashboard_data():
+    """
+    経営者向けライブモニタリングダッシュボード用のデータをまとめて取得する。
+    """
+
+    data = {
+        "processed_items_today": 0,
+        "new_matches_today": 0,
+        "adopted_count_today": 0,
+        "ai_activity_counts": {}, 
+        "funnel_data": {
+            "新規": 0, "提案準備中": 0, "提案中": 0, 
+            "クライアント面談": 0, "結果待ち": 0, "採用": 0
+        },
+        "top_performers": [],
+        "recent_matches": []
+    }
+    
+
+    
+    conn = get_db_connection()
+    if not conn:
+        return data
+
+    try:
+        with conn.cursor() as cur:
+            # 1. 本日登録された案件・技術者の合計数
+            today_str = datetime.now().strftime('%Y-%m-%d')
+            cur.execute(
+                "SELECT COUNT(*) FROM jobs WHERE created_at LIKE %s", (f"{today_str}%",)
+            )
+            jobs_today = cur.fetchone()['count']
+            cur.execute(
+                "SELECT COUNT(*) FROM engineers WHERE created_at LIKE %s", (f"{today_str}%",)
+            )
+            engineers_today = cur.fetchone()['count']
+            data["processed_items_today"] = jobs_today + engineers_today
+
+            # 2. 本日作成されたマッチングの総数
+            cur.execute(
+                "SELECT COUNT(*) FROM matching_results WHERE created_at >= CURRENT_DATE"
+            )
+            data["new_matches_today"] = cur.fetchone()['count']
+
+            # 3. ファネルチャート用の各ステータスごとの件数
+            cur.execute("""
+                SELECT status, COUNT(*) as count
+                FROM matching_results WHERE is_hidden = 0 GROUP BY status;
+            """)
+            for row in cur.fetchall():
+                if row['status'] in data['funnel_data']:
+                    data['funnel_data'][row['status']] = row['count']
+            
+            # ★★★【ここからが修正の核】★★★
+            # 4. 担当者別ランキング（今月の「採用」件数が多い順）
+            #    エイリアスを英数字にし、ORDER BY句を修正
+            cur.execute("""
+                SELECT 
+                    u.username, 
+                    COUNT(r.id) as adoption_count 
+                FROM matching_results r
+                JOIN jobs j ON r.job_id = j.id
+                JOIN users u ON j.assigned_user_id = u.id
+                WHERE r.status = '採用' AND r.created_at >= date_trunc('month', CURRENT_DATE)
+                GROUP BY u.username
+                ORDER BY adoption_count DESC
+                LIMIT 5;
+            """)
+            # ★★★【修正ここまで】★★★
+            data["top_performers"] = cur.fetchall()
+
+            # 5. 最新のマッチングログ
+            cur.execute("""
+                SELECT j.project_name, e.name as engineer_name, r.grade
+                FROM matching_results r
+                JOIN jobs j ON r.job_id = j.id
+                JOIN engineers e ON r.engineer_id = e.id
+                WHERE r.is_hidden = 0
+                ORDER BY r.created_at DESC
+                LIMIT 5;
+            """)
+            data["recent_matches"] = cur.fetchall()
+
+
+            # 本日実行されたAI評価の総数
+            cur.execute(
+                "SELECT COUNT(*) FROM ai_activity_log WHERE created_at >= CURRENT_DATE"
+            )
+            data["ai_evaluations_today"] = cur.fetchone()['count']
+            # ★★★【修正ここまで】★★★
+
+            cur.execute("""
+                SELECT COUNT(*) 
+                FROM matching_results 
+                WHERE status = '採用' 
+                  AND status_updated_at >= CURRENT_DATE;
+            """)
+            data["adopted_count_today"] = cur.fetchone()['count']
+
+            cur.execute("""
+                SELECT activity_type, COUNT(*) as count
+                FROM ai_activity_log
+                WHERE created_at >= NOW() - interval '24 hours'
+                GROUP BY activity_type;
+            """)
+
+            for row in cur.fetchall():
+                data["ai_activity_counts"][row['activity_type']] = row['count']
+
+
+
+
+    except Exception as e:
+        print(f"Error in get_live_dashboard_data: {e}")
+    finally:
+        if conn:
+            conn.close()
+            
+    return data
