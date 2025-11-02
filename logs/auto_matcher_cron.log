@@ -49,3 +49,900 @@ E0000 00:00:1762063805.095111 4846848 alts_credentials.cc:93] ALTS creds ignored
 2025-11-01 23:10:06.792360 |     - ⏭️ Skipped Eng(ID:24641) with rank D
 2025-11-01 23:10:07.629449 | Updated last processed IDs for request 9.
 2025-11-01 23:10:07.629913 | --- Auto-matcher batch finished ---
+2025-11-01 23:15:01.156047 | --- Script execution started ---
+2025-11-01 23:15:01.156634 | Importing libraries...
+2025-11-01 23:15:02.597906 | Libraries imported successfully.
+2025-11-01 23:15:02.598054 | __main__ block entered. Calling main().
+2025-11-01 23:15:02.598121 | --- Auto-matcher batch started ---
+2025-11-01 23:15:02.598216 | INFO: Google Generative AI API configured.
+2025-11-01 23:15:02.598280 | INFO: Configuration loaded successfully.
+2025-11-01 23:15:03.612952 | Request for Job ID 16472: No new engineers to process.
+2025-11-01 23:15:03.613222 | --- Auto-matcher batch finished ---
+2025-11-01 23:20:00.814401 | --- Script execution started ---
+2025-11-01 23:20:00.815158 | Importing libraries...
+2025-11-01 23:20:02.221461 | Libraries imported successfully.
+2025-11-01 23:20:02.221583 | __main__ block entered. Calling main().
+2025-11-01 23:20:02.221649 | --- Auto-matcher batch started ---
+2025-11-01 23:20:02.221743 | INFO: Google Generative AI API configured.
+2025-11-01 23:20:02.221802 | INFO: Configuration loaded successfully.
+2025-11-01 23:20:03.205813 | Request for Job ID 16472: No new engineers to process.
+2025-11-01 23:20:03.205956 | --- Auto-matcher batch finished ---
+2025-11-01 23:25:00.857863 | --- Script execution started ---
+2025-11-01 23:25:00.858260 | Importing libraries...
+2025-11-01 23:25:02.674384 | Libraries imported successfully.
+2025-11-01 23:25:02.674575 | __main__ block entered. Calling main().
+2025-11-01 23:25:02.674643 | --- Auto-matcher batch started ---
+2025-11-01 23:25:02.674746 | INFO: Google Generative AI API configured.
+2025-11-01 23:25:02.674812 | INFO: Configuration loaded successfully.
+2025-11-01 23:25:04.463333 | 
+Processing request for Job ID 16472 against new engineers (ID > 24637)
+2025-11-01 23:25:05.343365 |   - Evaluating batch of 4 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762064706.904089 4859347 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-01 23:25:09.060547 |     ✅ HIT! Job(16472) vs Eng(24638) -> Rank C. Match ID: 920
+2025-11-01 23:25:11.541015 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-01 23:25:15.353824 |     ✅ HIT! Job(16472) vs Eng(24639) -> Rank C. Match ID: 921
+2025-11-01 23:25:17.231765 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-01 23:25:20.093510 |     ✅ HIT! Job(16472) vs Eng(24640) -> Rank C. Match ID: 922
+2025-11-01 23:25:39.592683 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-01 23:25:42.567473 |     - ⏭️ Skipped Eng(ID:24641) with rank D
+2025-11-01 23:25:43.702456 | Updated last processed IDs for request 9.
+2025-11-01 23:25:43.703772 | --- Auto-matcher batch finished ---
+2025-11-01 23:30:00.764622 | --- Script execution started ---
+2025-11-01 23:30:00.765117 | Importing libraries...
+2025-11-01 23:30:01.943187 | Libraries imported successfully.
+2025-11-01 23:30:01.943334 | __main__ block entered. Calling main().
+2025-11-01 23:30:01.943403 | --- Auto-matcher batch started ---
+2025-11-01 23:30:01.943557 | INFO: Google Generative AI API configured.
+2025-11-01 23:30:01.943640 | INFO: Configuration loaded successfully.
+2025-11-01 23:30:03.003549 | Request for Job ID 16472: No new engineers to process.
+2025-11-01 23:30:03.003702 | --- Auto-matcher batch finished ---
+2025-11-01 23:35:01.097263 | --- Script execution started ---
+2025-11-01 23:35:01.097848 | Importing libraries...
+2025-11-01 23:35:02.270358 | Libraries imported successfully.
+2025-11-01 23:35:02.270511 | __main__ block entered. Calling main().
+2025-11-01 23:35:02.270578 | --- Auto-matcher batch started ---
+2025-11-01 23:35:02.270711 | INFO: Google Generative AI API configured.
+2025-11-01 23:35:02.270789 | INFO: Configuration loaded successfully.
+2025-11-01 23:35:03.219339 | Request for Job ID 16472: No new engineers to process.
+2025-11-01 23:35:03.219614 | --- Auto-matcher batch finished ---
+2025-11-01 23:40:00.487255 | --- Script execution started ---
+2025-11-01 23:40:00.487808 | Importing libraries...
+2025-11-01 23:40:01.562252 | Libraries imported successfully.
+2025-11-01 23:40:01.562676 | __main__ block entered. Calling main().
+2025-11-01 23:40:01.562803 | --- Auto-matcher batch started ---
+2025-11-01 23:40:01.562980 | INFO: Google Generative AI API configured.
+2025-11-01 23:40:01.563049 | INFO: Configuration loaded successfully.
+2025-11-01 23:40:03.062938 | Request for Job ID 16472: No new engineers to process.
+2025-11-01 23:40:03.063079 | --- Auto-matcher batch finished ---
+2025-11-01 23:45:00.809391 | --- Script execution started ---
+2025-11-01 23:45:00.809985 | Importing libraries...
+2025-11-01 23:45:01.743835 | Libraries imported successfully.
+2025-11-01 23:45:01.744022 | __main__ block entered. Calling main().
+2025-11-01 23:45:01.744086 | --- Auto-matcher batch started ---
+2025-11-01 23:45:01.744269 | INFO: Google Generative AI API configured.
+2025-11-01 23:45:01.744350 | INFO: Configuration loaded successfully.
+2025-11-01 23:45:02.714467 | Request for Job ID 16472: No new engineers to process.
+2025-11-01 23:45:02.714718 | --- Auto-matcher batch finished ---
+2025-11-01 23:50:00.216064 | --- Script execution started ---
+2025-11-01 23:50:00.216471 | Importing libraries...
+2025-11-01 23:50:01.182413 | Libraries imported successfully.
+2025-11-01 23:50:01.182548 | __main__ block entered. Calling main().
+2025-11-01 23:50:01.182646 | --- Auto-matcher batch started ---
+2025-11-01 23:50:01.182773 | INFO: Google Generative AI API configured.
+2025-11-01 23:50:01.182884 | INFO: Configuration loaded successfully.
+2025-11-01 23:50:02.153096 | Request for Job ID 16472: No new engineers to process.
+2025-11-01 23:50:02.153382 | --- Auto-matcher batch finished ---
+2025-11-01 23:55:00.456436 | --- Script execution started ---
+2025-11-01 23:55:00.456929 | Importing libraries...
+2025-11-01 23:55:01.382769 | Libraries imported successfully.
+2025-11-01 23:55:01.382941 | __main__ block entered. Calling main().
+2025-11-01 23:55:01.383013 | --- Auto-matcher batch started ---
+2025-11-01 23:55:01.383112 | INFO: Google Generative AI API configured.
+2025-11-01 23:55:01.383177 | INFO: Configuration loaded successfully.
+2025-11-01 23:55:02.824299 | Request for Job ID 16472: No new engineers to process.
+2025-11-01 23:55:02.824617 | --- Auto-matcher batch finished ---
+2025-11-02 00:00:01.483175 | --- Script execution started ---
+2025-11-02 00:00:01.486203 | Importing libraries...
+2025-11-02 00:00:03.496340 | Libraries imported successfully.
+2025-11-02 00:00:03.496518 | __main__ block entered. Calling main().
+2025-11-02 00:00:03.496589 | --- Auto-matcher batch started ---
+2025-11-02 00:00:03.496699 | INFO: Google Generative AI API configured.
+2025-11-02 00:00:03.496776 | INFO: Configuration loaded successfully.
+2025-11-02 00:00:04.505934 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:00:04.506099 | --- Auto-matcher batch finished ---
+2025-11-02 00:05:00.379541 | --- Script execution started ---
+2025-11-02 00:05:00.380024 | Importing libraries...
+2025-11-02 00:05:01.441854 | Libraries imported successfully.
+2025-11-02 00:05:01.441963 | __main__ block entered. Calling main().
+2025-11-02 00:05:01.442032 | --- Auto-matcher batch started ---
+2025-11-02 00:05:01.442124 | INFO: Google Generative AI API configured.
+2025-11-02 00:05:01.442187 | INFO: Configuration loaded successfully.
+2025-11-02 00:05:02.439458 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:05:02.439612 | --- Auto-matcher batch finished ---
+2025-11-02 00:10:00.927775 | --- Script execution started ---
+2025-11-02 00:10:00.928308 | Importing libraries...
+2025-11-02 00:10:01.882001 | Libraries imported successfully.
+2025-11-02 00:10:01.882245 | __main__ block entered. Calling main().
+2025-11-02 00:10:01.882408 | --- Auto-matcher batch started ---
+2025-11-02 00:10:01.882650 | INFO: Google Generative AI API configured.
+2025-11-02 00:10:01.882726 | INFO: Configuration loaded successfully.
+2025-11-02 00:10:02.813130 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:10:02.813368 | --- Auto-matcher batch finished ---
+2025-11-02 00:15:01.138463 | --- Script execution started ---
+2025-11-02 00:15:01.139127 | Importing libraries...
+2025-11-02 00:15:02.058651 | Libraries imported successfully.
+2025-11-02 00:15:02.058769 | __main__ block entered. Calling main().
+2025-11-02 00:15:02.058835 | --- Auto-matcher batch started ---
+2025-11-02 00:15:02.058925 | INFO: Google Generative AI API configured.
+2025-11-02 00:15:02.058988 | INFO: Configuration loaded successfully.
+2025-11-02 00:15:02.971472 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:15:02.971739 | --- Auto-matcher batch finished ---
+2025-11-02 00:20:00.530979 | --- Script execution started ---
+2025-11-02 00:20:00.531511 | Importing libraries...
+2025-11-02 00:20:01.475907 | Libraries imported successfully.
+2025-11-02 00:20:01.476044 | __main__ block entered. Calling main().
+2025-11-02 00:20:01.476139 | --- Auto-matcher batch started ---
+2025-11-02 00:20:01.476239 | INFO: Google Generative AI API configured.
+2025-11-02 00:20:01.476305 | INFO: Configuration loaded successfully.
+2025-11-02 00:20:02.415564 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:20:02.415793 | --- Auto-matcher batch finished ---
+2025-11-02 00:25:00.973697 | --- Script execution started ---
+2025-11-02 00:25:00.974014 | Importing libraries...
+2025-11-02 00:25:01.919858 | Libraries imported successfully.
+2025-11-02 00:25:01.920087 | __main__ block entered. Calling main().
+2025-11-02 00:25:01.920158 | --- Auto-matcher batch started ---
+2025-11-02 00:25:01.920300 | INFO: Google Generative AI API configured.
+2025-11-02 00:25:01.920379 | INFO: Configuration loaded successfully.
+2025-11-02 00:25:02.904997 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:25:02.905232 | --- Auto-matcher batch finished ---
+2025-11-02 00:30:00.412575 | --- Script execution started ---
+2025-11-02 00:30:00.413163 | Importing libraries...
+2025-11-02 00:30:01.538920 | Libraries imported successfully.
+2025-11-02 00:30:01.539059 | __main__ block entered. Calling main().
+2025-11-02 00:30:01.539131 | --- Auto-matcher batch started ---
+2025-11-02 00:30:01.539222 | INFO: Google Generative AI API configured.
+2025-11-02 00:30:01.539284 | INFO: Configuration loaded successfully.
+2025-11-02 00:30:02.842922 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:30:02.843211 | --- Auto-matcher batch finished ---
+2025-11-02 00:35:00.789604 | --- Script execution started ---
+2025-11-02 00:35:00.790257 | Importing libraries...
+2025-11-02 00:35:01.759760 | Libraries imported successfully.
+2025-11-02 00:35:01.759971 | __main__ block entered. Calling main().
+2025-11-02 00:35:01.760053 | --- Auto-matcher batch started ---
+2025-11-02 00:35:01.760170 | INFO: Google Generative AI API configured.
+2025-11-02 00:35:01.760237 | INFO: Configuration loaded successfully.
+2025-11-02 00:35:02.830466 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:35:02.830727 | --- Auto-matcher batch finished ---
+2025-11-02 00:40:01.084034 | --- Script execution started ---
+2025-11-02 00:40:01.084900 | Importing libraries...
+2025-11-02 00:40:02.082526 | Libraries imported successfully.
+2025-11-02 00:40:02.082668 | __main__ block entered. Calling main().
+2025-11-02 00:40:02.082737 | --- Auto-matcher batch started ---
+2025-11-02 00:40:02.082835 | INFO: Google Generative AI API configured.
+2025-11-02 00:40:02.082911 | INFO: Configuration loaded successfully.
+2025-11-02 00:40:03.028626 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:40:03.028784 | --- Auto-matcher batch finished ---
+2025-11-02 00:45:00.428455 | --- Script execution started ---
+2025-11-02 00:45:00.428974 | Importing libraries...
+2025-11-02 00:45:01.414822 | Libraries imported successfully.
+2025-11-02 00:45:01.414966 | __main__ block entered. Calling main().
+2025-11-02 00:45:01.415031 | --- Auto-matcher batch started ---
+2025-11-02 00:45:01.415120 | INFO: Google Generative AI API configured.
+2025-11-02 00:45:01.415190 | INFO: Configuration loaded successfully.
+2025-11-02 00:45:02.461086 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:45:02.461286 | --- Auto-matcher batch finished ---
+2025-11-02 00:50:01.032161 | --- Script execution started ---
+2025-11-02 00:50:01.032762 | Importing libraries...
+2025-11-02 00:50:01.979058 | Libraries imported successfully.
+2025-11-02 00:50:01.979229 | __main__ block entered. Calling main().
+2025-11-02 00:50:01.979362 | --- Auto-matcher batch started ---
+2025-11-02 00:50:01.979475 | INFO: Google Generative AI API configured.
+2025-11-02 00:50:01.979544 | INFO: Configuration loaded successfully.
+2025-11-02 00:50:02.956277 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:50:02.956529 | --- Auto-matcher batch finished ---
+2025-11-02 00:55:00.528452 | --- Script execution started ---
+2025-11-02 00:55:00.528826 | Importing libraries...
+2025-11-02 00:55:01.475770 | Libraries imported successfully.
+2025-11-02 00:55:01.475905 | __main__ block entered. Calling main().
+2025-11-02 00:55:01.475971 | --- Auto-matcher batch started ---
+2025-11-02 00:55:01.476064 | INFO: Google Generative AI API configured.
+2025-11-02 00:55:01.476126 | INFO: Configuration loaded successfully.
+2025-11-02 00:55:02.471482 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 00:55:02.471826 | --- Auto-matcher batch finished ---
+2025-11-02 01:00:00.844022 | --- Script execution started ---
+2025-11-02 01:00:00.844501 | Importing libraries...
+2025-11-02 01:00:02.073754 | Libraries imported successfully.
+2025-11-02 01:00:02.073931 | __main__ block entered. Calling main().
+2025-11-02 01:00:02.074028 | --- Auto-matcher batch started ---
+2025-11-02 01:00:02.074183 | INFO: Google Generative AI API configured.
+2025-11-02 01:00:02.074272 | INFO: Configuration loaded successfully.
+2025-11-02 01:00:03.076130 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 01:00:03.076961 | --- Auto-matcher batch finished ---
+2025-11-02 01:05:00.838575 | --- Script execution started ---
+2025-11-02 01:05:00.839007 | Importing libraries...
+2025-11-02 01:05:01.815821 | Libraries imported successfully.
+2025-11-02 01:05:01.816025 | __main__ block entered. Calling main().
+2025-11-02 01:05:01.816120 | --- Auto-matcher batch started ---
+2025-11-02 01:05:01.816222 | INFO: Google Generative AI API configured.
+2025-11-02 01:05:01.816289 | INFO: Configuration loaded successfully.
+2025-11-02 01:05:02.743750 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 01:05:02.743997 | --- Auto-matcher batch finished ---
+2025-11-02 01:10:00.464597 | --- Script execution started ---
+2025-11-02 01:10:00.465312 | Importing libraries...
+2025-11-02 01:10:01.434920 | Libraries imported successfully.
+2025-11-02 01:10:01.435153 | __main__ block entered. Calling main().
+2025-11-02 01:10:01.435221 | --- Auto-matcher batch started ---
+2025-11-02 01:10:01.435367 | INFO: Google Generative AI API configured.
+2025-11-02 01:10:01.435434 | INFO: Configuration loaded successfully.
+2025-11-02 01:10:02.376828 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:10:03.216094 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762071004.859883 4916892 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:10:05.026430 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:10:05.026723 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:10:09.840720 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:10:09.840848 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:10:14.587076 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:10:14.587297 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:10:17.654480 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:10:17.739478 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:10:17.740375 | --- Auto-matcher batch finished ---
+2025-11-02 01:15:01.129470 | --- Script execution started ---
+2025-11-02 01:15:01.129877 | Importing libraries...
+2025-11-02 01:15:02.088028 | Libraries imported successfully.
+2025-11-02 01:15:02.088199 | __main__ block entered. Calling main().
+2025-11-02 01:15:02.088267 | --- Auto-matcher batch started ---
+2025-11-02 01:15:02.088382 | INFO: Google Generative AI API configured.
+2025-11-02 01:15:02.088447 | INFO: Configuration loaded successfully.
+2025-11-02 01:15:03.041725 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:15:03.862308 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762071305.534919 4919185 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:15:05.720103 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:15:05.720326 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:15:10.565001 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:15:10.565224 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:15:15.422705 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:15:15.422868 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:15:18.545568 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:15:18.630337 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:15:18.631227 | --- Auto-matcher batch finished ---
+2025-11-02 01:20:00.333419 | --- Script execution started ---
+2025-11-02 01:20:00.334022 | Importing libraries...
+2025-11-02 01:20:01.281684 | Libraries imported successfully.
+2025-11-02 01:20:01.281831 | __main__ block entered. Calling main().
+2025-11-02 01:20:01.281897 | --- Auto-matcher batch started ---
+2025-11-02 01:20:01.281996 | INFO: Google Generative AI API configured.
+2025-11-02 01:20:01.282058 | INFO: Configuration loaded successfully.
+2025-11-02 01:20:02.217235 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:20:02.977482 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762071604.598389 4921682 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:20:04.904305 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:20:04.904546 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:20:09.716533 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:20:09.716788 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:20:14.449360 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:20:14.449518 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:20:17.461882 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:20:17.544819 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:20:17.545411 | --- Auto-matcher batch finished ---
+2025-11-02 01:25:00.826127 | --- Script execution started ---
+2025-11-02 01:25:00.826461 | Importing libraries...
+2025-11-02 01:25:01.731254 | Libraries imported successfully.
+2025-11-02 01:25:01.731389 | __main__ block entered. Calling main().
+2025-11-02 01:25:01.731456 | --- Auto-matcher batch started ---
+2025-11-02 01:25:01.731548 | INFO: Google Generative AI API configured.
+2025-11-02 01:25:01.731610 | INFO: Configuration loaded successfully.
+2025-11-02 01:25:02.696811 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:25:03.459383 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762071905.115949 4923975 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:25:05.295301 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:25:05.295545 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:25:10.062547 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:25:10.062812 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:25:14.877248 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:25:14.877505 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:25:17.902313 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:25:17.983771 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:25:17.984299 | --- Auto-matcher batch finished ---
+2025-11-02 01:30:00.539784 | --- Script execution started ---
+2025-11-02 01:30:00.540432 | Importing libraries...
+2025-11-02 01:30:01.782800 | Libraries imported successfully.
+2025-11-02 01:30:01.782941 | __main__ block entered. Calling main().
+2025-11-02 01:30:01.783008 | --- Auto-matcher batch started ---
+2025-11-02 01:30:01.783127 | INFO: Google Generative AI API configured.
+2025-11-02 01:30:01.783190 | INFO: Configuration loaded successfully.
+2025-11-02 01:30:03.034038 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:30:03.763127 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762072205.463713 4927678 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:30:05.657728 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:30:05.657993 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:30:10.550589 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:30:10.550743 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:30:15.310098 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:30:15.310254 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:30:18.453051 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:30:18.533683 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:30:18.534391 | --- Auto-matcher batch finished ---
+2025-11-02 01:35:00.428996 | --- Script execution started ---
+2025-11-02 01:35:00.429587 | Importing libraries...
+2025-11-02 01:35:01.425124 | Libraries imported successfully.
+2025-11-02 01:35:01.425621 | __main__ block entered. Calling main().
+2025-11-02 01:35:01.425738 | --- Auto-matcher batch started ---
+2025-11-02 01:35:01.425954 | INFO: Google Generative AI API configured.
+2025-11-02 01:35:01.426038 | INFO: Configuration loaded successfully.
+2025-11-02 01:35:02.646679 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:35:03.450188 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762072505.011142 4930941 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:35:05.207803 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:35:05.208003 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:35:10.147601 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:35:10.150818 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:35:14.831145 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:35:14.831476 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:35:17.967226 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:35:18.050540 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:35:18.051237 | --- Auto-matcher batch finished ---
+2025-11-02 01:40:00.559895 | --- Script execution started ---
+2025-11-02 01:40:00.560404 | Importing libraries...
+2025-11-02 01:40:01.575027 | Libraries imported successfully.
+2025-11-02 01:40:01.575169 | __main__ block entered. Calling main().
+2025-11-02 01:40:01.575236 | --- Auto-matcher batch started ---
+2025-11-02 01:40:01.575325 | INFO: Google Generative AI API configured.
+2025-11-02 01:40:01.575388 | INFO: Configuration loaded successfully.
+2025-11-02 01:40:03.008167 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:40:03.811330 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762072805.394389 4933138 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:40:05.601777 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:40:05.605107 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:40:10.286645 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:40:10.286928 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:40:15.029059 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:40:15.029226 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:40:18.048404 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:40:18.134722 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:40:18.135634 | --- Auto-matcher batch finished ---
+2025-11-02 01:45:00.600985 | --- Script execution started ---
+2025-11-02 01:45:00.601514 | Importing libraries...
+2025-11-02 01:45:01.575029 | Libraries imported successfully.
+2025-11-02 01:45:01.575152 | __main__ block entered. Calling main().
+2025-11-02 01:45:01.575222 | --- Auto-matcher batch started ---
+2025-11-02 01:45:01.575310 | INFO: Google Generative AI API configured.
+2025-11-02 01:45:01.575373 | INFO: Configuration loaded successfully.
+2025-11-02 01:45:02.516247 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:45:03.275064 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762073104.873551 4935320 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:45:05.045434 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:45:05.045593 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:45:09.821161 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:45:09.821450 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:45:14.638701 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:45:14.638944 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:45:17.749345 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:45:17.829450 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:45:17.830055 | --- Auto-matcher batch finished ---
+2025-11-02 01:50:01.228520 | --- Script execution started ---
+2025-11-02 01:50:01.228845 | Importing libraries...
+2025-11-02 01:50:02.154476 | Libraries imported successfully.
+2025-11-02 01:50:02.154707 | __main__ block entered. Calling main().
+2025-11-02 01:50:02.154777 | --- Auto-matcher batch started ---
+2025-11-02 01:50:02.154886 | INFO: Google Generative AI API configured.
+2025-11-02 01:50:02.154952 | INFO: Configuration loaded successfully.
+2025-11-02 01:50:03.135800 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:50:03.933194 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762073405.506077 4937483 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:50:05.676330 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:50:05.676512 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:50:10.416364 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:50:10.416549 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:50:15.269602 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:50:15.269778 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:50:18.313961 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:50:18.399194 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:50:18.400229 | --- Auto-matcher batch finished ---
+2025-11-02 01:55:01.034334 | --- Script execution started ---
+2025-11-02 01:55:01.034512 | Importing libraries...
+2025-11-02 01:55:01.969203 | Libraries imported successfully.
+2025-11-02 01:55:01.969328 | __main__ block entered. Calling main().
+2025-11-02 01:55:01.969395 | --- Auto-matcher batch started ---
+2025-11-02 01:55:01.969484 | INFO: Google Generative AI API configured.
+2025-11-02 01:55:01.969546 | INFO: Configuration loaded successfully.
+2025-11-02 01:55:02.968639 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:55:03.818863 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762073705.451734 4939695 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:55:05.641087 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:55:05.641325 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:55:10.352400 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:55:10.352682 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:55:15.071697 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:55:15.071897 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:55:18.204170 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:55:18.290993 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:55:18.291690 | --- Auto-matcher batch finished ---
+2025-11-02 01:00:00.618412 | --- Script execution started ---
+2025-11-02 01:00:00.618969 | Importing libraries...
+2025-11-02 01:00:01.805215 | Libraries imported successfully.
+2025-11-02 01:00:01.805371 | __main__ block entered. Calling main().
+2025-11-02 01:00:01.805495 | --- Auto-matcher batch started ---
+2025-11-02 01:00:01.805627 | INFO: Google Generative AI API configured.
+2025-11-02 01:00:01.805727 | INFO: Configuration loaded successfully.
+2025-11-02 01:00:04.759071 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:00:05.544572 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762074007.220062 4942845 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:00:07.417695 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:00:07.417828 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:00:12.203909 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:00:12.204202 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:00:16.979875 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:00:16.980099 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:00:20.122037 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:00:20.206990 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:00:20.207993 | --- Auto-matcher batch finished ---
+2025-11-02 01:05:00.871267 | --- Script execution started ---
+2025-11-02 01:05:00.871709 | Importing libraries...
+2025-11-02 01:05:01.956285 | Libraries imported successfully.
+2025-11-02 01:05:01.956442 | __main__ block entered. Calling main().
+2025-11-02 01:05:01.956507 | --- Auto-matcher batch started ---
+2025-11-02 01:05:01.956598 | INFO: Google Generative AI API configured.
+2025-11-02 01:05:01.956659 | INFO: Configuration loaded successfully.
+2025-11-02 01:05:02.907592 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:05:03.685526 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762074305.368444 4945524 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:05:05.561198 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:05:05.561471 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:05:10.335754 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:05:10.335954 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:05:15.018146 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:05:15.018305 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:05:18.146165 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:05:18.230802 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:05:18.231786 | --- Auto-matcher batch finished ---
+2025-11-02 01:10:01.349949 | --- Script execution started ---
+2025-11-02 01:10:01.350472 | Importing libraries...
+2025-11-02 01:10:02.852424 | Libraries imported successfully.
+2025-11-02 01:10:02.852574 | __main__ block entered. Calling main().
+2025-11-02 01:10:02.852644 | --- Auto-matcher batch started ---
+2025-11-02 01:10:02.852792 | INFO: Google Generative AI API configured.
+2025-11-02 01:10:02.852890 | INFO: Configuration loaded successfully.
+2025-11-02 01:10:03.970257 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:10:04.718554 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762074606.294834 4948098 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:10:06.485763 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:10:06.485960 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:10:11.176998 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:10:11.177183 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:10:15.912739 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:10:15.913159 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:10:18.973915 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:10:19.053592 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:10:19.054302 | --- Auto-matcher batch finished ---
+2025-11-02 01:15:00.351685 | --- Script execution started ---
+2025-11-02 01:15:00.352409 | Importing libraries...
+2025-11-02 01:15:01.455917 | Libraries imported successfully.
+2025-11-02 01:15:01.456142 | __main__ block entered. Calling main().
+2025-11-02 01:15:01.456215 | --- Auto-matcher batch started ---
+2025-11-02 01:15:01.456337 | INFO: Google Generative AI API configured.
+2025-11-02 01:15:01.456403 | INFO: Configuration loaded successfully.
+2025-11-02 01:15:02.400442 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:15:03.188470 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762074904.751190 4951155 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:15:04.916175 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:15:04.916361 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:15:09.604183 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:15:09.604432 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:15:14.321563 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:15:14.321775 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:15:17.370682 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:15:17.453750 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:15:17.454615 | --- Auto-matcher batch finished ---
+2025-11-02 01:20:00.608250 | --- Script execution started ---
+2025-11-02 01:20:00.608617 | Importing libraries...
+2025-11-02 01:20:02.179829 | Libraries imported successfully.
+2025-11-02 01:20:02.180214 | __main__ block entered. Calling main().
+2025-11-02 01:20:02.180513 | --- Auto-matcher batch started ---
+2025-11-02 01:20:02.180940 | INFO: Google Generative AI API configured.
+2025-11-02 01:20:02.181045 | INFO: Configuration loaded successfully.
+2025-11-02 01:20:03.216103 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:20:04.001169 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762075205.569918 4953918 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:20:05.790424 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:20:05.791113 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:20:10.486959 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:20:10.487116 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:20:15.185600 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:20:15.210462 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:20:18.220299 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:20:18.304837 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:20:18.306110 | --- Auto-matcher batch finished ---
+2025-11-02 01:25:00.299694 | --- Script execution started ---
+2025-11-02 01:25:00.300348 | Importing libraries...
+2025-11-02 01:25:01.407510 | Libraries imported successfully.
+2025-11-02 01:25:01.407728 | __main__ block entered. Calling main().
+2025-11-02 01:25:01.407796 | --- Auto-matcher batch started ---
+2025-11-02 01:25:01.407919 | INFO: Google Generative AI API configured.
+2025-11-02 01:25:01.407987 | INFO: Configuration loaded successfully.
+2025-11-02 01:25:02.519486 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:25:03.514755 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762075505.130354 4956739 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:25:05.345121 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:25:05.346293 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:25:10.084504 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:25:10.084714 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:25:14.777252 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:25:14.777528 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:25:17.850437 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:25:17.936786 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:25:17.937552 | --- Auto-matcher batch finished ---
+2025-11-02 01:30:00.264975 | --- Script execution started ---
+2025-11-02 01:30:00.266274 | Importing libraries...
+2025-11-02 01:30:01.474581 | Libraries imported successfully.
+2025-11-02 01:30:01.474768 | __main__ block entered. Calling main().
+2025-11-02 01:30:01.474843 | --- Auto-matcher batch started ---
+2025-11-02 01:30:01.474972 | INFO: Google Generative AI API configured.
+2025-11-02 01:30:01.475051 | INFO: Configuration loaded successfully.
+2025-11-02 01:30:02.717567 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:30:03.484747 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762075805.093509 4960197 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:30:05.281175 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:30:05.281444 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:30:10.017493 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:30:10.017664 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:30:14.705389 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:30:14.705835 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:30:17.741120 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:30:17.825276 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:30:17.825921 | --- Auto-matcher batch finished ---
+2025-11-02 01:35:00.923309 | --- Script execution started ---
+2025-11-02 01:35:00.924012 | Importing libraries...
+2025-11-02 01:35:02.010003 | Libraries imported successfully.
+2025-11-02 01:35:02.010170 | __main__ block entered. Calling main().
+2025-11-02 01:35:02.010236 | --- Auto-matcher batch started ---
+2025-11-02 01:35:02.010340 | INFO: Google Generative AI API configured.
+2025-11-02 01:35:02.010403 | INFO: Configuration loaded successfully.
+2025-11-02 01:35:03.162716 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:35:03.931810 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762076105.480826 4963597 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:35:05.673860 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:35:05.674114 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:35:10.377970 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:35:10.378274 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:35:15.116172 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:35:15.116363 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:35:18.176294 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:35:18.260538 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:35:18.261464 | --- Auto-matcher batch finished ---
+2025-11-02 01:40:00.655112 | --- Script execution started ---
+2025-11-02 01:40:00.655690 | Importing libraries...
+2025-11-02 01:40:01.846689 | Libraries imported successfully.
+2025-11-02 01:40:01.846865 | __main__ block entered. Calling main().
+2025-11-02 01:40:01.846945 | --- Auto-matcher batch started ---
+2025-11-02 01:40:01.847042 | INFO: Google Generative AI API configured.
+2025-11-02 01:40:01.847110 | INFO: Configuration loaded successfully.
+2025-11-02 01:40:02.811045 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:40:03.553632 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762076405.113804 4966864 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:40:05.294893 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:40:05.295065 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:40:09.973307 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:40:09.973632 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:40:14.709178 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:40:14.709341 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:40:17.752285 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:40:17.853494 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:40:17.854709 | --- Auto-matcher batch finished ---
+2025-11-02 01:45:00.222102 | --- Script execution started ---
+2025-11-02 01:45:00.222596 | Importing libraries...
+2025-11-02 01:45:01.293653 | Libraries imported successfully.
+2025-11-02 01:45:01.293850 | __main__ block entered. Calling main().
+2025-11-02 01:45:01.293960 | --- Auto-matcher batch started ---
+2025-11-02 01:45:01.294112 | INFO: Google Generative AI API configured.
+2025-11-02 01:45:01.294179 | INFO: Configuration loaded successfully.
+2025-11-02 01:45:02.359282 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:45:03.126626 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762076704.721751 4969544 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:45:04.903433 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:45:04.903585 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:45:09.611299 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:45:09.611550 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:45:14.297917 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:45:14.298187 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:45:17.312466 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:45:17.398619 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:45:17.399513 | --- Auto-matcher batch finished ---
+2025-11-02 01:50:00.998121 | --- Script execution started ---
+2025-11-02 01:50:00.998692 | Importing libraries...
+2025-11-02 01:50:02.059698 | Libraries imported successfully.
+2025-11-02 01:50:02.059864 | __main__ block entered. Calling main().
+2025-11-02 01:50:02.059930 | --- Auto-matcher batch started ---
+2025-11-02 01:50:02.060029 | INFO: Google Generative AI API configured.
+2025-11-02 01:50:02.060092 | INFO: Configuration loaded successfully.
+2025-11-02 01:50:03.081896 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:50:03.840596 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762077005.426846 4972317 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:50:05.618519 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:50:05.618745 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:50:10.286277 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:50:10.286457 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:50:14.946538 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:50:14.946811 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:50:18.022082 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:50:18.105019 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:50:18.105726 | --- Auto-matcher batch finished ---
+2025-11-02 01:55:00.585849 | --- Script execution started ---
+2025-11-02 01:55:00.586401 | Importing libraries...
+2025-11-02 01:55:01.686538 | Libraries imported successfully.
+2025-11-02 01:55:01.686704 | __main__ block entered. Calling main().
+2025-11-02 01:55:01.686770 | --- Auto-matcher batch started ---
+2025-11-02 01:55:01.686901 | INFO: Google Generative AI API configured.
+2025-11-02 01:55:01.686961 | INFO: Configuration loaded successfully.
+2025-11-02 01:55:02.632298 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 01:55:03.427888 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762077304.975145 4975090 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 01:55:05.157118 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:55:05.157334 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:55:09.827707 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:55:09.827967 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:55:14.527107 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 01:55:14.527385 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 01:55:17.600158 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 01:55:17.688838 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 01:55:17.689572 | --- Auto-matcher batch finished ---
+2025-11-02 02:00:00.712962 | --- Script execution started ---
+2025-11-02 02:00:00.716982 | Importing libraries...
+2025-11-02 02:00:02.065915 | Libraries imported successfully.
+2025-11-02 02:00:02.066070 | __main__ block entered. Calling main().
+2025-11-02 02:00:02.066200 | --- Auto-matcher batch started ---
+2025-11-02 02:00:02.066319 | INFO: Google Generative AI API configured.
+2025-11-02 02:00:02.066424 | INFO: Configuration loaded successfully.
+2025-11-02 02:00:03.290416 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 02:00:04.377390 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762077605.969292 4978349 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 02:00:06.174462 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 02:00:06.174976 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 02:00:10.820215 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 02:00:10.820436 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 02:00:15.506079 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 02:00:15.506267 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 02:00:18.509800 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 02:00:18.593516 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 02:00:18.594772 | --- Auto-matcher batch finished ---
+2025-11-02 02:05:00.881661 | --- Script execution started ---
+2025-11-02 02:05:00.882190 | Importing libraries...
+2025-11-02 02:05:02.109342 | Libraries imported successfully.
+2025-11-02 02:05:02.112417 | __main__ block entered. Calling main().
+2025-11-02 02:05:02.112493 | --- Auto-matcher batch started ---
+2025-11-02 02:05:02.112625 | INFO: Google Generative AI API configured.
+2025-11-02 02:05:02.112690 | INFO: Configuration loaded successfully.
+2025-11-02 02:05:03.067054 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 02:05:03.854240 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762077905.408530 4981241 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 02:05:05.600210 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 02:05:05.600448 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 02:05:10.256983 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 02:05:10.257154 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 02:05:14.958217 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 02:05:14.958483 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 02:05:17.993620 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 02:05:18.078589 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 02:05:18.079444 | --- Auto-matcher batch finished ---
+2025-11-02 02:10:00.342916 | --- Script execution started ---
+2025-11-02 02:10:00.343557 | Importing libraries...
+2025-11-02 02:10:01.572514 | Libraries imported successfully.
+2025-11-02 02:10:01.572630 | __main__ block entered. Calling main().
+2025-11-02 02:10:01.572697 | --- Auto-matcher batch started ---
+2025-11-02 02:10:01.572799 | INFO: Google Generative AI API configured.
+2025-11-02 02:10:01.572863 | INFO: Configuration loaded successfully.
+2025-11-02 02:10:02.571116 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 02:10:03.330183 |   - Evaluating batch of 1 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762078204.951140 4985262 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 02:10:05.158298 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 02:10:05.158487 |     - Attempt 1/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 02:10:09.828289 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 02:10:09.828489 |     - Attempt 2/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 02:10:14.615060 | Error in get_match_summary_batch: 403 Your API key was reported as leaked. Please use another API key.
+2025-11-02 02:10:14.616836 |     - Attempt 3/3 failed for Eng(ID:24642). Retrying in 3 seconds...
+2025-11-02 02:10:17.654034 |     - ❌ LLM evaluation for Eng(ID:24642) failed after 3 retries. Skipping.
+2025-11-02 02:10:17.747982 | WARNING: All evaluations in loop failed for Job ID 16472. Skipping last_processed_id update for this run.
+2025-11-02 02:10:17.757996 | --- Auto-matcher batch finished ---
+2025-11-02 02:10:54.711088 | --- Script execution started ---
+2025-11-02 02:10:54.711450 | Importing libraries...
+2025-11-02 02:10:55.141538 | Libraries imported successfully.
+2025-11-02 02:10:55.141626 | __main__ block entered. Calling main().
+2025-11-02 02:10:55.141673 | --- Auto-matcher batch started ---
+2025-11-02 02:10:55.141725 | INFO: Google Generative AI API configured.
+2025-11-02 02:10:55.141767 | INFO: Configuration loaded successfully.
+2025-11-02 02:10:56.044155 | 
+Processing request for Job ID 16472 against new engineers (ID > 24641)
+2025-11-02 02:10:56.845095 |   - Evaluating batch of 1 engineers (offset: 0)
+2025-11-02 02:11:00.802795 |     ✅ HIT! Job(16472) vs Eng(24642) -> Rank C. Match ID: 923
+2025-11-02 02:11:04.292386 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:11:05.245826 | Updated last processed IDs for request 9.
+2025-11-02 02:11:05.246766 | --- Auto-matcher batch finished ---
+2025-11-02 02:15:00.249254 | --- Script execution started ---
+2025-11-02 02:15:00.249949 | Importing libraries...
+2025-11-02 02:15:01.491906 | Libraries imported successfully.
+2025-11-02 02:15:01.492458 | __main__ block entered. Calling main().
+2025-11-02 02:15:01.492550 | --- Auto-matcher batch started ---
+2025-11-02 02:15:01.492687 | INFO: Google Generative AI API configured.
+2025-11-02 02:15:01.492765 | INFO: Configuration loaded successfully.
+2025-11-02 02:15:02.552278 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 02:15:02.552476 | --- Auto-matcher batch finished ---
+2025-11-02 02:20:00.425036 | --- Script execution started ---
+2025-11-02 02:20:00.425490 | Importing libraries...
+2025-11-02 02:20:01.568999 | Libraries imported successfully.
+2025-11-02 02:20:01.569157 | __main__ block entered. Calling main().
+2025-11-02 02:20:01.569235 | --- Auto-matcher batch started ---
+2025-11-02 02:20:01.569332 | INFO: Google Generative AI API configured.
+2025-11-02 02:20:01.569396 | INFO: Configuration loaded successfully.
+2025-11-02 02:20:02.574677 | 
+Processing request for Job ID 16472 against new engineers (ID > 24637)
+2025-11-02 02:20:03.453621 |   - Evaluating batch of 5 engineers (offset: 0)
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1762078805.040423 4993845 alts_credentials.cc:93] ALTS creds ignored. Not running on GCP and untrusted ALTS is not enabled.
+2025-11-02 02:20:07.254140 |     ✅ HIT! Job(16472) vs Eng(24638) -> Rank C. Match ID: 920
+2025-11-02 02:20:11.150214 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:20:14.828795 |     ✅ HIT! Job(16472) vs Eng(24639) -> Rank C. Match ID: 921
+2025-11-02 02:20:17.143241 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:20:19.864771 |     ✅ HIT! Job(16472) vs Eng(24640) -> Rank C. Match ID: 922
+2025-11-02 02:20:21.825101 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:20:25.753243 |     - ⏭️ Skipped Eng(ID:24641) with rank D
+2025-11-02 02:20:29.301980 |     ✅ HIT! Job(16472) vs Eng(24642) -> Rank C. Match ID: 923
+2025-11-02 02:20:31.933150 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:20:32.849714 | Updated last processed IDs for request 9.
+2025-11-02 02:20:32.850154 | --- Auto-matcher batch finished ---
+2025-11-02 02:25:01.104416 | --- Script execution started ---
+2025-11-02 02:25:01.104989 | Importing libraries...
+2025-11-02 02:25:02.228943 | Libraries imported successfully.
+2025-11-02 02:25:02.229101 | __main__ block entered. Calling main().
+2025-11-02 02:25:02.229168 | --- Auto-matcher batch started ---
+2025-11-02 02:25:02.229267 | INFO: Google Generative AI API configured.
+2025-11-02 02:25:02.229330 | INFO: Configuration loaded successfully.
+2025-11-02 02:25:03.220179 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 02:25:03.220351 | --- Auto-matcher batch finished ---
+2025-11-02 02:30:00.374092 | --- Script execution started ---
+2025-11-02 02:30:00.374563 | Importing libraries...
+2025-11-02 02:30:01.529513 | Libraries imported successfully.
+2025-11-02 02:30:01.529676 | __main__ block entered. Calling main().
+2025-11-02 02:30:01.529743 | --- Auto-matcher batch started ---
+2025-11-02 02:30:01.529853 | INFO: Google Generative AI API configured.
+2025-11-02 02:30:01.529954 | INFO: Configuration loaded successfully.
+2025-11-02 02:30:02.703029 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 02:30:02.703282 | --- Auto-matcher batch finished ---
+2025-11-02 02:35:00.143742 | --- Script execution started ---
+2025-11-02 02:35:00.144395 | Importing libraries...
+2025-11-02 02:35:01.263722 | Libraries imported successfully.
+2025-11-02 02:35:01.263876 | __main__ block entered. Calling main().
+2025-11-02 02:35:01.263943 | --- Auto-matcher batch started ---
+2025-11-02 02:35:01.264072 | INFO: Google Generative AI API configured.
+2025-11-02 02:35:01.264134 | INFO: Configuration loaded successfully.
+2025-11-02 02:35:02.293523 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 02:35:02.293769 | --- Auto-matcher batch finished ---
+
+2025-11-02 02:40:00.344976 | --- Script execution started ---
+2025-11-02 02:40:00.345504 | Importing libraries...
+2025-11-02 02:40:01.450778 | Libraries imported successfully.
+2025-11-02 02:40:01.450921 | __main__ block entered. Calling main().
+2025-11-02 02:40:01.450997 | --- Auto-matcher batch started ---
+2025-11-02 02:40:01.451130 | INFO: Google Generative AI API configured.
+2025-11-02 02:40:01.451211 | INFO: Configuration loaded successfully.
+2025-11-02 02:40:02.347049 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 02:40:02.347798 | --- Auto-matcher batch finished ---
+
+2025-11-02 02:40:37.000585 | --- Script execution started ---
+2025-11-02 02:40:37.000894 | Importing libraries...
+2025-11-02 02:40:37.288735 | Libraries imported successfully.
+2025-11-02 02:40:37.288818 | __main__ block entered. Calling main().
+2025-11-02 02:40:37.288861 | --- Auto-matcher batch started ---
+2025-11-02 02:40:37.288905 | INFO: Google Generative AI API configured.
+2025-11-02 02:40:37.288938 | INFO: Configuration loaded successfully.
+2025-11-02 02:40:38.240117 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 02:40:38.240891 | Request for Engineer ID 24642: No new jobs to process.
+2025-11-02 02:40:38.241199 | --- Auto-matcher batch finished ---
+
+2025-11-02 02:41:14.020662 | --- Script execution started ---
+2025-11-02 02:41:14.020968 | Importing libraries...
+2025-11-02 02:41:14.297454 | Libraries imported successfully.
+2025-11-02 02:41:14.297526 | __main__ block entered. Calling main().
+2025-11-02 02:41:14.297564 | --- Auto-matcher batch started ---
+2025-11-02 02:41:14.297604 | INFO: Google Generative AI API configured.
+2025-11-02 02:41:14.297640 | INFO: Configuration loaded successfully.
+2025-11-02 02:41:15.154797 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 02:41:15.155716 | 
+Processing request for Engineer ID 24642 against new jobs (ID > 16490)
+2025-11-02 02:41:16.052661 |   - Evaluating batch of 11 jobs (offset: 0)
+2025-11-02 02:41:19.546417 |     ✅ HIT! Eng(24642) vs Job(16491) -> Rank C. Match ID: 928
+2025-11-02 02:41:22.716742 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:41:26.732031 |     ✅ HIT! Eng(24642) vs Job(16492) -> Rank B. Match ID: 929
+2025-11-02 02:41:29.106062 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:41:33.320127 |     ✅ HIT! Eng(24642) vs Job(16493) -> Rank C. Match ID: 930
+2025-11-02 02:41:35.268955 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:41:38.208537 |     ✅ HIT! Eng(24642) vs Job(16494) -> Rank C. Match ID: 931
+2025-11-02 02:41:40.070947 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:41:43.417439 |     ✅ HIT! Eng(24642) vs Job(16495) -> Rank C. Match ID: 932
+2025-11-02 02:41:45.384647 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:41:48.745119 |     ✅ HIT! Eng(24642) vs Job(16496) -> Rank C. Match ID: 933
+2025-11-02 02:41:52.001593 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:41:55.499264 |     ✅ HIT! Eng(24642) vs Job(16497) -> Rank C. Match ID: 934
+2025-11-02 02:41:57.491950 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:42:01.064286 |     ✅ HIT! Eng(24642) vs Job(16498) -> Rank B. Match ID: 935
+2025-11-02 02:42:02.889877 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:42:06.945967 |     ✅ HIT! Eng(24642) vs Job(16499) -> Rank C. Match ID: 936
+2025-11-02 02:42:11.001899 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:42:14.410699 |     ✅ HIT! Eng(24642) vs Job(16500) -> Rank C. Match ID: 937
+2025-11-02 02:42:16.319749 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:42:19.666691 |     ✅ HIT! Eng(24642) vs Job(16501) -> Rank C. Match ID: 938
+2025-11-02 02:42:21.526884 | ✅ Notification email sent to tom2552tom@gmail.com
+2025-11-02 02:42:22.530719 | Updated last processed IDs for request 12.
+2025-11-02 02:42:22.531733 | --- Auto-matcher batch finished ---
+
+2025-11-02 02:45:00.801814 | --- Script execution started ---
+2025-11-02 02:45:00.802370 | Importing libraries...
+2025-11-02 02:45:02.229628 | Libraries imported successfully.
+2025-11-02 02:45:02.229856 | __main__ block entered. Calling main().
+2025-11-02 02:45:02.229926 | --- Auto-matcher batch started ---
+2025-11-02 02:45:02.230036 | INFO: Google Generative AI API configured.
+2025-11-02 02:45:02.230103 | INFO: Configuration loaded successfully.
+2025-11-02 02:45:03.295242 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 02:45:03.295746 | Request for Engineer ID 24642: No new jobs to process.
+2025-11-02 02:45:03.295920 | --- Auto-matcher batch finished ---
+
+2025-11-02 02:50:00.230619 | --- Script execution started ---
+2025-11-02 02:50:00.231086 | Importing libraries...
+2025-11-02 02:50:01.207000 | Libraries imported successfully.
+2025-11-02 02:50:01.207174 | __main__ block entered. Calling main().
+2025-11-02 02:50:01.207241 | --- Auto-matcher batch started ---
+2025-11-02 02:50:01.207347 | INFO: Google Generative AI API configured.
+2025-11-02 02:50:01.207410 | INFO: Configuration loaded successfully.
+2025-11-02 02:50:02.146676 | Request for Job ID 16472: No new engineers to process.
+2025-11-02 02:50:02.146955 | Request for Engineer ID 24642: No new jobs to process.
+2025-11-02 02:50:02.147053 | --- Auto-matcher batch finished ---
+

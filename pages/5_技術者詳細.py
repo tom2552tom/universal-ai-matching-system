@@ -275,6 +275,32 @@ if engineer_data:
         st.info("この技術者にマッチング済みの案件はありません。")
     else:
         st.write(f"計 {len(matched_jobs)} 件の案件がマッチングしています。")
+
+        # ★★★【ここからが修正の核】★★★
+        CLEAR_CONFIRM_KEY = f"clear_matches_confirm_eng_{selected_id}"
+        if CLEAR_CONFIRM_KEY not in st.session_state:
+            st.session_state[CLEAR_CONFIRM_KEY] = False
+
+        if st.button("🗑️ マッチングリストをクリア", type="secondary"):
+            st.session_state[CLEAR_CONFIRM_KEY] = not st.session_state[CLEAR_CONFIRM_KEY]
+            st.rerun()
+        
+        if st.session_state[CLEAR_CONFIRM_KEY]:
+            st.warning(f"**本当にこの技術者のマッチング済みリスト（{len(matched_jobs)}件）をすべてクリアしますか？** この操作は取り消せません。")
+            col_run, col_cancel = st.columns(2)
+            if col_run.button("はい、クリアします", type="primary"):
+                # ★ 技術者用の関数を呼び出す ★
+                if be.clear_matches_for_engineer(selected_id):
+                    st.success("マッチングリストをクリアしました。")
+                    st.session_state[CLEAR_CONFIRM_KEY] = False
+                    time.sleep(1); st.rerun()
+                else:
+                    st.error("クリア処理に失敗しました。")
+            if col_cancel.button("キャンセル"):
+                st.session_state[CLEAR_CONFIRM_KEY] = False
+                st.rerun()
+        # ★★★【修正ここまで】★★★
+        
         for job in matched_jobs:
             with st.container(border=True):
                 col1, col2 = st.columns([4, 1])

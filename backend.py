@@ -3040,3 +3040,59 @@ def create_or_update_match_record(job_id, engineer_id, score, grade, llm_result,
         if conn:
             conn.close()
 
+
+
+
+
+def clear_matches_for_job(job_id: int, conn=None) -> bool:
+    """指定された案件IDに紐づく全てのマッチング結果を削除する。"""
+    if not job_id:
+        return False
+    
+    should_close_conn = False
+    if conn is None:
+        conn = get_db_connection()
+        if not conn: return False
+        should_close_conn = True
+        
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM matching_results WHERE job_id = %s", (job_id,))
+            print(f"✅ Cleared {cur.rowcount} matches for job_id: {job_id}")
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ Error clearing matches for job_id {job_id}: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if should_close_conn and conn:
+            conn.close()
+
+
+def clear_matches_for_engineer(engineer_id: int, conn=None) -> bool:
+    """指定された技術者IDに紐づく全てのマッチング結果を削除する。"""
+    if not engineer_id:
+        return False
+    
+    should_close_conn = False
+    if conn is None:
+        conn = get_db_connection()
+        if not conn: return False
+        should_close_conn = True
+        
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM matching_results WHERE engineer_id = %s", (engineer_id,))
+            print(f"✅ Cleared {cur.rowcount} matches for engineer_id: {engineer_id}")
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ Error clearing matches for engineer_id {engineer_id}: {e}")
+        conn.rollback()
+        return False
+    finally:
+        if should_close_conn and conn:
+            conn.close()
+
+
