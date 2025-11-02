@@ -302,8 +302,8 @@ total_ai_activities = sum(dashboard_data.get('ai_activity_counts', {}).values())
 kpi_map = {
     "本日登録の案件数": dashboard_data.get('jobs_today', 0),
     "本日登録の技術者数": dashboard_data.get('engineers_today', 0),
-    "本日の採用決定数": dashboard_data.get('adopted_count_today', 0),
-    "本日のAI総思考回数": total_ai_activities
+    "本日のマッチング数": dashboard_data.get('new_matches_today', 0),
+    "本日の採用決定数": dashboard_data.get('adopted_count_today', 0)
 }
 # ★★★【修正ここまで】★★★
 for col, (label, value) in zip(kpi_cols, kpi_map.items()):
