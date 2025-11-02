@@ -131,10 +131,13 @@ else:
                 with col1:
                     project_name = job.get('project_name') or f"案件 (ID: {job['id']})"
                     if job.get('is_hidden') == 1:
-                        st.markdown(f"##### 🙈 `{project_name}`")
+                        st.markdown(f"##### 🙈 `{project_name}` (ID: {job['id']})")
                     else:
-                        st.markdown(f"##### {project_name}")
+                        st.markdown(f"##### {project_name} (ID: {job['id']})")
                     
+                    
+
+
                     doc_parts = job.get('document', '').split('\n---\n', 1)
                     main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
                     st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:100] + "...")

@@ -114,9 +114,9 @@ else:
                 with col1:
                     engineer_name = engineer.get('name') or f"技術者 (ID: {engineer['id']})"
                     if engineer.get('is_hidden') == 1:
-                        st.markdown(f"##### 🙈 `{engineer_name}`")
+                        st.markdown(f"##### 🙈 `{engineer_name}` (ID: {engineer['id']})")
                     else:
-                        st.markdown(f"##### {engineer_name}")
+                        st.markdown(f"##### {engineer_name} (ID: {engineer['id']})")
                     
                     doc_parts = engineer.get('document', '').split('\n---\n', 1)
                     main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
