@@ -3196,35 +3196,40 @@ def get_live_dashboard_data():
 
     try:
         with conn.cursor() as cur:
-            # --- 1. Python側で日本時間の日付範囲オブジェクトを生成 ---
-            jst = pytz.timezone('Asia/Tokyo')
-            now_in_jst = datetime.now(jst)
-            jst_today_start = now_in_jst.replace(hour=0, minute=0, second=0, microsecond=0)
-            jst_tomorrow_start = jst_today_start + timedelta(days=1)
-            jst_this_month_start = jst_today_start.replace(day=1)
-            twenty_four_hours_ago = now_in_jst - timedelta(hours=24)
 
-            # --- 2. 各種KPIの集計 ---
-            # 本日登録された案件・技術者の数
-            cur.execute("SELECT COUNT(*) FROM jobs WHERE created_at >= %s AND created_at < %s", (jst_today_start, jst_tomorrow_start))
+            target_tz = pytz.timezone('Asia/Tokyo') #Asia/Tokyo
+            now_in_target_tz = datetime.now(target_tz)
+            
+            # 「過去24時間前」の時刻を計算
+            twenty_four_hours_ago = now_in_target_tz - timedelta(hours=24)
+            
+            # 「今月の始まり」はランキングで使うため残しておく
+            this_month_start = now_in_target_tz.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+
+            # 過去24時間以内に登録された案件・技術者の数
+            cur.execute("SELECT COUNT(*) FROM jobs WHERE is_hidden = 0 AND created_at >= %s", (twenty_four_hours_ago,))
             data["jobs_today"] = cur.fetchone()['count']
-            cur.execute("SELECT COUNT(*) FROM engineers WHERE created_at >= %s AND created_at < %s", (jst_today_start, jst_tomorrow_start))
+            
+            cur.execute("SELECT COUNT(*) FROM engineers WHERE is_hidden = 0 AND created_at >= %s", (twenty_four_hours_ago,))
             data["engineers_today"] = cur.fetchone()['count']
+            
+            # ラベルは「本日」のままだが、中身は過去24時間の集計になる
             data["processed_items_today"] = data["jobs_today"] + data["engineers_today"]
 
-            # 本日作成されたマッチングの総数
-            cur.execute("SELECT COUNT(*) FROM matching_results WHERE created_at >= %s AND created_at < %s", (jst_today_start, jst_tomorrow_start))
+            # 過去24時間以内に作成されたマッチングの総数
+            cur.execute("SELECT COUNT(*) FROM matching_results WHERE is_hidden = 0 AND created_at >= %s", (twenty_four_hours_ago,))
             data["new_matches_today"] = cur.fetchone()['count']
 
-            # 本日「採用」にステータス変更された件数
-            cur.execute("SELECT COUNT(*) FROM matching_results WHERE status = '採用' AND status_updated_at >= %s AND status_updated_at < %s", (jst_today_start, jst_tomorrow_start))
+            # 過去24時間以内に「採用」にステータス変更された件数
+            cur.execute("SELECT COUNT(*) FROM matching_results WHERE status = '採用' AND status_updated_at >= %s", (twenty_four_hours_ago,))
             data["adopted_count_today"] = cur.fetchone()['count']
 
-            # 直近24時間のAIアクティビティ
+            # 過去24時間のAIアクティビティ
             cur.execute("SELECT activity_type, COUNT(*) as count FROM ai_activity_log WHERE created_at >= %s GROUP BY activity_type", (twenty_four_hours_ago,))
             for row in cur.fetchall():
                 data["ai_activity_counts"][row['activity_type']] = row['count']
-            
+
             # --- 3. その他の集計 ---
             # ファネルチャート用データ
             cur.execute("SELECT status, COUNT(*) as count FROM matching_results WHERE is_hidden = 0 GROUP BY status")
@@ -3237,7 +3242,7 @@ def get_live_dashboard_data():
                 JOIN jobs j ON r.job_id = j.id JOIN users u ON j.assigned_user_id = u.id
                 WHERE r.status = '採用' AND r.created_at >= %s GROUP BY u.username
                 ORDER BY adoption_count DESC LIMIT 5
-            """, (jst_this_month_start,))
+            """, (this_month_start,))
             data["top_performers"] = [dict(row) for row in cur.fetchall()]
 
             # 提案中の総件数
