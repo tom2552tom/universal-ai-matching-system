@@ -7,7 +7,7 @@ import numpy as np
 import os
 import google.generativeai as genai
 import json
-from datetime import datetime
+
 import imaplib
 import email
 from email.header import decode_header, make_header
@@ -20,6 +20,10 @@ import docx
 import re # スキル抽出のために re モジュールをインポート
 import json
 import pandas as pd
+
+from datetime import datetime, date, time, timedelta
+import pytz # ★★★ タイムゾーンを扱うために追加 ★★★
+
 
 
 # --- 1. 初期設定と定数 (変更なし) ---
@@ -3159,33 +3163,20 @@ def clear_matches_for_engineer(engineer_id: int, conn=None) -> bool:
 
 # backend.py の get_live_dashboard_data 関数をこちらに置き換えてください
 
+
 @st.cache_data(ttl=10)
 def get_live_dashboard_data():
     """
+    【タイムゾーン対応・完全リファクタリング版】
     経営者向けライブモニタリングダッシュボード用のデータをまとめて取得する。
     """
-
     data = {
-        "processed_items_today": 0,
-        "jobs_today": 0,
-        "engineers_today": 0,
-        "new_matches_today": 0,
-        "adopted_count_today": 0,
-        "ai_activity_counts": {}, 
-        "funnel_data": {
-            "新規": 0, "提案準備中": 0, "提案中": 0, 
-            "クライアント面談": 0, "結果待ち": 0, "採用": 0
-        },
-        "proposal_count_total": 0,
-        "active_auto_request_count": 0, # ★ 新しいKPIキー
-        "active_auto_requests": [], # ★ 新しいリストキー
-        "top_performers": [],
-        "recent_matches": [],
-        "live_log_feed": []
-        
+        "jobs_today": 0, "engineers_today": 0, "processed_items_today": 0,
+        "new_matches_today": 0, "adopted_count_today": 0,
+        "ai_activity_counts": {}, "funnel_data": {}, "proposal_count_total": 0,
+        "active_auto_request_count": 0, "active_auto_requests": [],
+        "top_performers": [], "recent_matches": [], "live_log_feed": []
     }
-    
-
     
     conn = get_db_connection()
     if not conn:
@@ -3193,201 +3184,84 @@ def get_live_dashboard_data():
 
     try:
         with conn.cursor() as cur:
-            # 1. 本日登録された案件・技術者の合計数
-            today_str = datetime.now().strftime('%Y-%m-%d')
-            cur.execute(
-                "SELECT COUNT(*) FROM jobs WHERE created_at LIKE %s", (f"{today_str}%",)
-            )
-            jobs_today = cur.fetchone()['count']
-            cur.execute(
-                "SELECT COUNT(*) FROM engineers WHERE created_at LIKE %s", (f"{today_str}%",)
-            )
-            engineers_today = cur.fetchone()['count']
-            data["processed_items_today"] = jobs_today + engineers_today
+            # --- 1. Python側で日本時間の日付範囲オブジェクトを生成 ---
+            jst = pytz.timezone('Asia/Tokyo')
+            now_in_jst = datetime.now(jst)
+            jst_today_start = now_in_jst.replace(hour=0, minute=0, second=0, microsecond=0)
+            jst_tomorrow_start = jst_today_start + timedelta(days=1)
+            jst_this_month_start = jst_today_start.replace(day=1)
+            twenty_four_hours_ago = now_in_jst - timedelta(hours=24)
 
-            # 2. 本日作成されたマッチングの総数
-            cur.execute(
-                "SELECT COUNT(*) FROM matching_results WHERE created_at >= CURRENT_DATE"
-            )
+            # --- 2. 各種KPIの集計 ---
+            # 本日登録された案件・技術者の数
+            cur.execute("SELECT COUNT(*) FROM jobs WHERE created_at >= %s AND created_at < %s", (jst_today_start, jst_tomorrow_start))
+            data["jobs_today"] = cur.fetchone()['count']
+            cur.execute("SELECT COUNT(*) FROM engineers WHERE created_at >= %s AND created_at < %s", (jst_today_start, jst_tomorrow_start))
+            data["engineers_today"] = cur.fetchone()['count']
+            data["processed_items_today"] = data["jobs_today"] + data["engineers_today"]
+
+            # 本日作成されたマッチングの総数
+            cur.execute("SELECT COUNT(*) FROM matching_results WHERE created_at >= %s AND created_at < %s", (jst_today_start, jst_tomorrow_start))
             data["new_matches_today"] = cur.fetchone()['count']
 
-            # 3. ファネルチャート用の各ステータスごとの件数
-            cur.execute("""
-                SELECT status, COUNT(*) as count
-                FROM matching_results WHERE is_hidden = 0 GROUP BY status;
-            """)
-            for row in cur.fetchall():
-                if row['status'] in data['funnel_data']:
-                    data['funnel_data'][row['status']] = row['count']
-            
-            # ★★★【ここからが修正の核】★★★
-            # 4. 担当者別ランキング（今月の「採用」件数が多い順）
-            #    エイリアスを英数字にし、ORDER BY句を修正
-            cur.execute("""
-                SELECT 
-                    u.username, 
-                    COUNT(r.id) as adoption_count 
-                FROM matching_results r
-                JOIN jobs j ON r.job_id = j.id
-                JOIN users u ON j.assigned_user_id = u.id
-                WHERE r.status = '採用' AND r.created_at >= date_trunc('month', CURRENT_DATE)
-                GROUP BY u.username
-                ORDER BY adoption_count DESC
-                LIMIT 5;
-            """)
-            # ★★★【修正ここまで】★★★
-            data["top_performers"] = cur.fetchall()
-
-            # 5. 最新のマッチングログ
-            cur.execute("""
-                SELECT j.project_name, e.name as engineer_name, r.grade
-                FROM matching_results r
-                JOIN jobs j ON r.job_id = j.id
-                JOIN engineers e ON r.engineer_id = e.id
-                WHERE r.is_hidden = 0
-                ORDER BY r.created_at DESC
-                LIMIT 5;
-            """)
-            data["recent_matches"] = cur.fetchall()
-
-
-            # 本日実行されたAI評価の総数
-            cur.execute(
-                "SELECT COUNT(*) FROM ai_activity_log WHERE created_at >= CURRENT_DATE"
-            )
-            data["ai_evaluations_today"] = cur.fetchone()['count']
-            # ★★★【修正ここまで】★★★
-
-            cur.execute("""
-                SELECT COUNT(*) 
-                FROM matching_results 
-                WHERE status = '採用' 
-                  AND status_updated_at >= CURRENT_DATE;
-            """)
+            # 本日「採用」にステータス変更された件数
+            cur.execute("SELECT COUNT(*) FROM matching_results WHERE status = '採用' AND status_updated_at >= %s AND status_updated_at < %s", (jst_today_start, jst_tomorrow_start))
             data["adopted_count_today"] = cur.fetchone()['count']
 
-            cur.execute("""
-                SELECT activity_type, COUNT(*) as count
-                FROM ai_activity_log
-                WHERE created_at >= NOW() - interval '24 hours'
-                GROUP BY activity_type;
-            """)
-
+            # 直近24時間のAIアクティビティ
+            cur.execute("SELECT activity_type, COUNT(*) as count FROM ai_activity_log WHERE created_at >= %s GROUP BY activity_type", (twenty_four_hours_ago,))
             for row in cur.fetchall():
                 data["ai_activity_counts"][row['activity_type']] = row['count']
+            
+            # --- 3. その他の集計 ---
+            # ファネルチャート用データ
+            cur.execute("SELECT status, COUNT(*) as count FROM matching_results WHERE is_hidden = 0 GROUP BY status")
+            for row in cur.fetchall():
+                data['funnel_data'][row['status']] = row['count']
 
-
+            # 担当者別ランキング（今月の「採用」件数）
             cur.execute("""
-                SELECT COUNT(*) 
-                FROM matching_results 
-                WHERE status IN ('提案準備中', '提案中');
-            """)
+                SELECT u.username, COUNT(r.id) as adoption_count FROM matching_results r
+                JOIN jobs j ON r.job_id = j.id JOIN users u ON j.assigned_user_id = u.id
+                WHERE r.status = '採用' AND r.created_at >= %s GROUP BY u.username
+                ORDER BY adoption_count DESC LIMIT 5
+            """, (jst_this_month_start,))
+            data["top_performers"] = [dict(row) for row in cur.fetchall()]
+
+            # 提案中の総件数
+            cur.execute("SELECT COUNT(*) FROM matching_results WHERE status IN ('提案準備中', '提案中')")
             data["proposal_count_total"] = cur.fetchone()['count']
-
-            today_str = datetime.now().strftime('%Y-%m-%d')
             
-            cur.execute(
-                "SELECT COUNT(*) FROM jobs WHERE created_at LIKE %s", 
-                (f"{today_str}%",)
-            )
-            data["jobs_today"] = cur.fetchone()['count']
-            
-            cur.execute(
-                "SELECT COUNT(*) FROM engineers WHERE created_at LIKE %s",
-                (f"{today_str}%",)
-            )
-            data["engineers_today"] = cur.fetchone()['count']
-
-
-            cur.execute("""
-                SELECT COUNT(*) 
-                FROM auto_matching_requests 
-                WHERE is_active = TRUE;
-            """)
+            # アクティブな自動マッチング依頼
+            cur.execute("SELECT COUNT(*) FROM auto_matching_requests WHERE is_active = TRUE")
             data["active_auto_request_count"] = cur.fetchone()['count']
-
-            # 2. アクティブな自動マッチング依頼の最新5件
-            #    UNION ALLを使って、jobsとengineersの両方から情報を取得
             cur.execute("""
-                SELECT * FROM (
-                    (SELECT 
-                        req.id, req.item_id, req.item_type, req.target_rank, req.notification_email,
-                        j.project_name as item_name,
-                        j.document, -- AI要約を取得
-                        COALESCE(mc.match_count, 0) as match_count, -- マッチング件数を取得
-                        req.created_at
-                    FROM auto_matching_requests req
-                    JOIN jobs j ON req.item_id = j.id AND req.item_type = 'job'
-                    LEFT JOIN (
-                        SELECT job_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY job_id
-                    ) mc ON j.id = mc.job_id
-                    WHERE req.is_active = TRUE
-                    ORDER BY req.created_at DESC
-                    LIMIT 5)
-                    UNION ALL
-                    (SELECT 
-                        req.id, req.item_id, req.item_type, req.target_rank, req.notification_email,
-                        e.name as item_name,
-                        e.document, -- AI要約を取得
-                        COALESCE(mc.match_count, 0) as match_count, -- マッチング件数を取得
-                        req.created_at
-                    FROM auto_matching_requests req
-                    JOIN engineers e ON req.item_id = e.id AND req.item_type = 'engineer'
-                    LEFT JOIN (
-                        SELECT engineer_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY engineer_id
-                    ) mc ON e.id = mc.engineer_id
-                    WHERE req.is_active = TRUE
-                    ORDER BY req.created_at DESC
-                    LIMIT 5)
-                ) AS combined_requests
-                ORDER BY created_at DESC
-                LIMIT 5;
+                (SELECT req.*, j.project_name as item_name, j.document, COALESCE(mc.match_count, 0) as match_count FROM auto_matching_requests req JOIN jobs j ON req.item_id = j.id AND req.item_type = 'job' LEFT JOIN (SELECT job_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY job_id) mc ON j.id = mc.job_id WHERE req.is_active = TRUE)
+                UNION ALL
+                (SELECT req.*, e.name as item_name, e.document, COALESCE(mc.match_count, 0) as match_count FROM auto_matching_requests req JOIN engineers e ON req.item_id = e.id AND req.item_type = 'engineer' LEFT JOIN (SELECT engineer_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY engineer_id) mc ON e.id = mc.engineer_id WHERE req.is_active = TRUE)
+                ORDER BY created_at DESC LIMIT 5
             """)
-            data["active_auto_requests"] = cur.fetchall()
-            # ★★★【修正ここまで】★★★
+            data["active_auto_requests"] = [dict(row) for row in cur.fetchall()]
 
-
-            # ★★★ 最新のAIアクティビティログと新規登録ログを取得 ★★★
+            # ▼▼▼【ここからが修正の核】▼▼▼
+            # 10. リアルタイム活動ログ
             cur.execute("""
                 SELECT * FROM (
-                    (SELECT 
-                        'processing' as log_type, 
-                        j.project_name, 
-                        e.name as engineer_name, 
-                        r.grade, 
-                        r.created_at -- この列は TIMESTAMP WITH TIME ZONE 型
-                    FROM matching_results r
-                    JOIN jobs j ON r.job_id = j.id
-                    JOIN engineers e ON r.engineer_id = e.id
-                    ORDER BY r.created_at DESC
-                    LIMIT 5)
+                    SELECT 'processing' as log_type, j.project_name, e.name as engineer_name, r.grade, r.created_at, j.id as job_id, e.id as engineer_id
+                    FROM matching_results r JOIN jobs j ON r.job_id = j.id JOIN engineers e ON r.engineer_id = e.id
+                    WHERE r.is_hidden = 0
                     UNION ALL
-                    (SELECT 
-                        'input' as log_type, 
-                        project_name, 
-                        NULL, 
-                        NULL, 
-                        created_at::timestamp with time zone -- TEXT型をTIMESTAMP型にキャスト
-                    FROM jobs
-                    ORDER BY id DESC
-                    LIMIT 5)
+                    SELECT 'input' as log_type, project_name, NULL as engineer_name, NULL as grade, created_at, id as job_id, NULL as engineer_id
+                    FROM jobs WHERE is_hidden = 0
                     UNION ALL
-                    (SELECT 
-                        'input' as log_type, 
-                        NULL, 
-                        name, 
-                        NULL, 
-                        created_at::timestamp with time zone -- TEXT型をTIMESTAMP型にキャスト
-                    FROM engineers
-                    ORDER BY id DESC
-                    LIMIT 5)
+                    SELECT 'input' as log_type, NULL as project_name, name as engineer_name, NULL as grade, created_at, NULL as job_id, id as engineer_id
+                    FROM engineers WHERE is_hidden = 0
                 ) AS combined_logs
                 ORDER BY created_at DESC
                 LIMIT 10;
             """)
-            
-            data["live_log_feed"] = cur.fetchall()
-
+            data["live_log_feed"] = [dict(row) for row in cur.fetchall()]
+            # ▲▲▲【修正ここまで】▲▲▲
 
 
 
