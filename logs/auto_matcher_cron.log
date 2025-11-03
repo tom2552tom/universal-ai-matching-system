@@ -255,3 +255,1422 @@ Processing request for Engineer ID 24646 against new jobs (ID > 16688)
 2025-11-02 19:50:26.763177 | Updated last processed IDs for request 16.
 2025-11-02 19:50:26.763795 | --- Auto-matcher batch finished ---
 
+2025-11-02 20:00:33.573259 | --- Script execution started ---
+2025-11-02 20:00:33.573782 | Importing libraries...
+2025-11-02 20:00:34.654602 | Libraries imported successfully.
+2025-11-02 20:00:34.654799 | __main__ block entered. Calling main().
+2025-11-02 20:00:34.654897 | --- Auto-matcher batch started ---
+2025-11-02 20:00:34.655020 | INFO: Google Generative AI API configured.
+2025-11-02 20:00:34.655120 | INFO: Configuration loaded successfully.
+2025-11-02 20:00:35.517331 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16689)
+2025-11-02 20:00:36.378823 |   - Evaluating batch of 3 jobs (offset: 0)
+2025-11-02 20:00:39.832591 |     - ⏭️ Skipped Job(ID:16690) with rank C
+2025-11-02 20:00:42.632388 |     - ⏭️ Skipped Job(ID:16691) with rank D
+2025-11-02 20:00:46.998016 |     - ⏭️ Skipped Job(ID:16692) with rank C
+2025-11-02 20:00:47.974226 | Updated last processed IDs for request 16.
+2025-11-02 20:00:47.975750 | --- Auto-matcher batch finished ---
+
+2025-11-02 20:13:19.106580 | --- Script execution started ---
+2025-11-02 20:13:19.107010 | Importing libraries...
+2025-11-02 20:13:20.087801 | Libraries imported successfully.
+2025-11-02 20:13:20.087984 | __main__ block entered. Calling main().
+2025-11-02 20:13:20.088098 | --- Auto-matcher batch started ---
+2025-11-02 20:13:20.088280 | INFO: Google Generative AI API configured.
+2025-11-02 20:13:20.088476 | INFO: Configuration loaded successfully.
+2025-11-02 20:13:21.058065 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16692)
+2025-11-02 20:13:22.057559 |   - Evaluating batch of 12 jobs (offset: 0)
+2025-11-02 20:13:25.191367 |     - ⏭️ Skipped Job(ID:16693) with rank C
+2025-11-02 20:13:28.740075 |     - ⏭️ Skipped Job(ID:16694) with rank C
+2025-11-02 20:13:32.160795 |     - ⏭️ Skipped Job(ID:16695) with rank B
+2025-11-02 20:13:35.913515 |     - ⏭️ Skipped Job(ID:16696) with rank B
+2025-11-02 20:13:38.970806 |     - ⏭️ Skipped Job(ID:16697) with rank C
+2025-11-02 20:13:42.502517 |     - ⏭️ Skipped Job(ID:16698) with rank B
+2025-11-02 20:13:46.067153 |     - ⏭️ Skipped Job(ID:16699) with rank C
+2025-11-02 20:13:49.231084 |     - ⏭️ Skipped Job(ID:16700) with rank C
+2025-11-02 20:13:52.546478 |     - ⏭️ Skipped Job(ID:16701) with rank C
+2025-11-02 20:13:55.826680 |     - ⏭️ Skipped Job(ID:16702) with rank C
+2025-11-02 20:13:59.125988 |     - ⏭️ Skipped Job(ID:16703) with rank C
+2025-11-02 20:14:02.275920 |     - ⏭️ Skipped Job(ID:16704) with rank C
+2025-11-02 20:14:03.296136 | Updated last processed IDs for request 16.
+2025-11-02 20:14:03.297339 | --- Auto-matcher batch finished ---
+
+2025-11-02 20:22:50.363460 | --- Script execution started ---
+2025-11-02 20:22:50.363870 | Importing libraries...
+2025-11-02 20:22:51.363641 | Libraries imported successfully.
+2025-11-02 20:22:51.364001 | __main__ block entered. Calling main().
+2025-11-02 20:22:51.364130 | --- Auto-matcher batch started ---
+2025-11-02 20:22:51.364297 | INFO: Google Generative AI API configured.
+2025-11-02 20:22:51.364425 | INFO: Configuration loaded successfully.
+2025-11-02 20:22:52.253135 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16704)
+2025-11-02 20:22:53.186765 |   - Evaluating batch of 3 jobs (offset: 0)
+2025-11-02 20:22:56.557983 |     - ⏭️ Skipped Job(ID:16705) with rank B
+2025-11-02 20:22:59.630330 |     - ⏭️ Skipped Job(ID:16706) with rank C
+2025-11-02 20:23:03.156290 |     - ⏭️ Skipped Job(ID:16707) with rank C
+2025-11-02 20:23:05.390553 | Updated last processed IDs for request 16.
+2025-11-02 20:23:05.391156 | 
+Processing request for Job ID 16700 against new engineers (ID > 24976)
+2025-11-02 20:23:06.636514 |   - Evaluating batch of 34 engineers (offset: 0)
+2025-11-02 20:23:10.315937 |     - ⏭️ Skipped Eng(ID:24977) with rank C
+2025-11-02 20:23:13.943430 |     ✅ HIT! Job(16700) vs Eng(24978) -> Rank B. Match ID: 991
+2025-11-02 20:23:16.360543 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 20:23:20.341159 |     - ⏭️ Skipped Eng(ID:24979) with rank C
+2025-11-02 20:23:24.958220 |     - ⏭️ Skipped Eng(ID:24980) with rank C
+2025-11-02 20:23:28.297381 |     - ⏭️ Skipped Eng(ID:24981) with rank D
+2025-11-02 20:23:30.821969 |     - ⏭️ Skipped Eng(ID:24982) with rank D
+2025-11-02 20:23:35.023351 |     ✅ HIT! Job(16700) vs Eng(24983) -> Rank B. Match ID: 992
+2025-11-02 20:23:39.676645 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 20:23:42.655821 |     - ⏭️ Skipped Eng(ID:24984) with rank D
+2025-11-02 20:23:46.561569 |     - ⏭️ Skipped Eng(ID:24985) with rank D
+2025-11-02 20:23:50.381603 |     - ⏭️ Skipped Eng(ID:24986) with rank C
+2025-11-02 20:23:54.106759 |     - ⏭️ Skipped Eng(ID:24987) with rank D
+2025-11-02 20:23:57.268318 |     - ⏭️ Skipped Eng(ID:24988) with rank D
+2025-11-02 20:24:00.406266 |     - ⏭️ Skipped Eng(ID:24989) with rank D
+2025-11-02 20:24:04.229040 |     - ⏭️ Skipped Eng(ID:24990) with rank D
+2025-11-02 20:24:07.477136 |     - ⏭️ Skipped Eng(ID:24991) with rank D
+2025-11-02 20:24:11.564375 |     ✅ HIT! Job(16700) vs Eng(24992) -> Rank A. Match ID: 993
+2025-11-02 20:24:14.052303 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 20:24:17.046455 |     - ⏭️ Skipped Eng(ID:24993) with rank C
+2025-11-02 20:24:20.674477 |     - ⏭️ Skipped Eng(ID:24994) with rank D
+2025-11-02 20:24:24.295445 |     - ⏭️ Skipped Eng(ID:24995) with rank C
+2025-11-02 20:24:28.634372 |     ✅ HIT! Job(16700) vs Eng(24996) -> Rank B. Match ID: 994
+2025-11-02 20:24:30.546355 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 20:24:34.430848 |     ✅ HIT! Job(16700) vs Eng(24997) -> Rank B. Match ID: 995
+2025-11-02 20:24:36.528632 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 20:24:39.891394 |     - ⏭️ Skipped Eng(ID:24998) with rank C
+2025-11-02 20:24:44.011994 |     - ⏭️ Skipped Eng(ID:24999) with rank C
+2025-11-02 20:24:47.257556 |     - ⏭️ Skipped Eng(ID:25000) with rank C
+2025-11-02 20:24:51.355298 |     ✅ HIT! Job(16700) vs Eng(25001) -> Rank A. Match ID: 996
+2025-11-02 20:24:53.341607 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 20:24:57.099190 |     - ⏭️ Skipped Eng(ID:25002) with rank D
+2025-11-02 20:25:00.367020 |     - ⏭️ Skipped Eng(ID:25003) with rank C
+2025-11-02 20:25:03.152602 |     - ⏭️ Skipped Eng(ID:25004) with rank D
+2025-11-02 20:25:06.441291 |     - ⏭️ Skipped Eng(ID:25005) with rank D
+2025-11-02 20:25:09.674830 |     - ⏭️ Skipped Eng(ID:25006) with rank D
+2025-11-02 20:25:12.864983 |     - ⏭️ Skipped Eng(ID:25007) with rank D
+2025-11-02 20:25:16.422887 |     - ⏭️ Skipped Eng(ID:25008) with rank D
+2025-11-02 20:25:19.464935 |     - ⏭️ Skipped Eng(ID:25009) with rank D
+2025-11-02 20:25:22.498982 |     - ⏭️ Skipped Eng(ID:25010) with rank D
+2025-11-02 20:25:23.466188 | Updated last processed IDs for request 19.
+2025-11-02 20:25:23.467247 | --- Auto-matcher batch finished ---
+
+2025-11-02 20:30:45.877108 | --- Script execution started ---
+2025-11-02 20:30:45.877307 | Importing libraries...
+2025-11-02 20:30:46.734565 | Libraries imported successfully.
+2025-11-02 20:30:46.734747 | __main__ block entered. Calling main().
+2025-11-02 20:30:46.734876 | --- Auto-matcher batch started ---
+2025-11-02 20:30:46.735061 | INFO: Google Generative AI API configured.
+2025-11-02 20:30:46.735207 | INFO: Configuration loaded successfully.
+2025-11-02 20:30:47.741069 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16707)
+2025-11-02 20:30:48.635029 |   - Evaluating batch of 3 jobs (offset: 0)
+2025-11-02 20:30:51.777235 |     - ⏭️ Skipped Job(ID:16708) with rank D
+2025-11-02 20:30:55.335250 |     - ⏭️ Skipped Job(ID:16709) with rank C
+2025-11-02 20:30:58.533170 |     - ⏭️ Skipped Job(ID:16710) with rank C
+2025-11-02 20:30:59.539201 | Updated last processed IDs for request 16.
+2025-11-02 20:30:59.539728 | 
+Processing request for Job ID 16700 against new engineers (ID > 25010)
+2025-11-02 20:31:00.600741 |   - Evaluating batch of 5 engineers (offset: 0)
+2025-11-02 20:31:03.697079 |     - ⏭️ Skipped Eng(ID:25011) with rank D
+2025-11-02 20:31:07.373176 |     - ⏭️ Skipped Eng(ID:25012) with rank D
+2025-11-02 20:31:11.109420 |     - ⏭️ Skipped Eng(ID:25013) with rank D
+2025-11-02 20:31:14.492177 |     - ⏭️ Skipped Eng(ID:25014) with rank D
+2025-11-02 20:31:18.891659 |     ✅ HIT! Job(16700) vs Eng(25015) -> Rank A. Match ID: 997
+2025-11-02 20:31:26.964356 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 20:31:28.040424 | Updated last processed IDs for request 19.
+2025-11-02 20:31:28.041162 | --- Auto-matcher batch finished ---
+
+2025-11-02 20:42:07.584987 | --- Script execution started ---
+2025-11-02 20:42:07.585427 | Importing libraries...
+2025-11-02 20:42:08.851714 | Libraries imported successfully.
+2025-11-02 20:42:08.851935 | __main__ block entered. Calling main().
+2025-11-02 20:42:08.852085 | --- Auto-matcher batch started ---
+2025-11-02 20:42:08.852234 | INFO: Google Generative AI API configured.
+2025-11-02 20:42:08.852363 | INFO: Configuration loaded successfully.
+2025-11-02 20:42:09.855025 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16710)
+2025-11-02 20:42:10.783426 |   - Evaluating batch of 8 jobs (offset: 0)
+2025-11-02 20:42:13.973642 |     - ⏭️ Skipped Job(ID:16711) with rank B
+2025-11-02 20:42:17.144944 |     - ⏭️ Skipped Job(ID:16712) with rank B
+2025-11-02 20:42:20.645838 |     - ⏭️ Skipped Job(ID:16713) with rank D
+2025-11-02 20:42:24.006772 |     - ⏭️ Skipped Job(ID:16714) with rank C
+2025-11-02 20:42:27.425393 |     - ⏭️ Skipped Job(ID:16715) with rank D
+2025-11-02 20:42:30.679517 |     - ⏭️ Skipped Job(ID:16716) with rank C
+2025-11-02 20:42:33.642813 |     - ⏭️ Skipped Job(ID:16717) with rank C
+2025-11-02 20:42:37.737189 |     - ⏭️ Skipped Job(ID:16718) with rank B
+2025-11-02 20:42:38.701402 | Updated last processed IDs for request 16.
+2025-11-02 20:42:38.702120 | 
+Processing request for Job ID 16700 against new engineers (ID > 25015)
+2025-11-02 20:42:39.815965 |   - Evaluating batch of 18 engineers (offset: 0)
+2025-11-02 20:42:43.116128 |     - ⏭️ Skipped Eng(ID:25016) with rank D
+2025-11-02 20:42:46.327000 |     - ⏭️ Skipped Eng(ID:25017) with rank D
+2025-11-02 20:42:50.289207 |     - ⏭️ Skipped Eng(ID:25018) with rank D
+2025-11-02 20:42:53.943558 |     - ⏭️ Skipped Eng(ID:25019) with rank C
+2025-11-02 20:42:56.928231 |     - ⏭️ Skipped Eng(ID:25020) with rank D
+2025-11-02 20:42:59.812196 |     - ⏭️ Skipped Eng(ID:25021) with rank D
+2025-11-02 20:43:03.725212 |     - ⏭️ Skipped Eng(ID:25022) with rank D
+2025-11-02 20:43:06.927144 |     - ⏭️ Skipped Eng(ID:25023) with rank D
+2025-11-02 20:43:10.877453 |     - ⏭️ Skipped Eng(ID:25024) with rank D
+2025-11-02 20:43:15.717552 |     - ⏭️ Skipped Eng(ID:25025) with rank C
+2025-11-02 20:43:20.556432 |     - ⏭️ Skipped Eng(ID:25026) with rank D
+2025-11-02 20:43:23.991981 |     - ⏭️ Skipped Eng(ID:25027) with rank D
+2025-11-02 20:43:27.262287 |     - ⏭️ Skipped Eng(ID:25028) with rank C
+2025-11-02 20:43:31.095332 |     - ⏭️ Skipped Eng(ID:25029) with rank C
+2025-11-02 20:43:33.759007 |     - ⏭️ Skipped Eng(ID:25030) with rank D
+2025-11-02 20:43:36.711402 |     - ⏭️ Skipped Eng(ID:25031) with rank D
+2025-11-02 20:43:39.478529 |     - ⏭️ Skipped Eng(ID:25032) with rank D
+2025-11-02 20:43:42.856598 |     - ⏭️ Skipped Eng(ID:25033) with rank C
+2025-11-02 20:43:43.891775 | Updated last processed IDs for request 19.
+2025-11-02 20:43:43.892272 | --- Auto-matcher batch finished ---
+
+2025-11-02 20:50:47.679763 | --- Script execution started ---
+2025-11-02 20:50:47.680243 | Importing libraries...
+2025-11-02 20:50:48.713592 | Libraries imported successfully.
+2025-11-02 20:50:48.713815 | __main__ block entered. Calling main().
+2025-11-02 20:50:48.713928 | --- Auto-matcher batch started ---
+2025-11-02 20:50:48.714112 | INFO: Google Generative AI API configured.
+2025-11-02 20:50:48.714344 | INFO: Configuration loaded successfully.
+2025-11-02 20:50:49.690304 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16718)
+2025-11-02 20:50:50.651030 |   - Evaluating batch of 3 jobs (offset: 0)
+2025-11-02 20:50:54.408915 |     - ⏭️ Skipped Job(ID:16719) with rank B
+2025-11-02 20:50:57.657475 |     - ⏭️ Skipped Job(ID:16720) with rank C
+2025-11-02 20:51:00.906349 |     - ⏭️ Skipped Job(ID:16721) with rank C
+2025-11-02 20:51:01.950089 | Updated last processed IDs for request 16.
+2025-11-02 20:51:01.950949 | 
+Processing request for Job ID 16700 against new engineers (ID > 25033)
+2025-11-02 20:51:02.857191 |   - Evaluating batch of 5 engineers (offset: 0)
+2025-11-02 20:51:05.651445 |     - ⏭️ Skipped Eng(ID:25034) with rank D
+2025-11-02 20:51:09.191619 |     - ⏭️ Skipped Eng(ID:25035) with rank C
+2025-11-02 20:51:12.313322 |     - ⏭️ Skipped Eng(ID:25036) with rank D
+2025-11-02 20:51:15.943362 |     - ⏭️ Skipped Eng(ID:25037) with rank D
+2025-11-02 20:51:18.966584 |     - ⏭️ Skipped Eng(ID:25038) with rank C
+2025-11-02 20:51:19.946093 | Updated last processed IDs for request 19.
+2025-11-02 20:51:19.946639 | --- Auto-matcher batch finished ---
+
+2025-11-02 21:00:52.241215 | --- Script execution started ---
+2025-11-02 21:00:52.241763 | Importing libraries...
+2025-11-02 21:00:53.381040 | Libraries imported successfully.
+2025-11-02 21:00:53.381222 | __main__ block entered. Calling main().
+2025-11-02 21:00:53.381390 | --- Auto-matcher batch started ---
+2025-11-02 21:00:53.381547 | INFO: Google Generative AI API configured.
+2025-11-02 21:00:53.381660 | INFO: Configuration loaded successfully.
+2025-11-02 21:00:54.311399 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16721)
+2025-11-02 21:00:55.214763 |   - Evaluating batch of 2 jobs (offset: 0)
+2025-11-02 21:00:58.759593 |     - ⏭️ Skipped Job(ID:16722) with rank C
+2025-11-02 21:01:02.109717 |     - ⏭️ Skipped Job(ID:16723) with rank C
+2025-11-02 21:01:03.076660 | Updated last processed IDs for request 16.
+2025-11-02 21:01:03.077896 | 
+Processing request for Job ID 16700 against new engineers (ID > 25038)
+2025-11-02 21:01:04.066738 |   - Evaluating batch of 5 engineers (offset: 0)
+2025-11-02 21:01:07.923977 |     - ⏭️ Skipped Eng(ID:25039) with rank C
+2025-11-02 21:01:10.707178 |     - ⏭️ Skipped Eng(ID:25040) with rank D
+2025-11-02 21:01:14.812770 |     - ⏭️ Skipped Eng(ID:25041) with rank B
+2025-11-02 21:01:17.976568 |     - ⏭️ Skipped Eng(ID:25042) with rank D
+2025-11-02 21:01:21.431503 |     - ⏭️ Skipped Eng(ID:25043) with rank C
+2025-11-02 21:01:22.430066 | Updated last processed IDs for request 19.
+2025-11-02 21:01:22.430868 | --- Auto-matcher batch finished ---
+
+2025-11-02 21:16:18.737233 | --- Script execution started ---
+2025-11-02 21:16:18.737733 | Importing libraries...
+2025-11-02 21:16:19.924106 | Libraries imported successfully.
+2025-11-02 21:16:19.924330 | __main__ block entered. Calling main().
+2025-11-02 21:16:19.924476 | --- Auto-matcher batch started ---
+2025-11-02 21:16:19.924659 | INFO: Google Generative AI API configured.
+2025-11-02 21:16:19.924791 | INFO: Configuration loaded successfully.
+2025-11-02 21:16:20.929537 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16723)
+2025-11-02 21:16:21.938908 |   - Evaluating batch of 13 jobs (offset: 0)
+2025-11-02 21:16:25.393878 |     - ⏭️ Skipped Job(ID:16724) with rank C
+2025-11-02 21:16:29.744314 |     ✅ HIT! Eng(24646) vs Job(16725) -> Rank A. Match ID: 998
+2025-11-02 21:16:33.252451 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:16:36.350629 |     - ⏭️ Skipped Job(ID:16726) with rank C
+2025-11-02 21:16:39.384194 |     - ⏭️ Skipped Job(ID:16727) with rank C
+2025-11-02 21:16:43.325120 |     - ⏭️ Skipped Job(ID:16728) with rank C
+2025-11-02 21:16:46.663492 |     - ⏭️ Skipped Job(ID:16729) with rank C
+2025-11-02 21:16:50.129333 |     - ⏭️ Skipped Job(ID:16730) with rank B
+2025-11-02 21:16:53.487790 |     - ⏭️ Skipped Job(ID:16731) with rank C
+2025-11-02 21:16:56.273281 |     - ⏭️ Skipped Job(ID:16732) with rank D
+2025-11-02 21:16:59.493918 |     - ⏭️ Skipped Job(ID:16733) with rank C
+2025-11-02 21:17:02.996348 |     - ⏭️ Skipped Job(ID:16734) with rank C
+2025-11-02 21:17:07.236369 |     ✅ HIT! Eng(24646) vs Job(16735) -> Rank A. Match ID: 999
+2025-11-02 21:17:09.840056 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:17:13.625230 |     ✅ HIT! Eng(24646) vs Job(16736) -> Rank A. Match ID: 1000
+2025-11-02 21:17:16.949473 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:17:17.928539 | Updated last processed IDs for request 16.
+2025-11-02 21:17:17.929156 | 
+Processing request for Job ID 16700 against new engineers (ID > 25043)
+2025-11-02 21:17:19.386997 |   - Evaluating batch of 73 engineers (offset: 0)
+2025-11-02 21:17:22.568804 |     - ⏭️ Skipped Eng(ID:25044) with rank D
+2025-11-02 21:17:26.459543 |     - ⏭️ Skipped Eng(ID:25045) with rank B
+2025-11-02 21:17:29.631697 |     - ⏭️ Skipped Eng(ID:25046) with rank C
+2025-11-02 21:17:33.402288 |     - ⏭️ Skipped Eng(ID:25047) with rank C
+2025-11-02 21:17:36.708234 |     - ⏭️ Skipped Eng(ID:25048) with rank D
+2025-11-02 21:17:41.158679 |     ✅ HIT! Job(16700) vs Eng(25049) -> Rank A. Match ID: 1001
+2025-11-02 21:17:43.095110 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:17:45.983831 |     - ⏭️ Skipped Eng(ID:25050) with rank C
+2025-11-02 21:17:49.567508 |     - ⏭️ Skipped Eng(ID:25051) with rank D
+2025-11-02 21:17:52.822650 |     - ⏭️ Skipped Eng(ID:25052) with rank D
+2025-11-02 21:17:55.902592 |     - ⏭️ Skipped Eng(ID:25053) with rank D
+2025-11-02 21:17:59.294386 |     - ⏭️ Skipped Eng(ID:25054) with rank D
+2025-11-02 21:18:02.559183 |     - ⏭️ Skipped Eng(ID:25055) with rank D
+2025-11-02 21:18:06.145737 |     - ⏭️ Skipped Eng(ID:25056) with rank B
+2025-11-02 21:18:09.525580 |     - ⏭️ Skipped Eng(ID:25057) with rank B
+2025-11-02 21:18:13.625231 |     - ⏭️ Skipped Eng(ID:25058) with rank D
+2025-11-02 21:18:16.714079 |     - ⏭️ Skipped Eng(ID:25059) with rank C
+2025-11-02 21:18:20.083747 |     - ⏭️ Skipped Eng(ID:25060) with rank D
+2025-11-02 21:18:23.959049 |     - ⏭️ Skipped Eng(ID:25061) with rank D
+2025-11-02 21:18:27.097064 |     - ⏭️ Skipped Eng(ID:25062) with rank D
+2025-11-02 21:18:30.557095 |     - ⏭️ Skipped Eng(ID:25063) with rank D
+2025-11-02 21:18:34.173093 |     - ⏭️ Skipped Eng(ID:25064) with rank D
+2025-11-02 21:18:37.911931 |     - ⏭️ Skipped Eng(ID:25065) with rank D
+2025-11-02 21:18:41.071846 |     - ⏭️ Skipped Eng(ID:25066) with rank D
+2025-11-02 21:18:44.833476 |     - ⏭️ Skipped Eng(ID:25067) with rank D
+2025-11-02 21:18:48.162547 |     - ⏭️ Skipped Eng(ID:25068) with rank D
+2025-11-02 21:18:51.427951 |     - ⏭️ Skipped Eng(ID:25069) with rank D
+2025-11-02 21:18:54.840675 |     - ⏭️ Skipped Eng(ID:25070) with rank D
+2025-11-02 21:18:58.677035 |     - ⏭️ Skipped Eng(ID:25071) with rank D
+2025-11-02 21:19:02.258543 |     - ⏭️ Skipped Eng(ID:25072) with rank C
+2025-11-02 21:19:05.158427 |     - ⏭️ Skipped Eng(ID:25073) with rank D
+2025-11-02 21:19:09.223236 |     - ⏭️ Skipped Eng(ID:25074) with rank B
+2025-11-02 21:19:11.767288 |     - ⏭️ Skipped Eng(ID:25075) with rank D
+2025-11-02 21:19:14.525125 |     - ⏭️ Skipped Eng(ID:25076) with rank D
+2025-11-02 21:19:18.130070 |     - ⏭️ Skipped Eng(ID:25077) with rank B
+2025-11-02 21:19:21.829533 |     - ⏭️ Skipped Eng(ID:25078) with rank D
+2025-11-02 21:19:25.298941 |     - ⏭️ Skipped Eng(ID:25079) with rank C
+2025-11-02 21:19:28.595516 |     - ⏭️ Skipped Eng(ID:25080) with rank D
+2025-11-02 21:19:31.541132 |     - ⏭️ Skipped Eng(ID:25081) with rank D
+2025-11-02 21:19:35.597560 |     ✅ HIT! Job(16700) vs Eng(25082) -> Rank A. Match ID: 1002
+2025-11-02 21:19:37.668509 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:19:41.229023 |     - ⏭️ Skipped Eng(ID:25083) with rank C
+2025-11-02 21:19:44.813026 |     - ⏭️ Skipped Eng(ID:25084) with rank C
+2025-11-02 21:19:48.002809 |     - ⏭️ Skipped Eng(ID:25085) with rank D
+2025-11-02 21:19:51.492249 |     - ⏭️ Skipped Eng(ID:25086) with rank D
+2025-11-02 21:19:54.468021 |     - ⏭️ Skipped Eng(ID:25087) with rank D
+2025-11-02 21:19:57.425774 |     - ⏭️ Skipped Eng(ID:25088) with rank D
+2025-11-02 21:20:00.627263 |     - ⏭️ Skipped Eng(ID:25089) with rank D
+2025-11-02 21:20:03.900723 |     - ⏭️ Skipped Eng(ID:25090) with rank C
+2025-11-02 21:20:07.371310 |     - ⏭️ Skipped Eng(ID:25091) with rank C
+2025-11-02 21:20:11.582877 |     - ⏭️ Skipped Eng(ID:25092) with rank D
+2025-11-02 21:20:15.727208 |     - ⏭️ Skipped Eng(ID:25093) with rank C
+2025-11-02 21:20:19.101885 |     - ⏭️ Skipped Eng(ID:25094) with rank D
+2025-11-02 21:20:22.978894 |     ✅ HIT! Job(16700) vs Eng(25095) -> Rank A. Match ID: 1003
+2025-11-02 21:20:26.990304 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:20:30.431448 |     - ⏭️ Skipped Eng(ID:25096) with rank C
+2025-11-02 21:20:34.071998 |     - ⏭️ Skipped Eng(ID:25097) with rank B
+2025-11-02 21:20:37.708671 |     - ⏭️ Skipped Eng(ID:25098) with rank C
+2025-11-02 21:20:40.987058 |     - ⏭️ Skipped Eng(ID:25099) with rank C
+2025-11-02 21:20:44.433284 |     - ⏭️ Skipped Eng(ID:25100) with rank C
+2025-11-02 21:20:47.745072 |     - ⏭️ Skipped Eng(ID:25101) with rank C
+2025-11-02 21:20:50.775291 |     - ⏭️ Skipped Eng(ID:25102) with rank D
+2025-11-02 21:20:54.472838 |     - ⏭️ Skipped Eng(ID:25103) with rank D
+2025-11-02 21:20:57.829789 |     - ⏭️ Skipped Eng(ID:25104) with rank C
+2025-11-02 21:21:01.456472 |     - ⏭️ Skipped Eng(ID:25105) with rank B
+2025-11-02 21:21:04.340179 |     - ⏭️ Skipped Eng(ID:25106) with rank D
+2025-11-02 21:21:07.533710 |     - ⏭️ Skipped Eng(ID:25107) with rank D
+2025-11-02 21:21:11.614670 |     - ⏭️ Skipped Eng(ID:25108) with rank C
+2025-11-02 21:21:14.683405 |     - ⏭️ Skipped Eng(ID:25109) with rank D
+2025-11-02 21:21:18.046091 |     - ⏭️ Skipped Eng(ID:25110) with rank D
+2025-11-02 21:21:18.242406 | --- Script execution started ---
+2025-11-02 21:21:18.242711 | Importing libraries...
+2025-11-02 21:21:19.367785 | Libraries imported successfully.
+2025-11-02 21:21:19.368056 | __main__ block entered. Calling main().
+2025-11-02 21:21:19.368201 | --- Auto-matcher batch started ---
+2025-11-02 21:21:19.368349 | INFO: Google Generative AI API configured.
+2025-11-02 21:21:19.368466 | INFO: Configuration loaded successfully.
+2025-11-02 21:21:20.330261 | 
+Processing request for Job ID 16700 against new engineers (ID > 25043)
+2025-11-02 21:21:21.311798 |     - ⏭️ Skipped Eng(ID:25111) with rank D
+2025-11-02 21:21:21.961601 |   - Evaluating batch of 88 engineers (offset: 0)
+2025-11-02 21:21:25.265694 |     - ⏭️ Skipped Eng(ID:25044) with rank C
+2025-11-02 21:21:25.771973 |     ✅ HIT! Job(16700) vs Eng(25112) -> Rank A. Match ID: 1004
+2025-11-02 21:21:27.875979 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:21:28.590021 |     - ⏭️ Skipped Eng(ID:25045) with rank B
+2025-11-02 21:21:31.366816 |     - ⏭️ Skipped Eng(ID:25113) with rank C
+2025-11-02 21:21:31.993349 |     - ⏭️ Skipped Eng(ID:25046) with rank C
+2025-11-02 21:21:34.818695 |     - ⏭️ Skipped Eng(ID:25047) with rank D
+2025-11-02 21:21:34.872284 |     - ⏭️ Skipped Eng(ID:25114) with rank D
+2025-11-02 21:21:37.498265 |     - ⏭️ Skipped Eng(ID:25115) with rank D
+2025-11-02 21:21:38.444081 |     - ⏭️ Skipped Eng(ID:25048) with rank D
+2025-11-02 21:21:40.632265 |     - ⏭️ Skipped Eng(ID:25116) with rank D
+2025-11-02 21:21:41.643051 | Updated last processed IDs for request 19.
+2025-11-02 21:21:41.643576 | --- Auto-matcher batch finished ---
+
+2025-11-02 21:21:42.760661 |     ✅ HIT! Job(16700) vs Eng(25049) -> Rank A. Match ID: 1001
+2025-11-02 21:21:45.104382 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:21:48.421205 |     - ⏭️ Skipped Eng(ID:25050) with rank C
+2025-11-02 21:21:51.945640 |     - ⏭️ Skipped Eng(ID:25051) with rank D
+2025-11-02 21:21:55.185912 |     - ⏭️ Skipped Eng(ID:25052) with rank D
+2025-11-02 21:21:58.343095 |     - ⏭️ Skipped Eng(ID:25053) with rank D
+2025-11-02 21:22:01.359609 |     - ⏭️ Skipped Eng(ID:25054) with rank D
+2025-11-02 21:22:04.453093 |     - ⏭️ Skipped Eng(ID:25055) with rank D
+2025-11-02 21:22:08.234672 |     - ⏭️ Skipped Eng(ID:25056) with rank B
+2025-11-02 21:22:12.108998 |     - ⏭️ Skipped Eng(ID:25057) with rank B
+2025-11-02 21:22:15.872376 |     - ⏭️ Skipped Eng(ID:25058) with rank D
+2025-11-02 21:22:19.161508 |     - ⏭️ Skipped Eng(ID:25059) with rank C
+2025-11-02 21:22:22.345665 |     - ⏭️ Skipped Eng(ID:25060) with rank D
+2025-11-02 21:22:26.281646 |     - ⏭️ Skipped Eng(ID:25061) with rank D
+2025-11-02 21:22:29.209672 |     - ⏭️ Skipped Eng(ID:25062) with rank D
+2025-11-02 21:22:32.182529 |     - ⏭️ Skipped Eng(ID:25063) with rank D
+2025-11-02 21:22:35.714813 |     - ⏭️ Skipped Eng(ID:25064) with rank D
+2025-11-02 21:22:38.944097 |     - ⏭️ Skipped Eng(ID:25065) with rank D
+2025-11-02 21:22:42.092034 |     - ⏭️ Skipped Eng(ID:25066) with rank D
+2025-11-02 21:22:45.423840 |     - ⏭️ Skipped Eng(ID:25067) with rank D
+2025-11-02 21:22:48.504907 |     - ⏭️ Skipped Eng(ID:25068) with rank D
+2025-11-02 21:22:51.312509 |     - ⏭️ Skipped Eng(ID:25069) with rank D
+2025-11-02 21:22:54.915309 |     - ⏭️ Skipped Eng(ID:25070) with rank D
+2025-11-02 21:22:58.446028 |     - ⏭️ Skipped Eng(ID:25071) with rank D
+2025-11-02 21:23:02.145613 |     - ⏭️ Skipped Eng(ID:25072) with rank C
+2025-11-02 21:23:05.162714 |     - ⏭️ Skipped Eng(ID:25073) with rank D
+2025-11-02 21:23:08.631326 |     - ⏭️ Skipped Eng(ID:25074) with rank B
+2025-11-02 21:23:12.230868 |     - ⏭️ Skipped Eng(ID:25075) with rank D
+2025-11-02 21:23:15.447937 |     - ⏭️ Skipped Eng(ID:25076) with rank D
+2025-11-02 21:23:20.222818 |     ✅ HIT! Job(16700) vs Eng(25077) -> Rank A. Match ID: 1006
+2025-11-02 21:23:24.925518 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:23:28.705080 |     - ⏭️ Skipped Eng(ID:25078) with rank C
+2025-11-02 21:23:32.854650 |     - ⏭️ Skipped Eng(ID:25079) with rank C
+2025-11-02 21:23:36.360156 |     - ⏭️ Skipped Eng(ID:25080) with rank D
+2025-11-02 21:23:40.137521 |     - ⏭️ Skipped Eng(ID:25081) with rank D
+2025-11-02 21:23:44.715123 |     ✅ HIT! Job(16700) vs Eng(25082) -> Rank A. Match ID: 1002
+2025-11-02 21:23:46.531508 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:23:49.771926 |     - ⏭️ Skipped Eng(ID:25083) with rank C
+2025-11-02 21:23:53.183470 |     - ⏭️ Skipped Eng(ID:25084) with rank C
+2025-11-02 21:23:56.248584 |     - ⏭️ Skipped Eng(ID:25085) with rank D
+2025-11-02 21:24:00.255412 |     - ⏭️ Skipped Eng(ID:25086) with rank C
+2025-11-02 21:24:03.725416 |     - ⏭️ Skipped Eng(ID:25087) with rank D
+2025-11-02 21:24:07.544041 |     - ⏭️ Skipped Eng(ID:25088) with rank D
+2025-11-02 21:24:11.056676 |     - ⏭️ Skipped Eng(ID:25089) with rank D
+2025-11-02 21:24:14.594504 |     - ⏭️ Skipped Eng(ID:25090) with rank C
+2025-11-02 21:24:17.774728 |     - ⏭️ Skipped Eng(ID:25091) with rank C
+2025-11-02 21:24:21.385943 |     - ⏭️ Skipped Eng(ID:25092) with rank D
+2025-11-02 21:24:24.717711 |     - ⏭️ Skipped Eng(ID:25093) with rank C
+2025-11-02 21:24:28.276836 |     - ⏭️ Skipped Eng(ID:25094) with rank D
+2025-11-02 21:24:32.366046 |     ✅ HIT! Job(16700) vs Eng(25095) -> Rank A. Match ID: 1003
+2025-11-02 21:24:34.228711 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:24:38.131262 |     - ⏭️ Skipped Eng(ID:25096) with rank B
+2025-11-02 21:24:42.534243 |     - ⏭️ Skipped Eng(ID:25097) with rank B
+2025-11-02 21:24:46.468383 |     - ⏭️ Skipped Eng(ID:25098) with rank B
+2025-11-02 21:24:50.369162 |     - ⏭️ Skipped Eng(ID:25099) with rank C
+2025-11-02 21:24:54.038429 |     - ⏭️ Skipped Eng(ID:25100) with rank C
+2025-11-02 21:24:57.191596 |     - ⏭️ Skipped Eng(ID:25101) with rank C
+2025-11-02 21:25:00.432119 |     - ⏭️ Skipped Eng(ID:25102) with rank D
+2025-11-02 21:25:03.813617 |     - ⏭️ Skipped Eng(ID:25103) with rank D
+2025-11-02 21:25:08.501940 |     - ⏭️ Skipped Eng(ID:25104) with rank C
+2025-11-02 21:25:11.899802 |     - ⏭️ Skipped Eng(ID:25105) with rank B
+2025-11-02 21:25:15.081776 |     - ⏭️ Skipped Eng(ID:25106) with rank D
+2025-11-02 21:25:18.123999 |     - ⏭️ Skipped Eng(ID:25107) with rank D
+2025-11-02 21:25:21.857546 |     - ⏭️ Skipped Eng(ID:25108) with rank C
+2025-11-02 21:25:25.710991 |     - ⏭️ Skipped Eng(ID:25109) with rank D
+2025-11-02 21:25:28.825269 |     - ⏭️ Skipped Eng(ID:25110) with rank D
+2025-11-02 21:25:31.957783 |     - ⏭️ Skipped Eng(ID:25111) with rank D
+2025-11-02 21:25:35.070541 |     - ⏭️ Skipped Eng(ID:25112) with rank B
+2025-11-02 21:25:38.619903 |     - ⏭️ Skipped Eng(ID:25113) with rank C
+2025-11-02 21:25:41.960792 |     - ⏭️ Skipped Eng(ID:25114) with rank D
+2025-11-02 21:25:44.500785 |     - ⏭️ Skipped Eng(ID:25115) with rank D
+2025-11-02 21:25:47.503475 |     - ⏭️ Skipped Eng(ID:25116) with rank D
+2025-11-02 21:25:50.820286 |     - ⏭️ Skipped Eng(ID:25117) with rank D
+2025-11-02 21:25:54.113504 |     - ⏭️ Skipped Eng(ID:25118) with rank D
+2025-11-02 21:25:57.470913 |     - ⏭️ Skipped Eng(ID:25119) with rank B
+2025-11-02 21:26:00.908635 |     - ⏭️ Skipped Eng(ID:25120) with rank D
+2025-11-02 21:26:04.178075 |     - ⏭️ Skipped Eng(ID:25121) with rank C
+2025-11-02 21:26:07.122156 |     - ⏭️ Skipped Eng(ID:25122) with rank D
+2025-11-02 21:26:10.498045 |     - ⏭️ Skipped Eng(ID:25123) with rank D
+2025-11-02 21:26:14.645630 |     - ⏭️ Skipped Eng(ID:25124) with rank C
+2025-11-02 21:26:17.423856 |     - ⏭️ Skipped Eng(ID:25125) with rank D
+2025-11-02 21:26:21.077172 |     - ⏭️ Skipped Eng(ID:25126) with rank D
+2025-11-02 21:26:24.506919 |     - ⏭️ Skipped Eng(ID:25127) with rank D
+2025-11-02 21:26:28.408841 |     - ⏭️ Skipped Eng(ID:25128) with rank D
+2025-11-02 21:26:31.917574 |     - ⏭️ Skipped Eng(ID:25129) with rank B
+2025-11-02 21:26:35.479956 |     - ⏭️ Skipped Eng(ID:25130) with rank D
+2025-11-02 21:26:38.612509 |     - ⏭️ Skipped Eng(ID:25131) with rank D
+2025-11-02 21:26:39.634117 | Updated last processed IDs for request 19.
+2025-11-02 21:26:39.635251 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16736)
+2025-11-02 21:26:40.547297 |   - Evaluating batch of 2 jobs (offset: 0)
+2025-11-02 21:26:43.798546 |     - ⏭️ Skipped Job(ID:16737) with rank C
+2025-11-02 21:26:46.910073 |     - ⏭️ Skipped Job(ID:16738) with rank B
+2025-11-02 21:26:47.905590 | Updated last processed IDs for request 16.
+2025-11-02 21:26:47.906466 | --- Auto-matcher batch finished ---
+
+2025-11-02 21:30:53.824069 | --- Script execution started ---
+2025-11-02 21:30:53.824385 | Importing libraries...
+2025-11-02 21:30:54.913799 | Libraries imported successfully.
+2025-11-02 21:30:54.914066 | __main__ block entered. Calling main().
+2025-11-02 21:30:54.914583 | --- Auto-matcher batch started ---
+2025-11-02 21:30:54.914830 | INFO: Google Generative AI API configured.
+2025-11-02 21:30:54.914970 | INFO: Configuration loaded successfully.
+2025-11-02 21:30:55.782668 | 
+Processing request for Job ID 16700 against new engineers (ID > 25131)
+2025-11-02 21:30:56.814139 |   - Evaluating batch of 4 engineers (offset: 0)
+2025-11-02 21:31:01.013021 |     - ⏭️ Skipped Eng(ID:25132) with rank C
+2025-11-02 21:31:04.591973 | Error in get_match_summary_batch: Unterminated string starting at: line 1 column 686 (char 685)
+2025-11-02 21:31:04.592620 |     - Attempt 1/3 failed for Eng(ID:25133). Retrying in 3 seconds...
+2025-11-02 21:31:10.950679 |     - ⏭️ Skipped Eng(ID:25133) with rank D
+2025-11-02 21:31:15.418796 |     - ⏭️ Skipped Eng(ID:25134) with rank D
+2025-11-02 21:31:18.900742 |     - ⏭️ Skipped Eng(ID:25135) with rank C
+2025-11-02 21:31:19.850954 | Updated last processed IDs for request 19.
+2025-11-02 21:31:19.851768 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16738)
+2025-11-02 21:31:20.722726 |   - Evaluating batch of 5 jobs (offset: 0)
+2025-11-02 21:31:24.372281 |     - ⏭️ Skipped Job(ID:16739) with rank D
+2025-11-02 21:31:27.315738 |     - ⏭️ Skipped Job(ID:16740) with rank D
+2025-11-02 21:31:31.140876 |     - ⏭️ Skipped Job(ID:16741) with rank D
+2025-11-02 21:31:34.791716 |     - ⏭️ Skipped Job(ID:16742) with rank B
+2025-11-02 21:31:38.346765 |     - ⏭️ Skipped Job(ID:16743) with rank B
+2025-11-02 21:31:39.387040 | Updated last processed IDs for request 16.
+2025-11-02 21:31:39.387589 | --- Auto-matcher batch finished ---
+
+2025-11-02 21:41:20.200434 | --- Script execution started ---
+2025-11-02 21:41:20.200680 | Importing libraries...
+2025-11-02 21:41:21.300863 | Libraries imported successfully.
+2025-11-02 21:41:21.301317 | __main__ block entered. Calling main().
+2025-11-02 21:41:21.301441 | --- Auto-matcher batch started ---
+2025-11-02 21:41:21.301601 | INFO: Google Generative AI API configured.
+2025-11-02 21:41:21.301755 | INFO: Configuration loaded successfully.
+2025-11-02 21:41:22.286673 | 
+Processing request for Job ID 16700 against new engineers (ID > 25135)
+2025-11-02 21:41:23.332214 |   - Evaluating batch of 13 engineers (offset: 0)
+2025-11-02 21:41:26.858442 |     - ⏭️ Skipped Eng(ID:25136) with rank B
+2025-11-02 21:41:30.162244 |     - ⏭️ Skipped Eng(ID:25137) with rank C
+2025-11-02 21:41:33.370227 |     - ⏭️ Skipped Eng(ID:25138) with rank D
+2025-11-02 21:41:36.638420 |     - ⏭️ Skipped Eng(ID:25139) with rank C
+2025-11-02 21:41:40.404832 |     - ⏭️ Skipped Eng(ID:25140) with rank D
+2025-11-02 21:41:43.606089 |     - ⏭️ Skipped Eng(ID:25141) with rank D
+2025-11-02 21:41:46.970402 |     - ⏭️ Skipped Eng(ID:25142) with rank D
+2025-11-02 21:41:49.766222 |     - ⏭️ Skipped Eng(ID:25143) with rank D
+2025-11-02 21:41:53.638322 |     - ⏭️ Skipped Eng(ID:25144) with rank C
+2025-11-02 21:41:57.494684 |     - ⏭️ Skipped Eng(ID:25145) with rank D
+2025-11-02 21:42:01.243995 |     - ⏭️ Skipped Eng(ID:25146) with rank D
+2025-11-02 21:42:04.638559 |     - ⏭️ Skipped Eng(ID:25147) with rank C
+2025-11-02 21:42:08.619592 |     - ⏭️ Skipped Eng(ID:25148) with rank C
+2025-11-02 21:42:09.593664 | Updated last processed IDs for request 19.
+2025-11-02 21:42:09.594466 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16743)
+2025-11-02 21:42:10.524449 |   - Evaluating batch of 3 jobs (offset: 0)
+2025-11-02 21:42:14.717471 |     ✅ HIT! Eng(24646) vs Job(16744) -> Rank A. Match ID: 1009
+2025-11-02 21:42:17.019439 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:42:21.395327 |     - ⏭️ Skipped Job(ID:16745) with rank C
+2025-11-02 21:42:24.811002 |     - ⏭️ Skipped Job(ID:16746) with rank D
+2025-11-02 21:42:26.026711 | Updated last processed IDs for request 16.
+2025-11-02 21:42:26.027456 | --- Auto-matcher batch finished ---
+
+2025-11-02 21:50:29.847499 | --- Script execution started ---
+2025-11-02 21:50:29.847783 | Importing libraries...
+2025-11-02 21:50:30.882491 | Libraries imported successfully.
+2025-11-02 21:50:30.882773 | __main__ block entered. Calling main().
+2025-11-02 21:50:30.882864 | --- Auto-matcher batch started ---
+2025-11-02 21:50:30.883047 | INFO: Google Generative AI API configured.
+2025-11-02 21:50:30.883158 | INFO: Configuration loaded successfully.
+2025-11-02 21:50:31.825389 | 
+Processing request for Job ID 16700 against new engineers (ID > 25148)
+2025-11-02 21:50:32.853851 |   - Evaluating batch of 2 engineers (offset: 0)
+2025-11-02 21:50:36.666329 |     - ⏭️ Skipped Eng(ID:25149) with rank C
+2025-11-02 21:50:41.027482 |     - ⏭️ Skipped Eng(ID:25150) with rank C
+2025-11-02 21:50:42.039994 | Updated last processed IDs for request 19.
+2025-11-02 21:50:42.040528 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16746)
+2025-11-02 21:50:42.859875 |   - Evaluating batch of 4 jobs (offset: 0)
+2025-11-02 21:50:46.452316 |     - ⏭️ Skipped Job(ID:16747) with rank D
+2025-11-02 21:50:49.835481 |     - ⏭️ Skipped Job(ID:16748) with rank B
+2025-11-02 21:50:54.141026 |     ✅ HIT! Eng(24646) vs Job(16749) -> Rank A. Match ID: 1010
+2025-11-02 21:50:57.543242 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 21:51:00.763419 |     - ⏭️ Skipped Job(ID:16750) with rank C
+2025-11-02 21:51:01.744850 | Updated last processed IDs for request 16.
+2025-11-02 21:51:01.745651 | --- Auto-matcher batch finished ---
+
+2025-11-02 22:00:14.206810 | --- Script execution started ---
+2025-11-02 22:00:14.207556 | Importing libraries...
+2025-11-02 22:00:15.107071 | Libraries imported successfully.
+2025-11-02 22:00:15.107264 | __main__ block entered. Calling main().
+2025-11-02 22:00:15.107361 | --- Auto-matcher batch started ---
+2025-11-02 22:00:15.107496 | INFO: Google Generative AI API configured.
+2025-11-02 22:00:15.107594 | INFO: Configuration loaded successfully.
+2025-11-02 22:00:15.982150 | Request for Job ID 16700: No new engineers to process.
+2025-11-02 22:00:15.982840 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16750)
+2025-11-02 22:00:16.876942 |   - Evaluating batch of 2 jobs (offset: 0)
+2025-11-02 22:00:20.430941 |     - ⏭️ Skipped Job(ID:16751) with rank C
+2025-11-02 22:00:25.018783 |     - ⏭️ Skipped Job(ID:16752) with rank B
+2025-11-02 22:00:26.022708 | Updated last processed IDs for request 16.
+2025-11-02 22:00:26.023406 | --- Auto-matcher batch finished ---
+
+2025-11-02 23:55:22.092393 | --- Script execution started ---
+2025-11-02 23:55:22.092861 | Importing libraries...
+2025-11-02 23:55:23.304968 | Libraries imported successfully.
+2025-11-02 23:55:23.305225 | __main__ block entered. Calling main().
+2025-11-02 23:55:23.305375 | --- Auto-matcher batch started ---
+2025-11-02 23:55:23.305554 | INFO: Google Generative AI API configured.
+2025-11-02 23:55:23.305916 | INFO: Configuration loaded successfully.
+2025-11-02 23:55:24.229734 | 
+Processing request for Job ID 16700 against new engineers (ID > 25150)
+2025-11-02 23:55:25.642687 |   - Evaluating batch of 58 engineers (offset: 0)
+2025-11-02 23:55:29.173446 |     - ⏭️ Skipped Eng(ID:25151) with rank B
+2025-11-02 23:55:33.383258 |     - ⏭️ Skipped Eng(ID:25152) with rank C
+2025-11-02 23:55:37.124503 |     - ⏭️ Skipped Eng(ID:25153) with rank C
+2025-11-02 23:55:39.941107 |     - ⏭️ Skipped Eng(ID:25154) with rank B
+2025-11-02 23:55:43.364981 |     - ⏭️ Skipped Eng(ID:25155) with rank C
+2025-11-02 23:55:46.660191 |     - ⏭️ Skipped Eng(ID:25156) with rank C
+2025-11-02 23:55:49.716260 |     - ⏭️ Skipped Eng(ID:25157) with rank D
+2025-11-02 23:55:52.739963 |     - ⏭️ Skipped Eng(ID:25158) with rank D
+2025-11-02 23:55:56.416231 |     - ⏭️ Skipped Eng(ID:25159) with rank D
+2025-11-02 23:55:59.415523 |     - ⏭️ Skipped Eng(ID:25160) with rank D
+2025-11-02 23:56:02.202979 |     - ⏭️ Skipped Eng(ID:25161) with rank D
+2025-11-02 23:56:05.780847 |     - ⏭️ Skipped Eng(ID:25162) with rank C
+2025-11-02 23:56:08.675601 |     - ⏭️ Skipped Eng(ID:25163) with rank D
+2025-11-02 23:56:12.344118 |     - ⏭️ Skipped Eng(ID:25164) with rank C
+2025-11-02 23:56:16.106005 |     - ⏭️ Skipped Eng(ID:25165) with rank D
+2025-11-02 23:56:19.739784 |     - ⏭️ Skipped Eng(ID:25166) with rank D
+2025-11-02 23:56:23.772877 |     - ⏭️ Skipped Eng(ID:25167) with rank B
+2025-11-02 23:56:27.345763 |     - ⏭️ Skipped Eng(ID:25168) with rank D
+2025-11-02 23:56:30.258790 |     - ⏭️ Skipped Eng(ID:25169) with rank D
+2025-11-02 23:56:33.307795 |     - ⏭️ Skipped Eng(ID:25170) with rank D
+2025-11-02 23:56:36.907826 |     - ⏭️ Skipped Eng(ID:25171) with rank B
+2025-11-02 23:56:40.242526 |     - ⏭️ Skipped Eng(ID:25172) with rank D
+2025-11-02 23:56:43.522701 |     - ⏭️ Skipped Eng(ID:25173) with rank C
+2025-11-02 23:56:46.631911 |     - ⏭️ Skipped Eng(ID:25174) with rank D
+2025-11-02 23:56:49.981931 |     - ⏭️ Skipped Eng(ID:25175) with rank D
+2025-11-02 23:56:53.560518 |     - ⏭️ Skipped Eng(ID:25176) with rank D
+2025-11-02 23:56:57.273397 |     - ⏭️ Skipped Eng(ID:25177) with rank D
+2025-11-02 23:57:00.692784 |     - ⏭️ Skipped Eng(ID:25178) with rank C
+2025-11-02 23:57:03.988919 |     - ⏭️ Skipped Eng(ID:25179) with rank D
+2025-11-02 23:57:07.026266 |     - ⏭️ Skipped Eng(ID:25180) with rank D
+2025-11-02 23:57:11.050254 |     ✅ HIT! Job(16700) vs Eng(25181) -> Rank A. Match ID: 1011
+2025-11-02 23:57:15.055177 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 23:57:18.317408 |     - ⏭️ Skipped Eng(ID:25182) with rank C
+2025-11-02 23:57:22.906033 |     ✅ HIT! Job(16700) vs Eng(25183) -> Rank A. Match ID: 1012
+2025-11-02 23:57:27.665816 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 23:57:30.732086 |     - ⏭️ Skipped Eng(ID:25184) with rank D
+2025-11-02 23:57:34.163881 |     - ⏭️ Skipped Eng(ID:25185) with rank D
+2025-11-02 23:57:37.955614 |     ✅ HIT! Job(16700) vs Eng(25186) -> Rank A. Match ID: 1013
+2025-11-02 23:57:40.091607 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 23:57:43.615143 |     ✅ HIT! Job(16700) vs Eng(25187) -> Rank A. Match ID: 1014
+2025-11-02 23:57:45.486532 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 23:57:49.102102 |     - ⏭️ Skipped Eng(ID:25188) with rank C
+2025-11-02 23:57:52.794155 |     - ⏭️ Skipped Eng(ID:25189) with rank C
+2025-11-02 23:57:56.917532 |     - ⏭️ Skipped Eng(ID:25190) with rank B
+2025-11-02 23:58:00.550558 |     - ⏭️ Skipped Eng(ID:25191) with rank C
+2025-11-02 23:58:03.550235 |     - ⏭️ Skipped Eng(ID:25192) with rank C
+2025-11-02 23:58:06.997885 |     - ⏭️ Skipped Eng(ID:25193) with rank D
+2025-11-02 23:58:10.750698 |     - ⏭️ Skipped Eng(ID:25194) with rank B
+2025-11-02 23:58:13.860255 |     - ⏭️ Skipped Eng(ID:25195) with rank B
+2025-11-02 23:58:17.199574 |     - ⏭️ Skipped Eng(ID:25196) with rank D
+2025-11-02 23:58:20.189628 |     - ⏭️ Skipped Eng(ID:25197) with rank D
+2025-11-02 23:58:23.208808 |     - ⏭️ Skipped Eng(ID:25198) with rank D
+2025-11-02 23:58:26.529141 |     - ⏭️ Skipped Eng(ID:25199) with rank D
+2025-11-02 23:58:29.816879 |     - ⏭️ Skipped Eng(ID:25200) with rank D
+2025-11-02 23:58:33.064433 |     - ⏭️ Skipped Eng(ID:25201) with rank D
+2025-11-02 23:58:36.613195 |     - ⏭️ Skipped Eng(ID:25202) with rank C
+2025-11-02 23:58:39.763192 |     - ⏭️ Skipped Eng(ID:25203) with rank D
+2025-11-02 23:58:43.742080 |     ✅ HIT! Job(16700) vs Eng(25204) -> Rank A. Match ID: 1015
+2025-11-02 23:58:45.590179 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 23:58:49.358626 |     - ⏭️ Skipped Eng(ID:25205) with rank B
+2025-11-02 23:58:53.211988 |     - ⏭️ Skipped Eng(ID:25206) with rank D
+2025-11-02 23:58:57.313304 |     - ⏭️ Skipped Eng(ID:25207) with rank C
+2025-11-02 23:59:00.349908 |     - ⏭️ Skipped Eng(ID:25208) with rank D
+2025-11-02 23:59:01.425241 | Updated last processed IDs for request 19.
+2025-11-02 23:59:01.425837 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16752)
+2025-11-02 23:59:02.417748 |   - Evaluating batch of 28 jobs (offset: 0)
+2025-11-02 23:59:05.528926 |     - ⏭️ Skipped Job(ID:16753) with rank B
+2025-11-02 23:59:09.040680 |     - ⏭️ Skipped Job(ID:16754) with rank C
+2025-11-02 23:59:12.474878 |     - ⏭️ Skipped Job(ID:16755) with rank B
+2025-11-02 23:59:15.842094 |     - ⏭️ Skipped Job(ID:16756) with rank C
+2025-11-02 23:59:19.535291 |     - ⏭️ Skipped Job(ID:16757) with rank B
+2025-11-02 23:59:23.300678 |     ✅ HIT! Eng(24646) vs Job(16758) -> Rank A. Match ID: 1016
+2025-11-02 23:59:25.229429 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 23:59:28.651344 |     - ⏭️ Skipped Job(ID:16759) with rank B
+2025-11-02 23:59:31.462411 |     - ⏭️ Skipped Job(ID:16760) with rank D
+2025-11-02 23:59:35.624404 |     - ⏭️ Skipped Job(ID:16761) with rank B
+2025-11-02 23:59:38.770767 |     - ⏭️ Skipped Job(ID:16762) with rank D
+2025-11-02 23:59:42.401970 |     ✅ HIT! Eng(24646) vs Job(16763) -> Rank A. Match ID: 1017
+2025-11-02 23:59:44.833227 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-02 23:59:48.133027 |     - ⏭️ Skipped Job(ID:16764) with rank C
+2025-11-02 23:59:51.134177 |     - ⏭️ Skipped Job(ID:16765) with rank C
+2025-11-02 23:59:56.199344 |     - ⏭️ Skipped Job(ID:16766) with rank D
+2025-11-02 23:59:59.277354 |     - ⏭️ Skipped Job(ID:16767) with rank C
+2025-11-03 00:00:02.827340 |     - ⏭️ Skipped Job(ID:16768) with rank C
+2025-11-03 00:00:05.895985 |     - ⏭️ Skipped Job(ID:16769) with rank D
+2025-11-03 00:00:09.588055 |     - ⏭️ Skipped Job(ID:16770) with rank D
+2025-11-03 00:00:12.673017 |     - ⏭️ Skipped Job(ID:16771) with rank D
+2025-11-03 00:00:15.943466 |     - ⏭️ Skipped Job(ID:16772) with rank C
+2025-11-03 00:00:19.527288 |     - ⏭️ Skipped Job(ID:16773) with rank C
+2025-11-03 00:00:23.662835 |     - ⏭️ Skipped Job(ID:16774) with rank B
+2025-11-03 00:00:26.640075 |     - ⏭️ Skipped Job(ID:16775) with rank D
+2025-11-03 00:00:29.722461 |     - ⏭️ Skipped Job(ID:16776) with rank D
+2025-11-03 00:00:32.518462 |     - ⏭️ Skipped Job(ID:16777) with rank D
+2025-11-03 00:00:35.878814 |     - ⏭️ Skipped Job(ID:16778) with rank D
+2025-11-03 00:00:39.129801 |     - ⏭️ Skipped Job(ID:16779) with rank D
+2025-11-03 00:00:42.380444 |     - ⏭️ Skipped Job(ID:16780) with rank C
+2025-11-03 00:00:43.311219 | Updated last processed IDs for request 16.
+2025-11-03 00:00:43.312606 | --- Auto-matcher batch finished ---
+
+2025-11-03 00:03:09.758970 | --- Script execution started ---
+2025-11-03 00:03:09.759586 | Importing libraries...
+2025-11-03 00:03:10.818434 | Libraries imported successfully.
+2025-11-03 00:03:10.818673 | __main__ block entered. Calling main().
+2025-11-03 00:03:10.818813 | --- Auto-matcher batch started ---
+2025-11-03 00:03:10.818992 | INFO: Google Generative AI API configured.
+2025-11-03 00:03:10.819121 | INFO: Configuration loaded successfully.
+2025-11-03 00:03:11.806520 | 
+Processing request for Job ID 16700 against new engineers (ID > 25208)
+2025-11-03 00:03:12.791720 |   - Evaluating batch of 16 engineers (offset: 0)
+2025-11-03 00:03:16.458874 |     - ⏭️ Skipped Eng(ID:25209) with rank D
+2025-11-03 00:03:20.101080 |     - ⏭️ Skipped Eng(ID:25210) with rank D
+2025-11-03 00:03:23.441875 |     - ⏭️ Skipped Eng(ID:25211) with rank D
+2025-11-03 00:03:26.493903 |     - ⏭️ Skipped Eng(ID:25212) with rank D
+2025-11-03 00:03:29.553243 |     - ⏭️ Skipped Eng(ID:25213) with rank D
+2025-11-03 00:03:32.282858 |     - ⏭️ Skipped Eng(ID:25214) with rank D
+2025-11-03 00:03:35.363584 |     - ⏭️ Skipped Eng(ID:25215) with rank D
+2025-11-03 00:03:38.297319 |     - ⏭️ Skipped Eng(ID:25216) with rank D
+2025-11-03 00:03:41.329942 |     - ⏭️ Skipped Eng(ID:25217) with rank D
+2025-11-03 00:03:44.348373 |     - ⏭️ Skipped Eng(ID:25218) with rank D
+2025-11-03 00:03:48.404770 |     ✅ HIT! Job(16700) vs Eng(25219) -> Rank A. Match ID: 1018
+2025-11-03 00:03:51.067730 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-03 00:03:53.597818 |     - ⏭️ Skipped Eng(ID:25220) with rank D
+2025-11-03 00:03:56.882894 |     - ⏭️ Skipped Eng(ID:25221) with rank D
+2025-11-03 00:04:00.436619 |     - ⏭️ Skipped Eng(ID:25222) with rank D
+2025-11-03 00:04:04.075111 |     - ⏭️ Skipped Eng(ID:25223) with rank D
+2025-11-03 00:04:06.945737 |     - ⏭️ Skipped Eng(ID:25224) with rank D
+2025-11-03 00:04:07.919141 | Updated last processed IDs for request 19.
+2025-11-03 00:04:07.919708 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16780)
+2025-11-03 00:04:08.936680 |   - Evaluating batch of 39 jobs (offset: 0)
+2025-11-03 00:04:12.712477 |     - ⏭️ Skipped Job(ID:16781) with rank C
+2025-11-03 00:04:16.074865 |     - ⏭️ Skipped Job(ID:16782) with rank C
+2025-11-03 00:04:19.442144 |     - ⏭️ Skipped Job(ID:16783) with rank B
+2025-11-03 00:04:23.406683 |     - ⏭️ Skipped Job(ID:16784) with rank C
+2025-11-03 00:04:26.781219 |     - ⏭️ Skipped Job(ID:16785) with rank B
+2025-11-03 00:04:29.899009 |     - ⏭️ Skipped Job(ID:16786) with rank C
+2025-11-03 00:04:33.583408 |     - ⏭️ Skipped Job(ID:16787) with rank C
+2025-11-03 00:04:38.246558 |     - ⏭️ Skipped Job(ID:16788) with rank C
+2025-11-03 00:04:41.310849 |     - ⏭️ Skipped Job(ID:16789) with rank C
+2025-11-03 00:04:45.105523 |     - ⏭️ Skipped Job(ID:16790) with rank C
+2025-11-03 00:04:49.772979 |     - ⏭️ Skipped Job(ID:16791) with rank D
+2025-11-03 00:04:52.856052 |     - ⏭️ Skipped Job(ID:16792) with rank D
+2025-11-03 00:04:56.136688 |     - ⏭️ Skipped Job(ID:16793) with rank C
+2025-11-03 00:05:00.472476 |     - ⏭️ Skipped Job(ID:16794) with rank C
+2025-11-03 00:05:03.468342 |     - ⏭️ Skipped Job(ID:16795) with rank C
+2025-11-03 00:05:06.407611 |     - ⏭️ Skipped Job(ID:16796) with rank C
+2025-11-03 00:05:09.317443 |     - ⏭️ Skipped Job(ID:16797) with rank D
+2025-11-03 00:05:13.875629 |     - ⏭️ Skipped Job(ID:16798) with rank D
+2025-11-03 00:05:18.284081 |     - ⏭️ Skipped Job(ID:16799) with rank D
+2025-11-03 00:05:21.787927 |     - ⏭️ Skipped Job(ID:16800) with rank D
+2025-11-03 00:05:25.011061 |     - ⏭️ Skipped Job(ID:16801) with rank C
+2025-11-03 00:05:29.020409 |     - ⏭️ Skipped Job(ID:16802) with rank B
+2025-11-03 00:05:32.662101 |     - ⏭️ Skipped Job(ID:16803) with rank D
+2025-11-03 00:05:36.352767 |     ✅ HIT! Eng(24646) vs Job(16804) -> Rank A. Match ID: 1019
+2025-11-03 00:05:38.842494 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-03 00:05:42.244376 |     - ⏭️ Skipped Job(ID:16805) with rank C
+2025-11-03 00:05:45.887955 |     - ⏭️ Skipped Job(ID:16806) with rank C
+2025-11-03 00:05:49.811404 |     - ⏭️ Skipped Job(ID:16807) with rank C
+2025-11-03 00:05:53.579457 |     - ⏭️ Skipped Job(ID:16808) with rank C
+2025-11-03 00:05:56.694807 |     - ⏭️ Skipped Job(ID:16809) with rank C
+2025-11-03 00:05:59.687320 |     - ⏭️ Skipped Job(ID:16810) with rank D
+2025-11-03 00:06:02.825867 |     - ⏭️ Skipped Job(ID:16811) with rank D
+2025-11-03 00:06:05.560738 |     - ⏭️ Skipped Job(ID:16812) with rank C
+2025-11-03 00:06:09.100579 |     ✅ HIT! Eng(24646) vs Job(16813) -> Rank A. Match ID: 1020
+2025-11-03 00:06:10.886755 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-03 00:06:14.187823 |     - ⏭️ Skipped Job(ID:16814) with rank C
+2025-11-03 00:06:18.853201 |     - ⏭️ Skipped Job(ID:16815) with rank B
+2025-11-03 00:06:22.579935 |     - ⏭️ Skipped Job(ID:16816) with rank B
+2025-11-03 00:06:26.341434 |     - ⏭️ Skipped Job(ID:16817) with rank D
+2025-11-03 00:06:29.362246 |     - ⏭️ Skipped Job(ID:16818) with rank D
+2025-11-03 00:06:32.774964 |     - ⏭️ Skipped Job(ID:16819) with rank C
+2025-11-03 00:06:33.762761 | Updated last processed IDs for request 16.
+2025-11-03 00:06:33.763451 | --- Auto-matcher batch finished ---
+
+2025-11-03 00:11:16.965604 | --- Script execution started ---
+2025-11-03 00:11:16.966020 | Importing libraries...
+2025-11-03 00:11:18.054306 | Libraries imported successfully.
+2025-11-03 00:11:18.054478 | __main__ block entered. Calling main().
+2025-11-03 00:11:18.054583 | --- Auto-matcher batch started ---
+2025-11-03 00:11:18.054709 | INFO: Google Generative AI API configured.
+2025-11-03 00:11:18.054800 | INFO: Configuration loaded successfully.
+2025-11-03 00:11:19.202457 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16819)
+2025-11-03 00:11:20.049746 |   - Evaluating batch of 3 jobs (offset: 0)
+2025-11-03 00:11:23.322389 |     - ⏭️ Skipped Job(ID:16820) with rank D
+2025-11-03 00:11:27.862475 |     ✅ HIT! Eng(24646) vs Job(16821) -> Rank A. Match ID: 1021
+2025-11-03 00:11:36.720607 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-03 00:11:40.388071 |     - ⏭️ Skipped Job(ID:16822) with rank D
+2025-11-03 00:11:41.359492 | Updated last processed IDs for request 16.
+2025-11-03 00:11:41.360126 | --- Auto-matcher batch finished ---
+
+2025-11-03 00:20:23.376396 | --- Script execution started ---
+2025-11-03 00:20:23.376710 | Importing libraries...
+2025-11-03 00:20:24.372738 | Libraries imported successfully.
+2025-11-03 00:20:24.373016 | __main__ block entered. Calling main().
+2025-11-03 00:20:24.373122 | --- Auto-matcher batch started ---
+2025-11-03 00:20:24.373285 | INFO: Google Generative AI API configured.
+2025-11-03 00:20:24.373394 | INFO: Configuration loaded successfully.
+2025-11-03 00:20:25.235583 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16822)
+2025-11-03 00:20:26.111922 |   - Evaluating batch of 5 jobs (offset: 0)
+2025-11-03 00:20:29.540522 |     - ⏭️ Skipped Job(ID:16823) with rank B
+2025-11-03 00:20:33.271113 |     - ⏭️ Skipped Job(ID:16824) with rank B
+2025-11-03 00:20:36.796616 |     - ⏭️ Skipped Job(ID:16825) with rank D
+2025-11-03 00:20:40.662084 |     - ⏭️ Skipped Job(ID:16826) with rank B
+2025-11-03 00:20:44.348543 |     - ⏭️ Skipped Job(ID:16827) with rank C
+2025-11-03 00:20:45.251148 | Updated last processed IDs for request 16.
+2025-11-03 00:20:45.251921 | --- Auto-matcher batch finished ---
+
+2025-11-03 00:30:14.398632 | --- Script execution started ---
+2025-11-03 00:30:14.399127 | Importing libraries...
+2025-11-03 00:30:15.344733 | Libraries imported successfully.
+2025-11-03 00:30:15.344948 | __main__ block entered. Calling main().
+2025-11-03 00:30:15.345078 | --- Auto-matcher batch started ---
+2025-11-03 00:30:15.345237 | INFO: Google Generative AI API configured.
+2025-11-03 00:30:15.345374 | INFO: Configuration loaded successfully.
+2025-11-03 00:30:16.236017 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16827)
+2025-11-03 00:30:17.127698 |   - Evaluating batch of 2 jobs (offset: 0)
+2025-11-03 00:30:20.283828 |     - ⏭️ Skipped Job(ID:16828) with rank D
+2025-11-03 00:30:24.276057 |     - ⏭️ Skipped Job(ID:16829) with rank B
+2025-11-03 00:30:25.224253 | Updated last processed IDs for request 16.
+2025-11-03 00:30:25.225274 | --- Auto-matcher batch finished ---
+
+2025-11-03 00:40:29.459752 | --- Script execution started ---
+2025-11-03 00:40:29.460267 | Importing libraries...
+2025-11-03 00:40:30.349353 | Libraries imported successfully.
+2025-11-03 00:40:30.349525 | __main__ block entered. Calling main().
+2025-11-03 00:40:30.349618 | --- Auto-matcher batch started ---
+2025-11-03 00:40:30.349741 | INFO: Google Generative AI API configured.
+2025-11-03 00:40:30.349836 | INFO: Configuration loaded successfully.
+2025-11-03 00:40:31.260036 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16829)
+2025-11-03 00:40:32.123255 |   - Evaluating batch of 3 jobs (offset: 0)
+2025-11-03 00:40:35.322124 |     - ⏭️ Skipped Job(ID:16830) with rank C
+2025-11-03 00:40:38.381563 |     - ⏭️ Skipped Job(ID:16831) with rank C
+2025-11-03 00:40:42.107114 |     - ⏭️ Skipped Job(ID:16832) with rank C
+2025-11-03 00:40:43.056484 | Updated last processed IDs for request 16.
+2025-11-03 00:40:43.057176 | --- Auto-matcher batch finished ---
+
+2025-11-03 00:50:36.917672 | --- Script execution started ---
+2025-11-03 00:50:36.917874 | Importing libraries...
+2025-11-03 00:50:38.026228 | Libraries imported successfully.
+2025-11-03 00:50:38.026555 | __main__ block entered. Calling main().
+2025-11-03 00:50:38.026752 | --- Auto-matcher batch started ---
+2025-11-03 00:50:38.026922 | INFO: Google Generative AI API configured.
+2025-11-03 00:50:38.027142 | INFO: Configuration loaded successfully.
+2025-11-03 00:50:38.968097 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16832)
+2025-11-03 00:50:39.816439 |   - Evaluating batch of 2 jobs (offset: 0)
+2025-11-03 00:50:43.877257 |     - ⏭️ Skipped Job(ID:16833) with rank C
+2025-11-03 00:50:46.549187 |     - ⏭️ Skipped Job(ID:16834) with rank C
+2025-11-03 00:50:47.488256 | Updated last processed IDs for request 16.
+2025-11-03 00:50:47.488820 | --- Auto-matcher batch finished ---
+
+2025-11-03 01:00:34.734584 | --- Script execution started ---
+2025-11-03 01:00:34.735028 | Importing libraries...
+2025-11-03 01:00:35.853930 | Libraries imported successfully.
+2025-11-03 01:00:35.854525 | __main__ block entered. Calling main().
+2025-11-03 01:00:35.854790 | --- Auto-matcher batch started ---
+2025-11-03 01:00:35.854970 | INFO: Google Generative AI API configured.
+2025-11-03 01:00:35.855081 | INFO: Configuration loaded successfully.
+2025-11-03 01:00:36.795240 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16834)
+2025-11-03 01:00:37.641055 |   - Evaluating batch of 4 jobs (offset: 0)
+2025-11-03 01:00:40.703311 |     - ⏭️ Skipped Job(ID:16835) with rank D
+2025-11-03 01:00:43.771771 |     - ⏭️ Skipped Job(ID:16836) with rank D
+2025-11-03 01:00:46.831774 |     - ⏭️ Skipped Job(ID:16837) with rank D
+2025-11-03 01:00:51.551407 |     - ⏭️ Skipped Job(ID:16838) with rank B
+2025-11-03 01:00:52.471964 | Updated last processed IDs for request 16.
+2025-11-03 01:00:52.472694 | --- Auto-matcher batch finished ---
+
+2025-11-03 01:12:10.909861 | --- Script execution started ---
+2025-11-03 01:12:10.910504 | Importing libraries...
+2025-11-03 01:12:12.006058 | Libraries imported successfully.
+2025-11-03 01:12:12.006322 | __main__ block entered. Calling main().
+2025-11-03 01:12:12.006443 | --- Auto-matcher batch started ---
+2025-11-03 01:12:12.006586 | INFO: Google Generative AI API configured.
+2025-11-03 01:12:12.006680 | INFO: Configuration loaded successfully.
+2025-11-03 01:12:12.898567 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16838)
+2025-11-03 01:12:14.040229 |   - Evaluating batch of 20 jobs (offset: 0)
+2025-11-03 01:12:17.562442 |     - ⏭️ Skipped Job(ID:16839) with rank C
+2025-11-03 01:12:20.918151 |     - ⏭️ Skipped Job(ID:16840) with rank C
+2025-11-03 01:12:24.388418 |     - ⏭️ Skipped Job(ID:16841) with rank C
+2025-11-03 01:12:28.092691 |     - ⏭️ Skipped Job(ID:16842) with rank C
+2025-11-03 01:12:31.551662 |     - ⏭️ Skipped Job(ID:16843) with rank C
+2025-11-03 01:12:35.272285 |     - ⏭️ Skipped Job(ID:16844) with rank D
+2025-11-03 01:12:38.567150 |     - ⏭️ Skipped Job(ID:16845) with rank C
+2025-11-03 01:12:42.140109 |     - ⏭️ Skipped Job(ID:16846) with rank C
+2025-11-03 01:12:45.880342 |     ✅ HIT! Eng(24646) vs Job(16847) -> Rank A. Match ID: 1022
+2025-11-03 01:12:48.345953 | ✅ Notification email sent to tom@universalmobile.us
+2025-11-03 01:12:51.858195 |     - ⏭️ Skipped Job(ID:16848) with rank D
+2025-11-03 01:12:55.499436 |     - ⏭️ Skipped Job(ID:16849) with rank C
+2025-11-03 01:12:58.646274 |     - ⏭️ Skipped Job(ID:16850) with rank C
+2025-11-03 01:13:02.921286 |     - ⏭️ Skipped Job(ID:16851) with rank B
+2025-11-03 01:13:07.095107 |     - ⏭️ Skipped Job(ID:16852) with rank D
+2025-11-03 01:13:10.237245 |     - ⏭️ Skipped Job(ID:16853) with rank D
+2025-11-03 01:13:13.400367 |     - ⏭️ Skipped Job(ID:16854) with rank D
+2025-11-03 01:13:16.998019 |     - ⏭️ Skipped Job(ID:16855) with rank C
+2025-11-03 01:13:20.723841 |     - ⏭️ Skipped Job(ID:16856) with rank B
+2025-11-03 01:13:24.371212 |     - ⏭️ Skipped Job(ID:16857) with rank D
+2025-11-03 01:13:27.224549 |     - ⏭️ Skipped Job(ID:16858) with rank D
+2025-11-03 01:13:28.272515 | Updated last processed IDs for request 16.
+2025-11-03 01:13:28.273218 | --- Auto-matcher batch finished ---
+
+2025-11-03 01:20:22.450360 | --- Script execution started ---
+2025-11-03 01:20:22.450787 | Importing libraries...
+2025-11-03 01:20:24.012991 | Libraries imported successfully.
+2025-11-03 01:20:24.013195 | __main__ block entered. Calling main().
+2025-11-03 01:20:24.013291 | --- Auto-matcher batch started ---
+2025-11-03 01:20:24.013571 | INFO: Google Generative AI API configured.
+2025-11-03 01:20:24.013741 | INFO: Configuration loaded successfully.
+2025-11-03 01:20:25.154701 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 01:20:25.154959 | --- Auto-matcher batch finished ---
+
+2025-11-03 01:30:27.204668 | --- Script execution started ---
+2025-11-03 01:30:27.205298 | Importing libraries...
+2025-11-03 01:30:28.164391 | Libraries imported successfully.
+2025-11-03 01:30:28.164735 | __main__ block entered. Calling main().
+2025-11-03 01:30:28.164883 | --- Auto-matcher batch started ---
+2025-11-03 01:30:28.165070 | INFO: Google Generative AI API configured.
+2025-11-03 01:30:28.165312 | INFO: Configuration loaded successfully.
+2025-11-03 01:30:29.094490 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 01:30:29.095134 | --- Auto-matcher batch finished ---
+
+2025-11-03 01:40:29.145158 | --- Script execution started ---
+2025-11-03 01:40:29.145636 | Importing libraries...
+2025-11-03 01:40:30.133870 | Libraries imported successfully.
+2025-11-03 01:40:30.134101 | __main__ block entered. Calling main().
+2025-11-03 01:40:30.134211 | --- Auto-matcher batch started ---
+2025-11-03 01:40:30.134345 | INFO: Google Generative AI API configured.
+2025-11-03 01:40:30.134497 | INFO: Configuration loaded successfully.
+2025-11-03 01:40:31.065354 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 01:40:31.066050 | --- Auto-matcher batch finished ---
+
+2025-11-03 01:50:29.882123 | --- Script execution started ---
+2025-11-03 01:50:29.882652 | Importing libraries...
+2025-11-03 01:50:30.844447 | Libraries imported successfully.
+2025-11-03 01:50:30.844728 | __main__ block entered. Calling main().
+2025-11-03 01:50:30.845127 | --- Auto-matcher batch started ---
+2025-11-03 01:50:30.845401 | INFO: Google Generative AI API configured.
+2025-11-03 01:50:30.845547 | INFO: Configuration loaded successfully.
+2025-11-03 01:50:31.738742 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 01:50:31.739255 | --- Auto-matcher batch finished ---
+
+2025-11-03 02:00:22.600109 | --- Script execution started ---
+2025-11-03 02:00:22.600647 | Importing libraries...
+2025-11-03 02:00:23.563971 | Libraries imported successfully.
+2025-11-03 02:00:23.564160 | __main__ block entered. Calling main().
+2025-11-03 02:00:23.564262 | --- Auto-matcher batch started ---
+2025-11-03 02:00:23.564385 | INFO: Google Generative AI API configured.
+2025-11-03 02:00:23.564478 | INFO: Configuration loaded successfully.
+2025-11-03 02:00:24.461974 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 02:00:24.462410 | --- Auto-matcher batch finished ---
+
+2025-11-03 02:10:34.211181 | --- Script execution started ---
+2025-11-03 02:10:34.211703 | Importing libraries...
+2025-11-03 02:10:35.237937 | Libraries imported successfully.
+2025-11-03 02:10:35.238202 | __main__ block entered. Calling main().
+2025-11-03 02:10:35.238311 | --- Auto-matcher batch started ---
+2025-11-03 02:10:35.238448 | INFO: Google Generative AI API configured.
+2025-11-03 02:10:35.238631 | INFO: Configuration loaded successfully.
+2025-11-03 02:10:36.139905 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 02:10:36.140543 | --- Auto-matcher batch finished ---
+
+2025-11-03 02:20:30.927754 | --- Script execution started ---
+2025-11-03 02:20:30.928178 | Importing libraries...
+2025-11-03 02:20:32.057939 | Libraries imported successfully.
+2025-11-03 02:20:32.058141 | __main__ block entered. Calling main().
+2025-11-03 02:20:32.058257 | --- Auto-matcher batch started ---
+2025-11-03 02:20:32.058404 | INFO: Google Generative AI API configured.
+2025-11-03 02:20:32.058511 | INFO: Configuration loaded successfully.
+2025-11-03 02:20:32.920412 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 02:20:32.920979 | --- Auto-matcher batch finished ---
+
+2025-11-03 02:30:21.134989 | --- Script execution started ---
+2025-11-03 02:30:21.135328 | Importing libraries...
+2025-11-03 02:30:22.093965 | Libraries imported successfully.
+2025-11-03 02:30:22.098591 | __main__ block entered. Calling main().
+2025-11-03 02:30:22.098752 | --- Auto-matcher batch started ---
+2025-11-03 02:30:22.098932 | INFO: Google Generative AI API configured.
+2025-11-03 02:30:22.099071 | INFO: Configuration loaded successfully.
+2025-11-03 02:30:22.957346 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 02:30:22.957559 | --- Auto-matcher batch finished ---
+
+2025-11-03 02:40:27.980330 | --- Script execution started ---
+2025-11-03 02:40:27.980901 | Importing libraries...
+2025-11-03 02:40:29.051271 | Libraries imported successfully.
+2025-11-03 02:40:29.051462 | __main__ block entered. Calling main().
+2025-11-03 02:40:29.051553 | --- Auto-matcher batch started ---
+2025-11-03 02:40:29.051697 | INFO: Google Generative AI API configured.
+2025-11-03 02:40:29.051799 | INFO: Configuration loaded successfully.
+2025-11-03 02:40:29.957593 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 02:40:29.958164 | --- Auto-matcher batch finished ---
+
+2025-11-03 02:50:19.200844 | --- Script execution started ---
+2025-11-03 02:50:19.201267 | Importing libraries...
+2025-11-03 02:50:20.177588 | Libraries imported successfully.
+2025-11-03 02:50:20.177809 | __main__ block entered. Calling main().
+2025-11-03 02:50:20.177925 | --- Auto-matcher batch started ---
+2025-11-03 02:50:20.178057 | INFO: Google Generative AI API configured.
+2025-11-03 02:50:20.178147 | INFO: Configuration loaded successfully.
+2025-11-03 02:50:21.049390 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 02:50:21.049686 | --- Auto-matcher batch finished ---
+
+2025-11-03 03:00:05.730939 | --- Script execution started ---
+2025-11-03 03:00:05.731477 | Importing libraries...
+2025-11-03 03:00:06.530431 | Libraries imported successfully.
+2025-11-03 03:00:06.531210 | __main__ block entered. Calling main().
+2025-11-03 03:00:06.531310 | --- Auto-matcher batch started ---
+2025-11-03 03:00:06.531488 | INFO: Google Generative AI API configured.
+2025-11-03 03:00:06.531605 | INFO: Configuration loaded successfully.
+2025-11-03 03:00:07.510284 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 03:00:07.511067 | --- Auto-matcher batch finished ---
+
+2025-11-03 03:10:05.078089 | --- Script execution started ---
+2025-11-03 03:10:05.078363 | Importing libraries...
+2025-11-03 03:10:05.805900 | Libraries imported successfully.
+2025-11-03 03:10:05.806159 | __main__ block entered. Calling main().
+2025-11-03 03:10:05.806267 | --- Auto-matcher batch started ---
+2025-11-03 03:10:05.806417 | INFO: Google Generative AI API configured.
+2025-11-03 03:10:05.806539 | INFO: Configuration loaded successfully.
+2025-11-03 03:10:06.773149 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 03:10:06.773348 | --- Auto-matcher batch finished ---
+
+2025-11-03 03:20:05.148705 | --- Script execution started ---
+2025-11-03 03:20:05.149051 | Importing libraries...
+2025-11-03 03:20:05.853068 | Libraries imported successfully.
+2025-11-03 03:20:05.853591 | __main__ block entered. Calling main().
+2025-11-03 03:20:05.853716 | --- Auto-matcher batch started ---
+2025-11-03 03:20:05.853846 | INFO: Google Generative AI API configured.
+2025-11-03 03:20:05.853946 | INFO: Configuration loaded successfully.
+2025-11-03 03:20:06.734038 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 03:20:06.734632 | --- Auto-matcher batch finished ---
+
+2025-11-03 03:30:05.105414 | --- Script execution started ---
+2025-11-03 03:30:05.105900 | Importing libraries...
+2025-11-03 03:30:05.852766 | Libraries imported successfully.
+2025-11-03 03:30:05.853259 | __main__ block entered. Calling main().
+2025-11-03 03:30:05.853377 | --- Auto-matcher batch started ---
+2025-11-03 03:30:05.853533 | INFO: Google Generative AI API configured.
+2025-11-03 03:30:05.853651 | INFO: Configuration loaded successfully.
+2025-11-03 03:30:06.838264 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 03:30:06.838471 | --- Auto-matcher batch finished ---
+
+2025-11-03 03:40:06.097223 | --- Script execution started ---
+2025-11-03 03:40:06.097407 | Importing libraries...
+2025-11-03 03:40:06.836307 | Libraries imported successfully.
+2025-11-03 03:40:06.836744 | __main__ block entered. Calling main().
+2025-11-03 03:40:06.836968 | --- Auto-matcher batch started ---
+2025-11-03 03:40:06.837114 | INFO: Google Generative AI API configured.
+2025-11-03 03:40:06.837225 | INFO: Configuration loaded successfully.
+2025-11-03 03:40:07.773393 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 03:40:07.773585 | --- Auto-matcher batch finished ---
+
+2025-11-03 03:50:05.848182 | --- Script execution started ---
+2025-11-03 03:50:05.848377 | Importing libraries...
+2025-11-03 03:50:06.562521 | Libraries imported successfully.
+2025-11-03 03:50:06.563057 | __main__ block entered. Calling main().
+2025-11-03 03:50:06.563148 | --- Auto-matcher batch started ---
+2025-11-03 03:50:06.563300 | INFO: Google Generative AI API configured.
+2025-11-03 03:50:06.563415 | INFO: Configuration loaded successfully.
+2025-11-03 03:50:07.538904 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 03:50:07.539093 | --- Auto-matcher batch finished ---
+
+2025-11-03 06:20:15.471854 | --- Script execution started ---
+2025-11-03 06:20:15.472317 | Importing libraries...
+2025-11-03 06:20:16.339877 | Libraries imported successfully.
+2025-11-03 06:20:16.340085 | __main__ block entered. Calling main().
+2025-11-03 06:20:16.340181 | --- Auto-matcher batch started ---
+2025-11-03 06:20:16.340306 | INFO: Google Generative AI API configured.
+2025-11-03 06:20:16.340398 | INFO: Configuration loaded successfully.
+2025-11-03 06:20:17.270505 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 06:20:17.270916 | --- Auto-matcher batch finished ---
+
+2025-11-03 06:30:05.706499 | --- Script execution started ---
+2025-11-03 06:30:05.707003 | Importing libraries...
+2025-11-03 06:30:06.439684 | Libraries imported successfully.
+2025-11-03 06:30:06.440199 | __main__ block entered. Calling main().
+2025-11-03 06:30:06.440315 | --- Auto-matcher batch started ---
+2025-11-03 06:30:06.440459 | INFO: Google Generative AI API configured.
+2025-11-03 06:30:06.440563 | INFO: Configuration loaded successfully.
+2025-11-03 06:30:07.408377 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 06:30:07.408685 | --- Auto-matcher batch finished ---
+
+2025-11-03 06:41:14.367771 | --- Script execution started ---
+2025-11-03 06:41:14.368551 | Importing libraries...
+2025-11-03 06:41:15.404114 | Libraries imported successfully.
+2025-11-03 06:41:15.404346 | __main__ block entered. Calling main().
+2025-11-03 06:41:15.404463 | --- Auto-matcher batch started ---
+2025-11-03 06:41:15.404619 | INFO: Google Generative AI API configured.
+2025-11-03 06:41:15.404714 | INFO: Configuration loaded successfully.
+2025-11-03 06:41:16.431576 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 06:41:16.431747 | --- Auto-matcher batch finished ---
+
+2025-11-03 06:50:05.076354 | --- Script execution started ---
+2025-11-03 06:50:05.076634 | Importing libraries...
+2025-11-03 06:50:05.864560 | Libraries imported successfully.
+2025-11-03 06:50:05.865119 | __main__ block entered. Calling main().
+2025-11-03 06:50:05.865248 | --- Auto-matcher batch started ---
+2025-11-03 06:50:05.865392 | INFO: Google Generative AI API configured.
+2025-11-03 06:50:05.865487 | INFO: Configuration loaded successfully.
+2025-11-03 06:50:06.876440 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 06:50:06.876713 | --- Auto-matcher batch finished ---
+
+2025-11-03 07:00:06.146198 | --- Script execution started ---
+2025-11-03 07:00:06.146414 | Importing libraries...
+2025-11-03 07:00:07.213043 | Libraries imported successfully.
+2025-11-03 07:00:07.213293 | __main__ block entered. Calling main().
+2025-11-03 07:00:07.213389 | --- Auto-matcher batch started ---
+2025-11-03 07:00:07.213519 | INFO: Google Generative AI API configured.
+2025-11-03 07:00:07.213619 | INFO: Configuration loaded successfully.
+2025-11-03 07:00:08.136885 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 07:00:08.137365 | --- Auto-matcher batch finished ---
+
+2025-11-03 07:10:05.122949 | --- Script execution started ---
+2025-11-03 07:10:05.123429 | Importing libraries...
+2025-11-03 07:10:05.863051 | Libraries imported successfully.
+2025-11-03 07:10:05.863409 | __main__ block entered. Calling main().
+2025-11-03 07:10:05.863680 | --- Auto-matcher batch started ---
+2025-11-03 07:10:05.863819 | INFO: Google Generative AI API configured.
+2025-11-03 07:10:05.863914 | INFO: Configuration loaded successfully.
+2025-11-03 07:10:06.731305 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 07:10:06.731726 | --- Auto-matcher batch finished ---
+
+2025-11-03 07:16:17.676794 | --- Script execution started ---
+2025-11-03 07:16:17.677014 | Importing libraries...
+2025-11-03 07:16:18.039129 | Libraries imported successfully.
+2025-11-03 07:16:18.039204 | __main__ block entered. Calling main().
+2025-11-03 07:16:18.039245 | --- Auto-matcher batch started ---
+2025-11-03 07:16:18.039287 | INFO: Google Generative AI API configured.
+2025-11-03 07:16:18.039320 | INFO: Configuration loaded successfully.
+2025-11-03 07:16:18.909369 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16858)
+2025-11-03 07:16:19.743617 |   - Evaluating batch of 2 jobs (offset: 0)
+2025-11-03 07:16:23.563062 |     - ⏭️ Skipped Job(ID:16859) with rank D
+2025-11-03 07:16:28.465806 |     - ⏭️ Skipped Job(ID:16860) with rank D
+2025-11-03 07:16:29.388847 | Updated last processed IDs for request 16.
+2025-11-03 07:16:29.389294 | --- Auto-matcher batch finished ---
+
+2025-11-03 07:20:05.092473 | --- Script execution started ---
+2025-11-03 07:20:05.092929 | Importing libraries...
+2025-11-03 07:20:05.878311 | Libraries imported successfully.
+2025-11-03 07:20:05.878848 | __main__ block entered. Calling main().
+2025-11-03 07:20:05.878944 | --- Auto-matcher batch started ---
+2025-11-03 07:20:05.879100 | INFO: Google Generative AI API configured.
+2025-11-03 07:20:05.879217 | INFO: Configuration loaded successfully.
+2025-11-03 07:20:06.786228 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 07:20:06.786462 | --- Auto-matcher batch finished ---
+
+2025-11-03 07:30:24.321773 | --- Script execution started ---
+2025-11-03 07:30:24.322239 | Importing libraries...
+2025-11-03 07:30:25.329848 | Libraries imported successfully.
+2025-11-03 07:30:25.330106 | __main__ block entered. Calling main().
+2025-11-03 07:30:25.330196 | --- Auto-matcher batch started ---
+2025-11-03 07:30:25.330349 | INFO: Google Generative AI API configured.
+2025-11-03 07:30:25.330435 | INFO: Configuration loaded successfully.
+2025-11-03 07:30:26.199757 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 07:30:26.200539 | --- Auto-matcher batch finished ---
+
+2025-11-03 07:40:05.697158 | --- Script execution started ---
+2025-11-03 07:40:05.697415 | Importing libraries...
+2025-11-03 07:40:06.582184 | Libraries imported successfully.
+2025-11-03 07:40:06.585673 | __main__ block entered. Calling main().
+2025-11-03 07:40:06.586070 | --- Auto-matcher batch started ---
+2025-11-03 07:40:06.586277 | INFO: Google Generative AI API configured.
+2025-11-03 07:40:06.586375 | INFO: Configuration loaded successfully.
+2025-11-03 07:40:07.546456 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 07:40:07.547106 | --- Auto-matcher batch finished ---
+
+2025-11-03 07:50:05.419876 | --- Script execution started ---
+2025-11-03 07:50:05.420342 | Importing libraries...
+2025-11-03 07:50:06.177689 | Libraries imported successfully.
+2025-11-03 07:50:06.178174 | __main__ block entered. Calling main().
+2025-11-03 07:50:06.178310 | --- Auto-matcher batch started ---
+2025-11-03 07:50:06.178451 | INFO: Google Generative AI API configured.
+2025-11-03 07:50:06.178590 | INFO: Configuration loaded successfully.
+2025-11-03 07:50:07.416459 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 07:50:07.416662 | --- Auto-matcher batch finished ---
+
+2025-11-03 08:00:04.890164 | --- Script execution started ---
+2025-11-03 08:00:04.890511 | Importing libraries...
+2025-11-03 08:00:05.544991 | Libraries imported successfully.
+2025-11-03 08:00:05.545178 | __main__ block entered. Calling main().
+2025-11-03 08:00:05.545307 | --- Auto-matcher batch started ---
+2025-11-03 08:00:05.545430 | INFO: Google Generative AI API configured.
+2025-11-03 08:00:05.545563 | INFO: Configuration loaded successfully.
+2025-11-03 08:00:06.614683 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 08:00:06.615447 | --- Auto-matcher batch finished ---
+
+2025-11-03 08:20:06.082183 | --- Script execution started ---
+2025-11-03 08:20:06.082761 | Importing libraries...
+2025-11-03 08:20:06.830157 | Libraries imported successfully.
+2025-11-03 08:20:06.830936 | __main__ block entered. Calling main().
+2025-11-03 08:20:06.831059 | --- Auto-matcher batch started ---
+2025-11-03 08:20:06.831236 | INFO: Google Generative AI API configured.
+2025-11-03 08:20:06.831348 | INFO: Configuration loaded successfully.
+2025-11-03 08:20:07.814415 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 08:20:07.815241 | --- Auto-matcher batch finished ---
+
+2025-11-03 09:30:18.968424 | --- Script execution started ---
+2025-11-03 09:30:18.970448 | Importing libraries...
+2025-11-03 09:30:19.726753 | Libraries imported successfully.
+2025-11-03 09:30:19.727017 | __main__ block entered. Calling main().
+2025-11-03 09:30:19.727103 | --- Auto-matcher batch started ---
+2025-11-03 09:30:19.727235 | INFO: Google Generative AI API configured.
+2025-11-03 09:30:19.727323 | INFO: Configuration loaded successfully.
+2025-11-03 09:30:20.738026 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 09:30:20.738468 | --- Auto-matcher batch finished ---
+
+2025-11-03 09:40:47.895032 | --- Script execution started ---
+2025-11-03 09:40:47.895484 | Importing libraries...
+2025-11-03 09:40:48.584278 | Libraries imported successfully.
+2025-11-03 09:40:48.584712 | __main__ block entered. Calling main().
+2025-11-03 09:40:48.584821 | --- Auto-matcher batch started ---
+2025-11-03 09:40:48.584940 | INFO: Google Generative AI API configured.
+2025-11-03 09:40:48.585025 | INFO: Configuration loaded successfully.
+2025-11-03 09:40:49.602787 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 09:40:49.603194 | --- Auto-matcher batch finished ---
+
+2025-11-03 10:06:10.857286 | --- Script execution started ---
+2025-11-03 10:06:10.857782 | Importing libraries...
+2025-11-03 10:06:11.579533 | Libraries imported successfully.
+2025-11-03 10:06:11.580336 | __main__ block entered. Calling main().
+2025-11-03 10:06:11.580456 | --- Auto-matcher batch started ---
+2025-11-03 10:06:11.580596 | INFO: Google Generative AI API configured.
+2025-11-03 10:06:11.580684 | INFO: Configuration loaded successfully.
+2025-11-03 10:06:12.641270 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 10:06:12.641686 | --- Auto-matcher batch finished ---
+
+2025-11-03 10:10:05.319292 | --- Script execution started ---
+2025-11-03 10:10:05.319844 | Importing libraries...
+2025-11-03 10:10:06.063465 | Libraries imported successfully.
+2025-11-03 10:10:06.063732 | __main__ block entered. Calling main().
+2025-11-03 10:10:06.063827 | --- Auto-matcher batch started ---
+2025-11-03 10:10:06.063950 | INFO: Google Generative AI API configured.
+2025-11-03 10:10:06.064040 | INFO: Configuration loaded successfully.
+2025-11-03 10:10:07.042774 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 10:10:07.043690 | --- Auto-matcher batch finished ---
+
+2025-11-03 10:21:40.869447 | --- Script execution started ---
+2025-11-03 10:21:40.869769 | Importing libraries...
+2025-11-03 10:21:41.624162 | Libraries imported successfully.
+2025-11-03 10:21:41.624814 | __main__ block entered. Calling main().
+2025-11-03 10:21:41.624917 | --- Auto-matcher batch started ---
+2025-11-03 10:21:41.625061 | INFO: Google Generative AI API configured.
+2025-11-03 10:21:41.625152 | INFO: Configuration loaded successfully.
+2025-11-03 10:21:42.569105 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 10:21:42.569976 | --- Auto-matcher batch finished ---
+
+2025-11-03 11:04:03.027556 | --- Script execution started ---
+2025-11-03 11:04:03.028045 | Importing libraries...
+2025-11-03 11:04:03.772481 | Libraries imported successfully.
+2025-11-03 11:04:03.773244 | __main__ block entered. Calling main().
+2025-11-03 11:04:03.773339 | --- Auto-matcher batch started ---
+2025-11-03 11:04:03.773467 | INFO: Google Generative AI API configured.
+2025-11-03 11:04:03.773550 | INFO: Configuration loaded successfully.
+2025-11-03 11:04:05.174285 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 11:04:05.174901 | --- Auto-matcher batch finished ---
+
+2025-11-03 11:30:05.490992 | --- Script execution started ---
+2025-11-03 11:30:05.491235 | Importing libraries...
+2025-11-03 11:30:06.234166 | Libraries imported successfully.
+2025-11-03 11:30:06.234799 | __main__ block entered. Calling main().
+2025-11-03 11:30:06.234948 | --- Auto-matcher batch started ---
+2025-11-03 11:30:06.235098 | INFO: Google Generative AI API configured.
+2025-11-03 11:30:06.235199 | INFO: Configuration loaded successfully.
+2025-11-03 11:30:07.215534 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 11:30:07.215945 | --- Auto-matcher batch finished ---
+
+2025-11-03 11:40:05.496613 | --- Script execution started ---
+2025-11-03 11:40:05.498207 | Importing libraries...
+2025-11-03 11:40:06.287498 | Libraries imported successfully.
+2025-11-03 11:40:06.288171 | __main__ block entered. Calling main().
+2025-11-03 11:40:06.288295 | --- Auto-matcher batch started ---
+2025-11-03 11:40:06.288449 | INFO: Google Generative AI API configured.
+2025-11-03 11:40:06.288542 | INFO: Configuration loaded successfully.
+2025-11-03 11:40:07.280591 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 11:40:07.280908 | --- Auto-matcher batch finished ---
+
+2025-11-03 11:50:05.601336 | --- Script execution started ---
+2025-11-03 11:50:05.602001 | Importing libraries...
+2025-11-03 11:50:06.338201 | Libraries imported successfully.
+2025-11-03 11:50:06.338866 | __main__ block entered. Calling main().
+2025-11-03 11:50:06.338967 | --- Auto-matcher batch started ---
+2025-11-03 11:50:06.339102 | INFO: Google Generative AI API configured.
+2025-11-03 11:50:06.339190 | INFO: Configuration loaded successfully.
+2025-11-03 11:50:07.484036 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 11:50:07.484479 | --- Auto-matcher batch finished ---
+
+2025-11-03 12:00:05.935832 | --- Script execution started ---
+2025-11-03 12:00:05.936477 | Importing libraries...
+2025-11-03 12:00:06.672267 | Libraries imported successfully.
+2025-11-03 12:00:06.672649 | __main__ block entered. Calling main().
+2025-11-03 12:00:06.672752 | --- Auto-matcher batch started ---
+2025-11-03 12:00:06.672912 | INFO: Google Generative AI API configured.
+2025-11-03 12:00:06.673008 | INFO: Configuration loaded successfully.
+2025-11-03 12:00:07.592484 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 12:00:07.593372 | --- Auto-matcher batch finished ---
+
+2025-11-03 12:10:06.094678 | --- Script execution started ---
+2025-11-03 12:10:06.102424 | Importing libraries...
+2025-11-03 12:10:07.159499 | Libraries imported successfully.
+2025-11-03 12:10:07.159949 | __main__ block entered. Calling main().
+2025-11-03 12:10:07.160098 | --- Auto-matcher batch started ---
+2025-11-03 12:10:07.160285 | INFO: Google Generative AI API configured.
+2025-11-03 12:10:07.160425 | INFO: Configuration loaded successfully.
+2025-11-03 12:10:08.147224 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 12:10:08.147540 | --- Auto-matcher batch finished ---
+
+2025-11-03 12:20:05.939081 | --- Script execution started ---
+2025-11-03 12:20:05.939675 | Importing libraries...
+2025-11-03 12:20:06.684865 | Libraries imported successfully.
+2025-11-03 12:20:06.685605 | __main__ block entered. Calling main().
+2025-11-03 12:20:06.685770 | --- Auto-matcher batch started ---
+2025-11-03 12:20:06.685926 | INFO: Google Generative AI API configured.
+2025-11-03 12:20:06.686015 | INFO: Configuration loaded successfully.
+2025-11-03 12:20:07.671678 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 12:20:07.672565 | --- Auto-matcher batch finished ---
+
+2025-11-03 13:50:06.601791 | --- Script execution started ---
+2025-11-03 13:50:06.602398 | Importing libraries...
+2025-11-03 13:50:07.331791 | Libraries imported successfully.
+2025-11-03 13:50:07.332493 | __main__ block entered. Calling main().
+2025-11-03 13:50:07.332633 | --- Auto-matcher batch started ---
+2025-11-03 13:50:07.332796 | INFO: Google Generative AI API configured.
+2025-11-03 13:50:07.332901 | INFO: Configuration loaded successfully.
+2025-11-03 13:50:08.623053 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 13:50:08.623399 | --- Auto-matcher batch finished ---
+
+2025-11-03 14:00:05.601561 | --- Script execution started ---
+2025-11-03 14:00:05.602188 | Importing libraries...
+2025-11-03 14:00:06.406636 | Libraries imported successfully.
+2025-11-03 14:00:06.406949 | __main__ block entered. Calling main().
+2025-11-03 14:00:06.407048 | --- Auto-matcher batch started ---
+2025-11-03 14:00:06.407196 | INFO: Google Generative AI API configured.
+2025-11-03 14:00:06.407296 | INFO: Configuration loaded successfully.
+2025-11-03 14:00:07.362963 | Request for Engineer ID 24646: No new jobs to process.
+2025-11-03 14:00:07.363386 | --- Auto-matcher batch finished ---
+
+2025-11-03 14:12:37.361192 | --- Script execution started ---
+2025-11-03 14:12:37.361646 | Importing libraries...
+2025-11-03 14:12:38.350884 | Libraries imported successfully.
+2025-11-03 14:12:38.351162 | __main__ block entered. Calling main().
+2025-11-03 14:12:38.351313 | --- Auto-matcher batch started ---
+2025-11-03 14:12:38.351464 | INFO: Google Generative AI API configured.
+2025-11-03 14:12:38.351583 | INFO: Configuration loaded successfully.
+2025-11-03 14:12:39.254004 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16860)
+2025-11-03 14:12:39.957180 |   - Could not find engineer data for ID: 24646. Skipping.
+2025-11-03 14:12:39.958197 | --- Auto-matcher batch finished ---
+
+2025-11-03 14:22:16.023838 | --- Script execution started ---
+2025-11-03 14:22:16.024433 | Importing libraries...
+2025-11-03 14:22:17.175594 | Libraries imported successfully.
+2025-11-03 14:22:17.175850 | __main__ block entered. Calling main().
+2025-11-03 14:22:17.175938 | --- Auto-matcher batch started ---
+2025-11-03 14:22:17.176075 | INFO: Google Generative AI API configured.
+2025-11-03 14:22:17.176162 | INFO: Configuration loaded successfully.
+2025-11-03 14:22:18.257572 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16860)
+2025-11-03 14:22:19.002096 |   - Could not find engineer data for ID: 24646. Skipping.
+2025-11-03 14:22:19.002697 | --- Auto-matcher batch finished ---
+
+2025-11-03 14:31:49.078998 | --- Script execution started ---
+2025-11-03 14:31:49.079487 | Importing libraries...
+2025-11-03 14:31:50.327593 | Libraries imported successfully.
+2025-11-03 14:31:50.328361 | __main__ block entered. Calling main().
+2025-11-03 14:31:50.328711 | --- Auto-matcher batch started ---
+2025-11-03 14:31:50.329145 | INFO: Google Generative AI API configured.
+2025-11-03 14:31:50.329567 | INFO: Configuration loaded successfully.
+2025-11-03 14:31:51.273852 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16860)
+2025-11-03 14:31:51.984035 |   - Could not find engineer data for ID: 24646. Skipping.
+2025-11-03 14:31:51.985627 | --- Auto-matcher batch finished ---
+
+2025-11-03 14:33:25.401592 | --- Script execution started ---
+2025-11-03 14:33:25.401682 | Importing libraries...
+2025-11-03 14:33:25.739959 | Libraries imported successfully.
+2025-11-03 14:33:25.740035 | __main__ block entered. Calling main().
+2025-11-03 14:33:25.740069 | --- Auto-matcher batch started ---
+2025-11-03 14:33:25.740113 | INFO: Google Generative AI API configured.
+2025-11-03 14:33:25.740152 | INFO: Configuration loaded successfully.
+2025-11-03 14:33:26.635234 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16860)
+2025-11-03 14:33:27.359049 |   - Could not find engineer data for ID: 24646. Skipping.
+2025-11-03 14:33:27.359572 | --- Auto-matcher batch finished ---
+
+2025-11-03 14:36:18.045886 | --- Script execution started ---
+2025-11-03 14:36:18.046114 | Importing libraries...
+2025-11-03 14:36:18.439326 | Libraries imported successfully.
+2025-11-03 14:36:18.439444 | __main__ block entered. Calling main().
+2025-11-03 14:36:18.439491 | --- Auto-matcher batch started ---
+2025-11-03 14:36:18.439541 | INFO: Google Generative AI API configured.
+2025-11-03 14:36:18.439581 | INFO: Configuration loaded successfully.
+2025-11-03 14:36:19.300018 | 
+Processing request for Engineer ID 24646 against new jobs (ID > 16860)
+2025-11-03 14:36:19.936146 |   - Could not find engineer data for ID: 24646. Skipping.
+2025-11-03 14:36:19.937002 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16840)
+2025-11-03 14:36:21.279101 |   - Evaluating batch of 35 jobs (offset: 0)
+2025-11-03 14:36:24.418044 |     - ⏭️ Skipped Job(ID:16841) with rank C
+2025-11-03 14:36:27.590483 |     - ⏭️ Skipped Job(ID:16842) with rank C
+2025-11-03 14:36:31.395214 |     - ⏭️ Skipped Job(ID:16843) with rank B
+2025-11-03 14:36:34.929396 |     - ⏭️ Skipped Job(ID:16844) with rank C
+2025-11-03 14:36:38.496741 |     - ⏭️ Skipped Job(ID:16845) with rank C
+2025-11-03 14:36:41.814147 |     - ⏭️ Skipped Job(ID:16846) with rank C
+2025-11-03 14:36:45.508882 |     - ⏭️ Skipped Job(ID:16847) with rank B
+2025-11-03 14:36:48.884202 |     - ⏭️ Skipped Job(ID:16848) with rank D
+2025-11-03 14:36:51.845113 |     - ⏭️ Skipped Job(ID:16849) with rank C
+2025-11-03 14:36:55.332390 |     - ⏭️ Skipped Job(ID:16850) with rank C
+2025-11-03 14:36:58.736439 |     - ⏭️ Skipped Job(ID:16851) with rank C
+2025-11-03 14:37:01.859138 |     - ⏭️ Skipped Job(ID:16852) with rank D
+2025-11-03 14:37:05.265074 |     - ⏭️ Skipped Job(ID:16853) with rank C
+2025-11-03 14:37:08.417265 |     - ⏭️ Skipped Job(ID:16854) with rank D
+2025-11-03 14:37:11.710037 |     - ⏭️ Skipped Job(ID:16855) with rank C
+2025-11-03 14:37:15.294096 |     - ⏭️ Skipped Job(ID:16856) with rank B
+2025-11-03 14:37:18.279848 |     - ⏭️ Skipped Job(ID:16857) with rank D
+2025-11-03 14:37:21.675771 |     - ⏭️ Skipped Job(ID:16858) with rank D
+2025-11-03 14:37:24.866512 |     - ⏭️ Skipped Job(ID:16859) with rank D
+2025-11-03 14:37:28.302101 |     - ⏭️ Skipped Job(ID:16860) with rank D
+2025-11-03 14:37:31.798217 |     - ⏭️ Skipped Job(ID:16861) with rank D
+2025-11-03 14:37:35.282961 |     - ⏭️ Skipped Job(ID:16862) with rank B
+2025-11-03 14:37:38.200504 |     - ⏭️ Skipped Job(ID:16863) with rank D
+2025-11-03 14:37:40.844454 |     - ⏭️ Skipped Job(ID:16864) with rank D
+2025-11-03 14:37:43.924863 |     - ⏭️ Skipped Job(ID:16865) with rank D
+2025-11-03 14:37:47.401806 |     - ⏭️ Skipped Job(ID:16866) with rank B
+2025-11-03 14:37:50.679949 |     - ⏭️ Skipped Job(ID:16867) with rank B
+2025-11-03 14:37:53.665240 |     - ⏭️ Skipped Job(ID:16868) with rank C
+2025-11-03 14:37:56.883265 |     - ⏭️ Skipped Job(ID:16869) with rank D
+2025-11-03 14:38:00.236642 |     - ⏭️ Skipped Job(ID:16870) with rank D
+2025-11-03 14:38:03.717459 |     - ⏭️ Skipped Job(ID:16871) with rank B
+2025-11-03 14:38:07.275803 |     - ⏭️ Skipped Job(ID:16872) with rank C
+2025-11-03 14:38:10.457794 |     - ⏭️ Skipped Job(ID:16873) with rank D
+2025-11-03 14:38:13.890310 |     - ⏭️ Skipped Job(ID:16874) with rank C
+2025-11-03 14:38:17.084129 |     - ⏭️ Skipped Job(ID:16875) with rank C
+2025-11-03 14:38:18.082413 | Updated last processed IDs for request 22.
+2025-11-03 14:38:18.083577 | --- Auto-matcher batch finished ---
+
+2025-11-03 14:41:01.884488 | --- Script execution started ---
+2025-11-03 14:41:01.884916 | Importing libraries...
+2025-11-03 14:41:02.828723 | Libraries imported successfully.
+2025-11-03 14:41:02.828988 | __main__ block entered. Calling main().
+2025-11-03 14:41:02.829101 | --- Auto-matcher batch started ---
+2025-11-03 14:41:02.829260 | INFO: Google Generative AI API configured.
+2025-11-03 14:41:02.829365 | INFO: Configuration loaded successfully.
+2025-11-03 14:41:03.735866 | Request for Engineer ID 25465: No new jobs to process.
+2025-11-03 14:41:03.736355 | --- Auto-matcher batch finished ---
+
+2025-11-03 14:51:15.430352 | --- Script execution started ---
+2025-11-03 14:51:15.430782 | Importing libraries...
+2025-11-03 14:51:16.544583 | Libraries imported successfully.
+2025-11-03 14:51:16.544784 | __main__ block entered. Calling main().
+2025-11-03 14:51:16.544876 | --- Auto-matcher batch started ---
+2025-11-03 14:51:16.545042 | INFO: Google Generative AI API configured.
+2025-11-03 14:51:16.545157 | INFO: Configuration loaded successfully.
+2025-11-03 14:51:17.517590 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16875)
+2025-11-03 14:51:18.430522 |   - Evaluating batch of 3 jobs (offset: 0)
+2025-11-03 14:51:21.970047 |     - ⏭️ Skipped Job(ID:16876) with rank D
+2025-11-03 14:51:25.719791 |     - ⏭️ Skipped Job(ID:16877) with rank B
+2025-11-03 14:51:28.943658 |     - ⏭️ Skipped Job(ID:16878) with rank B
+2025-11-03 14:51:29.889121 | Updated last processed IDs for request 22.
+2025-11-03 14:51:29.891615 | --- Auto-matcher batch finished ---
+

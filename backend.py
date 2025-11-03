@@ -936,8 +936,32 @@ def update_engineer_source_json(engineer_id, new_json_str):
             conn.commit(); return True
         except (Exception, psycopg2.Error) as e: print(f"技術者のJSONデータ更新エラー: {e}"); conn.rollback(); return False
 
-def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_name, project_name, conn=None):
-    if not all([job_summary, engineer_summary, engineer_name, project_name]): return "情報が不足しているため、提案メールを生成できませんでした。"
+
+
+def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_name, project_name):
+    """
+    【エラーハンドリング強化・完成版】
+    提案メールを生成する。DB接続の確立もこの関数内で行う。
+    """
+    if not all([job_summary, engineer_summary, engineer_name, project_name]):
+        return "情報が不足しているため、提案メールを生成できませんでした。"
+
+    # ▼▼▼【ここからが修正の核】▼▼▼
+    
+    # --- 1. AIアクティビティログを先に記録する ---
+    # この処理は独立して実行し、万が一失敗してもメール生成は続行する
+    try:
+        # この関数内でDB接続を確立する
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # タイムゾーン対応のため、created_atも明示的に指定する
+                cur.execute("INSERT INTO ai_activity_log (activity_type, created_at) VALUES ('proposal_generation', NOW())")
+            conn.commit()
+    except Exception as db_err:
+        # ログ記録の失敗はコンソールに出力するのみで、ユーザーには影響を与えない
+        print(f"Warning: Failed to record 'proposal_generation' activity log: {db_err}")
+
+    # --- 2. AIに問い合わせてメール本文を生成する ---
     prompt = f"""
         あなたは、クライアントに優秀な技術者を提案する、経験豊富なIT営業担当者です。
         以下の案件情報と技術者情報をもとに、クライアントの心に響く、丁寧で説得力のある提案メールの文面を作成してください。
@@ -963,24 +987,25 @@ def generate_proposal_reply_with_llm(job_summary, engineer_summary, engineer_nam
         それでは、上記の指示に基づいて、最適な提案メールを作成してください。
     """
     try:
-
-        with conn.cursor() as cur:
-            cur.execute("INSERT INTO ai_activity_log (activity_type) VALUES ('proposal_generation')")
-        conn.commit()
-
-        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        # モデル名はご自身の環境に合わせて調整してください
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite') 
         response = model.generate_content(prompt)
+        
+        # 応答が空でないことを確認
+        if not response.text or not response.text.strip():
+            return "AIが応答を生成できませんでした。お手数ですが、再度お試しください。"
+            
         return response.text
+        
     except Exception as e:
-        print(f"Error generating proposal reply with LLM: {e}"); return f"提案メールの生成中にエラーが発生しました: {e}"
+        print(f"Error generating proposal reply with LLM: {e}")
+        # ユーザーに表示する、より具体的なエラーメッセージ
+        return f"提案メールの生成中にAIとの通信エラーが発生しました: {e}"
+    
 
-def save_match_grade(match_id, grade):
-    if not grade: return False
-    with get_db_connection() as conn:
-        try:
-            with conn.cursor() as cursor: cursor.execute("UPDATE matching_results SET grade = %s WHERE id = %s", (grade, match_id))
-            conn.commit(); return True
-        except (Exception, psycopg2.Error) as e: print(f"Error saving match grade for match_id {match_id}: {e}"); conn.rollback(); return False
+
+
+
 
 def get_evaluation_html(grade, font_size='2.5em'):
     if not grade: return ""

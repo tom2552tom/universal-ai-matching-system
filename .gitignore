@@ -20,3 +20,4 @@ run_auto_matcher.py
 *.log
 logs/auto_matcher_cron.log
 logs/auto_matcher_cron.log
+logs/auto_matcher_cron.log
