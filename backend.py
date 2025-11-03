@@ -2678,10 +2678,22 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
             yield "🤖 検索の核となるキーワードをAIが抽出しています..."
             search_keywords = []
             try:
+                # ▼▼▼【ここからが修正の核】▼▼▼
                 keyword_extraction_prompt = f"""
                     以下の技術者情報テキストから、案件を探す上で重要となる検索キーワードを最大10個、カンマ区切りの単語リストとして抜き出してください。
-                    ... (プロンプト本文) ...
+                    「必須」「歓迎」などの枕詞や、経験年数、単価などの付随情報は含めず、技術名や役職名などの単語のみを抽出してください。
+                    例:
+                    入力:「Java(SpringBoot), PHP(CakePHP)でのバックエンド開発経験が豊富です。AWS上でのインフラ構築も対応可能です。」
+                    出力: Java, SpringBoot, PHP, CakePHP, AWS
+
+                    入力テキスト: ---
+                    {original_text}
+                    ---
+                    出力:
                 """
+                # ▲▲▲【修正ここまで】▲▲▲
+
+                
                 model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
                 response = model.generate_content(keyword_extraction_prompt)
                 search_keywords = [kw.strip() for kw in response.text.strip().split(',') if kw.strip()]
