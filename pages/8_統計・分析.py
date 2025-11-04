@@ -225,8 +225,10 @@ def generate_dynamic_ai_advice(dashboard_data_json_str):
         context_summary = {
             "今日の案件登録数": data.get('jobs_today', 0),
             "今日の技術者登録数": data.get('engineers_today', 0),
-            "今日の採用決定数": data.get('adopted_count_today', 0),
+            "今日の新規決定数": data.get('adopted_count_today', 0),
+            "今日の提案数": data.get('proposal_count_total', 0),
             "現在の自動マッチング依頼数": data.get('active_auto_request_count', 0),
+            
             "現在の時刻": datetime.now().strftime('%H:%M'),
         }
 
@@ -278,7 +280,7 @@ def generate_dynamic_ai_advice(dashboard_data_json_str):
 col_title, col_ai_comment = st.columns([3, 2])
 
 with col_title:
-    st.title("🚀 AIシステム リアルタイム分析")
+    st.title("🚀 AI リアルタイム分析")
     st.caption(f"最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 with col_ai_comment:
@@ -329,7 +331,7 @@ st.divider()
 # ==================================
 # === サマリーKPIエリア ===
 # ==================================
-st.header("📊 今日の活動サマリー")
+st.header("📊 今日の活動サマリー（直近24時間）")
 
 def animated_metric(label, value):
     # (この関数の内容は変更なし)
@@ -344,17 +346,20 @@ def animated_metric(label, value):
 
 # ★★★【ここからが修正の核】★★★
 # 4つのKPIを横に並べて表示するために st.columns(4) に変更
-kpi_cols = st.columns(4) 
+kpi_cols = st.columns(5) 
 
 # AI総思考回数を計算
 total_ai_activities = sum(dashboard_data.get('ai_activity_counts', {}).values())
 
 # kpi_mapに「本日のAI総思考回数」を追加
 kpi_map = {
-    "本日登録の案件数": dashboard_data.get('jobs_today', 0),
-    "本日登録の技術者数": dashboard_data.get('engineers_today', 0),
-    "本日のマッチング数": dashboard_data.get('new_matches_today', 0),
-    "本日の採用決定数": dashboard_data.get('adopted_count_today', 0)
+    "案件数": dashboard_data.get('jobs_today', 0),
+    "技術者数": dashboard_data.get('engineers_today', 0),
+    "マッチング数": dashboard_data.get('new_matches_today', 0),
+    "提案数": dashboard_data.get('proposal_count_total', 0),
+    "新規決定": dashboard_data.get('adopted_count_today', 0)
+    
+    
 }
 # ★★★【修正ここまで】★★★
 for col, (label, value) in zip(kpi_cols, kpi_map.items()):
