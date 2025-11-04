@@ -24,6 +24,9 @@ import pandas as pd
 from datetime import datetime, date, time, timedelta
 import pytz # ★★★ タイムゾーンを扱うために追加 ★★★
 
+import feedparser # RSSフィードをパースするためのライブラリ
+import random
+
 
 
 # --- 1. 初期設定と定数 (変更なし) ---
@@ -1432,7 +1435,7 @@ def get_dashboard_data():
     """ダッシュボード表示に必要なデータをDBから取得・集計する"""
     conn = get_db_connection()
     try:
-        #@st.cache_data(ttl=300) # 5分間キャッシュ
+        #@st.cache_data(ttl=3600) # 5分間キャッシュ
         def fetch_data_from_db():
             # 【変更点1】 users テーブルも読み込む
             # 【変更点2】 SQLでJOINして担当者名(username)を取得する
@@ -3547,4 +3550,42 @@ def summarize_ai_learnings(feedback_logs: list) -> str:
     except Exception as e:
         print(f"Error in summarize_ai_learnings: {e}")
         return f"AIによる学習サマリーの生成中にエラーが発生しました: {e}"
+    
+
+
+
+
+
+
+# feedparserがインストールされていなければインストール
+# pip install feedparser
+
+@st.cache_data(ttl=3600) # 1時間キャッシュ
+def get_latest_japan_news(num_headlines=3):
+    """Yahoo!ニュースの主要トピックスRSSから最新ヘッドラインを取得する"""
+    try:
+        feed_url = "https://news.yahoo.co.jp/rss/topics/it.xml"
+        feed = feedparser.parse(feed_url)
+        if feed.entries:
+            headlines = [entry.title for entry in feed.entries[:num_headlines]]
+            return headlines
+        return []
+    except Exception as e:
+        print(f"Error fetching Japan IT news: {e}")
+        return []
+
+@st.cache_data(ttl=3600) # 1時間キャッシュ
+def get_latest_ai_news(num_headlines=3):
+    """Google NewsのAI関連RSSから最新ヘッドラインを取得する"""
+    try:
+        # Google Newsで「AI 人工知能」を検索した結果のRSSフィード
+        feed_url = "https://news.google.com/rss/search?q=%EAI%20%E4%BA%BA%E5%B7%A5%E7%9F%A5%E8%83%BD&hl=ja&gl=JP&ceid=JP:ja"
+        feed = feedparser.parse(feed_url)
+        if feed.entries:
+            headlines = [entry.title.split(' - ')[0] for entry in feed.entries[:num_headlines]]
+            return headlines
+        return []
+    except Exception as e:
+        print(f"Error fetching AI news: {e}")
+        return []
     
