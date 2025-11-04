@@ -3412,3 +3412,139 @@ def get_current_time_str_in_jst(format_str: str = '%Y-%m-%d %H:%M:%S') -> str:
         return datetime.now().strftime(format_str)
     
 
+
+def get_feedback_and_learning_logs(limit: int = 10) -> list:
+    """
+    フィードバックが入力されたマッチング結果と、それに関連する情報を
+    最新順に取得して返す。
+
+    Args:
+        limit (int): 取得する最大件数。
+
+    Returns:
+        list: フィードバック情報の辞書のリスト。
+    """
+    conn = get_db_connection()
+    if not conn:
+        return []
+
+    # 必要な情報をJOINして取得するSQLクエリ
+    sql = """
+        SELECT 
+            r.id as result_id,
+            r.created_at,
+            r.feedback_at,
+            r.feedback_status,
+            r.feedback_comment,
+            r.ai_learning_summary, -- AIの学習結果を保存するカラム（後述）
+            j.id as job_id,
+            j.project_name,
+            j.document as job_document,
+            e.id as engineer_id,
+            e.name as engineer_name,
+            e.document as engineer_document,
+            u.username as feedback_user_name
+        FROM 
+            matching_results r
+        JOIN 
+            jobs j ON r.job_id = j.id
+        JOIN 
+            engineers e ON r.engineer_id = e.id
+        LEFT JOIN 
+            users u ON r.feedback_user_id = u.id
+        WHERE 
+            r.feedback_status IS NOT NULL 
+            AND r.feedback_comment IS NOT NULL 
+            AND r.feedback_comment != ''
+        ORDER BY 
+            r.feedback_at DESC
+        LIMIT %s;
+    """
+    
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql, (limit,))
+            results = cursor.fetchall()
+            # DictRowを通常のdictに変換して返す
+            return [dict(row) for row in results]
+    except Exception as e:
+        print(f"Error in get_feedback_and_learning_logs: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+def save_ai_learning_summary(result_id: int, summary: str) -> bool:
+    """
+    AIの学習結果サマリーをデータベースに保存する。
+    """
+    if not result_id or not summary:
+        return False
+    
+    with get_db_connection() as conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE matching_results SET ai_learning_summary = %s WHERE id = %s",
+                    (summary, result_id)
+                )
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error saving AI learning summary: {e}")
+            conn.rollback()
+            return False
+
+
+
+
+def summarize_ai_learnings(feedback_logs: list) -> str:
+    """
+    複数のフィードバックログを受け取り、AIが全体の傾向を分析・要約する。
+    """
+    if not feedback_logs:
+        return "最近のフィードバックデータがありません。AIは新しい学びを待っています。"
+
+    # AIに渡すための、フィードバックデータの要約テキストを作成
+    feedback_summary_text = ""
+    for i, log in enumerate(feedback_logs):
+        feedback_summary_text += f"\n--- フィードバック {i+1} ---\n"
+        feedback_summary_text += f"案件: {log.get('project_name', 'N/A')}\n"
+        feedback_summary_text += f"技術者: {log.get('engineer_name', 'N/A')}\n"
+        feedback_summary_text += f"担当者評価: {log.get('feedback_status', 'N/A')}\n"
+        feedback_summary_text += f"担当者コメント: {log.get('feedback_comment', 'N/A')}\n"
+
+    # AIへの指示プロンプト
+    prompt = f"""
+    あなたは、IT人材紹介事業のAIシステムの成長をモニタリングする、非常に優秀なAIプロダクトマネージャーです。
+    あなたの仕事は、現場の担当者から寄せられた複数のフィードバックを分析し、そこからAIが何を学習しているのか、どのような改善傾向にあるのかを、経営層に向けて簡潔に報告することです。
+
+    # 絶対的なルール:
+    - **出力は、必ず「-」で始まる3つの箇条書きのテキストのみ**としてください。
+    - **タイトル、見出し、前置き、結びの言葉など、箇条書き以外の要素は一切含めないでください。**
+
+    # 指示:
+    - ポジティブな学習内容と、今後の改善点の両方を含むように、バランス良くまとめてください。
+    - 専門用語は避け、ビジネス的な視点からの報告を心がけてください。
+
+    # 分析対象の最新フィードバックデータ:
+    {feedback_summary_text}
+    ---
+
+    # 報告書の例 (この形式に厳密に従ってください):
+    - 特定のクラウド技術（AWS, Azure）を持つ技術者のマッチング精度が向上している傾向が見られます。
+    - 一方で、単価のミスマッチに関する指摘が散見されるため、評価ロジックの調整が今後の課題です。
+    - 総じて、現場からのフィードバックにより、AIは日々、より実践的なマッチング能力を獲得しています。
+
+    # 最新の学習状況に関するサマリーレポートを、上記のルールに従って3つの箇条書きで作成してください:
+    """
+
+    try:
+        # このタスクは品質が重要なので、より高性能なモデルを使うことを検討しても良い
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Error in summarize_ai_learnings: {e}")
+        return f"AIによる学習サマリーの生成中にエラーが発生しました: {e}"
+    
