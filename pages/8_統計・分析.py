@@ -1,4 +1,4 @@
-# pages/0_ライブモニタリング.py (最終レイアウト版)
+# pages/8_統計・分析.py (最終レイアウト版)
 
 import streamlit as st
 import backend as be
@@ -93,30 +93,32 @@ CHAT_LOG_HTML = """
             msgEl.id = logId;
             msgEl.className = `chat-message ${log.type}`;
 
-            // ▼▼▼【ここからが修正の核】▼▼▼
+            
+            // ▼▼▼【ここが修正箇所】▼▼▼
+            // 新しいURLベースのロジックのみを残す
             if (log.url) {
-                msgEl.href = log.url; // 1. Pythonから渡された完全なURLを設定
-                msgEl.target = "_blank"; // 2. 新しいタブで開くように設定
-                msgEl.rel = "noopener noreferrer"; // 3. セキュリティ対策
+                msgEl.href = log.url;
+                msgEl.target = "_blank";
+                msgEl.rel = "noopener noreferrer";
             } else {
-                // URLがない場合はクリックできないようにする
                 msgEl.href = "javascript:void(0);";
                 msgEl.style.cursor = "default";
             }
             // ▲▲▲【修正ここまで】▲▲▲
 
+            // innerHTML の設定（日時表示に対応させる）
+            msgEl.innerHTML = `
+                <span class="icon">${log.icon}</span>
+                <div class="content-wrapper" style="width: 100%;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <span class="source">${log.source_text}</span>
+                        <span style="font-size: 0.75rem; color: #8b949e; margin-left: 0.5rem; white-space: nowrap;">${log.display_time}</span>
+                    </div>
+                    <span class="text">${log.html_content}</span>
+                </div>
+            `;
 
-            msgEl.href = '#';
-            if (log.link_data) {
-                msgEl.onclick = (event) => {
-                    event.preventDefault();
-                    Streamlit.setComponentValue(log.link_data);
-                };
-            } else {
-                msgEl.style.cursor = 'default';
-                msgEl.onclick = (event) => event.preventDefault();
-            }
-            msgEl.innerHTML = `<span class="icon">${log.icon}</span><div class="content-wrapper"><span class="source">${log.source_text}</span><span class="text">${log.html_content}</span></div>`;
+            
             setTimeout(() => {
                 chatBox.appendChild(msgEl);
                 if (isScrolledToBottom) {
@@ -423,7 +425,7 @@ if live_log_feed:
 
         log_entry['url'] = url
         # ▲▲▲【修正ここまで】▲▲▲
-        
+
 
         link_data = None
         if log['log_type'] == 'input':
@@ -473,25 +475,11 @@ if live_log_feed:
         f'const newLogs = {log_feed_json};'
     )
     
-    clicked_log = st.components.v1.html(
+    st.components.v1.html(
         final_html,
         height=420
     )
 
-
-
-
-    if clicked_log and isinstance(clicked_log, dict):
-        if clicked_log.get("type") == "job":
-            st.session_state['selected_job_id'] = clicked_log.get("id")
-            st.switch_page("pages/6_案件詳細.py")
-        elif clicked_log.get("type") == "engineer":
-            st.session_state['selected_engineer_id'] = clicked_log.get("id")
-            st.switch_page("pages/5_技術者詳細.py")
-else:
-        
-    with st.container(height=400, border=True):
-        st.info("現在、表示するリアルタイム活動ログはありません。")
 
 
 
