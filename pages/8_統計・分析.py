@@ -350,59 +350,93 @@ st.divider()
 
 
 with st.expander("⚙️ リアルタイム活動ログ（クリックで展開）", expanded=False):
-    log_feed_data = []
-    for log in dashboard_data.get('live_log_feed', []):
-        log_entry = {"timestamp": log['created_at'].isoformat()}
-        link_data = None
-        if log['log_type'] == 'input':
-            item_name = log.get('project_name') or log.get('engineer_name', 'N/A')
-            safe_item_name = html.escape(item_name)
-            log_entry['type'] = 'input'
-            log_entry['icon'] = '📥'
-            log_entry['source_text'] = 'NEW DATA'
-            log_entry['html_content'] = f"新しいデータ <strong>{safe_item_name}</strong> が登録されました。"
-            if log.get('job_id'):
-                link_data = {"type": "job", "id": log['job_id']}
-            elif log.get('engineer_id'):
-                link_data = {"type": "engineer", "id": log['engineer_id']}
-        elif log['log_type'] == 'processing':
-            project_name = html.escape(log.get('project_name', 'N/A'))
-            engineer_name = html.escape(log.get('engineer_name', 'N/A'))
-            rank = html.escape(log.get('grade', 'N/A'))
-            log_entry['type'] = 'processing'
-            log_entry['icon'] = '✅'
-            log_entry['source_text'] = 'AI MATCH'
-            log_entry['html_content'] = f"HIT! <strong>{project_name}</strong> ⇔ <strong>{engineer_name}</strong> (Rank: {rank})"
-            if log.get('job_id'):
-                link_data = {"type": "job", "id": log['job_id']}
-        log_entry['link_data'] = link_data
-        log_feed_data.append(log_entry)
+    live_log_feed = dashboard_data.get('live_log_feed', [])
 
-    log_feed_json = json.dumps(log_feed_data)
-    
-    # ★★★【ここからが修正の核】★★★
-    # プレースホルダーを実際のJavaScriptコードに置き換える
-    final_html = CHAT_LOG_HTML.replace(
-        '__LOG_DATA_PLACEHOLDER__', 
-        f'const newLogs = {log_feed_json};'
-    )
-    
-    clicked_log = st.components.v1.html(
-        final_html,
-        height=420
-    )
-    # ★★★【修正ここまで】★★★
+    if live_log_feed:
+        log_feed_data = []
+        for log in live_log_feed:
+            # ★★★【ここからが修正の核】★★★
+            # created_at の処理は変更なし
+            created_at_dt = log['created_at'] 
+            if isinstance(created_at_dt, datetime):
+                display_time_str = created_at_dt.strftime('%m/%d %H:%M')
+                timestamp_iso_str = created_at_dt.isoformat()
+            else:
+                # 万が一 datetime でない場合は、空文字列をデフォルトにするか、エラーログを出す
+                display_time_str = "不明"
+                timestamp_iso_str = str(created_at_dt) # とりあえず文字列にする
 
-    if clicked_log and isinstance(clicked_log, dict):
-        if clicked_log.get("type") == "job":
-            st.session_state['selected_job_id'] = clicked_log.get("id")
-            st.switch_page("pages/6_案件詳細.py")
-        elif clicked_log.get("type") == "engineer":
-            st.session_state['selected_engineer_id'] = clicked_log.get("id")
-            st.switch_page("pages/5_技術者詳細.py")
+            log_entry = {
+                "timestamp": timestamp_iso_str,
+                "display_time": display_time_str
+            }
+            # ▲▲▲【修正ここまで】▲▲▲
+
+            link_data = None
+            if log['log_type'] == 'input':
+                # ▼▼▼【ここからが修正の核】▼▼▼
+                # item_name が確実に文字列になるように修正
+                item_name_raw = log.get('project_name') or log.get('engineer_name')
+                item_name = item_name_raw if item_name_raw is not None else "名称不明"
+                
+                safe_item_name = html.escape(str(item_name)) # str() で確実に文字列に変換してからエスケープ
+                # ▲▲▲【修正ここまで】▲▲▲
+                
+                log_entry['type'] = 'input'
+                log_entry['icon'] = '📥'
+                log_entry['source_text'] = 'NEW DATA'
+                log_entry['html_content'] = f"新しいデータ <strong>{safe_item_name}</strong> が登録されました。"
+                
+                if log.get('job_id'):
+                    link_data = {"type": "job", "id": log['job_id']}
+                elif log.get('engineer_id'):
+                    link_data = {"type": "engineer", "id": log['engineer_id']}
+
+            elif log['log_type'] == 'processing':
+                # ▼▼▼【ここからが修正の核】▼▼▼
+                # name が None の場合に備えてデフォルト値を追加
+                project_name = html.escape(str(log.get('project_name', '名称不明の案件')))
+                engineer_name = html.escape(str(log.get('engineer_name', '名称不明の技術者')))
+                rank = html.escape(str(log.get('grade', 'N/A')))
+                # ▲▲▲【修正ここまで】▲▲▲
+
+                log_entry['type'] = 'processing'
+                log_entry['icon'] = '✅'
+                log_entry['source_text'] = 'AI MATCH'
+                log_entry['html_content'] = f"HIT! <strong>{project_name}</strong> ⇔ <strong>{engineer_name}</strong> (Rank: {rank})"
+                
+                if log.get('job_id'):
+                    link_data = {"type": "job", "id": log['job_id']}
+            
+            log_entry['link_data'] = link_data
+            log_feed_data.append(log_entry)
+
+        log_feed_json = json.dumps(log_feed_data)
+        
+        final_html = CHAT_LOG_HTML.replace(
+            '__LOG_DATA_PLACEHOLDER__', 
+            f'const newLogs = {log_feed_json};'
+        )
+        
+        clicked_log = st.components.v1.html(
+            final_html,
+            height=420
+        )
+
+        if clicked_log and isinstance(clicked_log, dict):
+            if clicked_log.get("type") == "job":
+                st.session_state['selected_job_id'] = clicked_log.get("id")
+                st.switch_page("pages/6_案件詳細.py")
+            elif clicked_log.get("type") == "engineer":
+                st.session_state['selected_engineer_id'] = clicked_log.get("id")
+                st.switch_page("pages/5_技術者詳細.py")
+    else:
+        with st.container(height=400, border=True):
+            st.info("現在、表示するリアルタイム活動ログはありません。")
 
 
 
+            
 st.divider()
 
 # ==================================
