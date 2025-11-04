@@ -3289,19 +3289,43 @@ def get_live_dashboard_data():
             # 10. リアルタイム活動ログ
             cur.execute("""
                 SELECT * FROM (
-                    SELECT 'processing' as log_type, j.project_name, e.name as engineer_name, r.grade, r.created_at, j.id as job_id, e.id as engineer_id
-                    FROM matching_results r JOIN jobs j ON r.job_id = j.id JOIN engineers e ON r.engineer_id = e.id
-                    WHERE r.is_hidden = 0
+                    
+
+                    -- サブクエリ2: 案件登録の最新5件を取得
+                    (SELECT 
+                        'input' as log_type, 
+                        project_name, 
+                        NULL as engineer_name, 
+                        NULL as grade, 
+                        created_at, 
+                        id as job_id, 
+                        NULL as engineer_id
+                    FROM jobs 
+                    WHERE is_hidden = 0
+                    ORDER BY created_at DESC
+                    LIMIT 5)
+
                     UNION ALL
-                    SELECT 'input' as log_type, project_name, NULL as engineer_name, NULL as grade, created_at, id as job_id, NULL as engineer_id
-                    FROM jobs WHERE is_hidden = 0
-                    UNION ALL
-                    SELECT 'input' as log_type, NULL as project_name, name as engineer_name, NULL as grade, created_at, NULL as job_id, id as engineer_id
-                    FROM engineers WHERE is_hidden = 0
+
+                    -- サブクエリ3: 技術者登録の最新5件を取得
+                    (SELECT 
+                        'input' as log_type, 
+                        NULL as project_name, 
+                        name as engineer_name, 
+                        NULL as grade, 
+                        created_at, 
+                        NULL as job_id, 
+                        id as engineer_id
+                    FROM engineers 
+                    WHERE is_hidden = 0
+                    ORDER BY created_at DESC
+                    LIMIT 5)
+                    
                 ) AS combined_logs
-                ORDER BY created_at DESC
-                LIMIT 10;
+                -- 最後に全体を時刻順に並べ替える
+                ORDER BY created_at DESC;
             """)
+                    
             data["live_log_feed"] = [dict(row) for row in cur.fetchall()]
             # ▲▲▲【修正ここまで】▲▲▲
 
