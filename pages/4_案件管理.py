@@ -9,7 +9,10 @@ config = be.load_app_config()
 APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | 案件管理", layout="wide")
 ui.apply_global_styles()
+if not ui.check_password():
+    st.stop() # 認証が通らない場合、ここで処理を停止
 
+    
 st.title("💼 案件管理")
 st.markdown("登録されている案件の一覧表示、検索、並び替えができます。")
 

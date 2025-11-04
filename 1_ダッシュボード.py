@@ -42,7 +42,10 @@ APP_TITLE = config.get("app", {}).get("title", "AI Matching System")
 st.set_page_config(page_title=f"{APP_TITLE} | ダッシュボード", layout="wide")
 ui.apply_global_styles()
 
+if not ui.check_password():
+    st.stop() # 認証が通らない場合、ここで処理を停止
 
+    
 # --- ヘルパー関数 (変更なし) ---
 def get_evaluation_html(grade, font_size='2.5em'):
     if not grade: return ""

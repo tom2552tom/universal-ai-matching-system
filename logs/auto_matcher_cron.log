@@ -1674,3 +1674,435 @@ Processing request for Engineer ID 25465 against new jobs (ID > 16875)
 2025-11-03 14:51:29.889121 | Updated last processed IDs for request 22.
 2025-11-03 14:51:29.891615 | --- Auto-matcher batch finished ---
 
+2025-11-03 15:01:24.598970 | --- Script execution started ---
+2025-11-03 15:01:24.599498 | Importing libraries...
+2025-11-03 15:01:25.564008 | Libraries imported successfully.
+2025-11-03 15:01:25.564277 | __main__ block entered. Calling main().
+2025-11-03 15:01:25.564374 | --- Auto-matcher batch started ---
+2025-11-03 15:01:25.564621 | INFO: Google Generative AI API configured.
+2025-11-03 15:01:25.564977 | INFO: Configuration loaded successfully.
+2025-11-03 15:01:26.459664 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16878)
+2025-11-03 15:01:27.236798 |   - Evaluating batch of 1 jobs (offset: 0)
+2025-11-03 15:01:31.454412 |     - ⏭️ Skipped Job(ID:16879) with rank D
+2025-11-03 15:01:32.476045 | Updated last processed IDs for request 22.
+2025-11-03 15:01:32.477149 | --- Auto-matcher batch finished ---
+
+2025-11-03 15:14:57.853701 | --- Script execution started ---
+2025-11-03 15:14:57.854103 | Importing libraries...
+2025-11-03 15:14:58.986077 | Libraries imported successfully.
+2025-11-03 15:14:58.986423 | __main__ block entered. Calling main().
+2025-11-03 15:14:58.986580 | --- Auto-matcher batch started ---
+2025-11-03 15:14:58.986748 | INFO: Google Generative AI API configured.
+2025-11-03 15:14:58.986854 | INFO: Configuration loaded successfully.
+2025-11-03 15:14:59.836228 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16879)
+2025-11-03 15:15:00.924973 |   - Evaluating batch of 26 jobs (offset: 0)
+2025-11-03 15:15:04.574689 |     - ⏭️ Skipped Job(ID:16880) with rank C
+2025-11-03 15:15:08.689874 |     - ⏭️ Skipped Job(ID:16881) with rank D
+2025-11-03 15:15:11.909124 |     - ⏭️ Skipped Job(ID:16882) with rank D
+2025-11-03 15:15:15.807302 |     - ⏭️ Skipped Job(ID:16883) with rank C
+2025-11-03 15:15:18.775590 |     - ⏭️ Skipped Job(ID:16884) with rank D
+2025-11-03 15:15:22.335570 |     - ⏭️ Skipped Job(ID:16885) with rank C
+2025-11-03 15:15:25.498442 |     - ⏭️ Skipped Job(ID:16886) with rank C
+2025-11-03 15:15:29.910335 |     - ⏭️ Skipped Job(ID:16887) with rank C
+2025-11-03 15:15:32.983969 |     - ⏭️ Skipped Job(ID:16888) with rank D
+2025-11-03 15:15:36.192343 |     - ⏭️ Skipped Job(ID:16889) with rank D
+2025-11-03 15:15:39.132130 |     - ⏭️ Skipped Job(ID:16890) with rank D
+2025-11-03 15:15:42.604362 |     - ⏭️ Skipped Job(ID:16891) with rank C
+2025-11-03 15:15:46.407635 |     ✅ HIT! Eng(25465) vs Job(16892) -> Rank A. Match ID: 1024
+2025-11-03 15:15:49.494271 | ✅ Notification email sent to info@uc-america.net
+2025-11-03 15:15:52.388853 |     ✅ HIT! Eng(25465) vs Job(16893) -> Rank A. Match ID: 1025
+2025-11-03 15:15:57.048386 | ✅ Notification email sent to info@uc-america.net
+2025-11-03 15:16:00.537699 |     - ⏭️ Skipped Job(ID:16894) with rank D
+2025-11-03 15:16:03.872599 |     ✅ HIT! Eng(25465) vs Job(16895) -> Rank A. Match ID: 1026
+2025-11-03 15:16:13.237455 | ✅ Notification email sent to info@uc-america.net
+2025-11-03 15:16:17.132374 |     - ⏭️ Skipped Job(ID:16896) with rank C
+2025-11-03 15:16:21.032480 |     - ⏭️ Skipped Job(ID:16897) with rank D
+2025-11-03 15:16:23.852731 |     - ⏭️ Skipped Job(ID:16898) with rank D
+2025-11-03 15:16:27.272180 |     - ⏭️ Skipped Job(ID:16899) with rank C
+2025-11-03 15:16:30.275768 |     - ⏭️ Skipped Job(ID:16900) with rank D
+2025-11-03 15:16:33.398427 |     - ⏭️ Skipped Job(ID:16901) with rank D
+2025-11-03 15:16:36.803174 |     - ⏭️ Skipped Job(ID:16902) with rank C
+2025-11-03 15:16:40.495313 |     - ⏭️ Skipped Job(ID:16903) with rank D
+2025-11-03 15:16:43.889499 |     - ⏭️ Skipped Job(ID:16904) with rank C
+2025-11-03 15:16:46.914387 |     - ⏭️ Skipped Job(ID:16905) with rank D
+2025-11-03 15:16:47.977263 | Updated last processed IDs for request 22.
+2025-11-03 15:16:47.977814 | --- Auto-matcher batch finished ---
+
+2025-11-03 15:22:43.095425 | --- Script execution started ---
+2025-11-03 15:22:43.095799 | Importing libraries...
+2025-11-03 15:22:44.082439 | Libraries imported successfully.
+2025-11-03 15:22:44.082620 | __main__ block entered. Calling main().
+2025-11-03 15:22:44.082709 | --- Auto-matcher batch started ---
+2025-11-03 15:22:44.082874 | INFO: Google Generative AI API configured.
+2025-11-03 15:22:44.083005 | INFO: Configuration loaded successfully.
+2025-11-03 15:22:44.971117 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16905)
+2025-11-03 15:22:46.069282 |   - Evaluating batch of 25 jobs (offset: 0)
+2025-11-03 15:22:49.321839 |     - ⏭️ Skipped Job(ID:16906) with rank C
+2025-11-03 15:22:52.919822 |     - ⏭️ Skipped Job(ID:16907) with rank B
+2025-11-03 15:22:56.680162 |     - ⏭️ Skipped Job(ID:16908) with rank D
+2025-11-03 15:23:00.232722 |     - ⏭️ Skipped Job(ID:16909) with rank C
+2025-11-03 15:23:03.656783 |     - ⏭️ Skipped Job(ID:16910) with rank C
+2025-11-03 15:23:06.781651 |     - ⏭️ Skipped Job(ID:16911) with rank B
+2025-11-03 15:23:09.717228 |     - ⏭️ Skipped Job(ID:16912) with rank D
+2025-11-03 15:23:12.887473 |     - ⏭️ Skipped Job(ID:16913) with rank B
+2025-11-03 15:23:16.737069 |     - ⏭️ Skipped Job(ID:16914) with rank C
+2025-11-03 15:23:21.851226 |     - ⏭️ Skipped Job(ID:16915) with rank C
+2025-11-03 15:23:25.100644 |     - ⏭️ Skipped Job(ID:16916) with rank B
+2025-11-03 15:23:28.089812 |     - ⏭️ Skipped Job(ID:16917) with rank C
+2025-11-03 15:23:31.233863 |     - ⏭️ Skipped Job(ID:16918) with rank C
+2025-11-03 15:23:34.270374 |     - ⏭️ Skipped Job(ID:16919) with rank D
+2025-11-03 15:23:37.977015 |     - ⏭️ Skipped Job(ID:16920) with rank C
+2025-11-03 15:23:41.820711 |     - ⏭️ Skipped Job(ID:16921) with rank C
+2025-11-03 15:23:44.929997 |     - ⏭️ Skipped Job(ID:16922) with rank C
+2025-11-03 15:23:47.953945 |     - ⏭️ Skipped Job(ID:16923) with rank C
+2025-11-03 15:23:51.285248 |     - ⏭️ Skipped Job(ID:16924) with rank D
+2025-11-03 15:23:54.646971 |     - ⏭️ Skipped Job(ID:16925) with rank B
+2025-11-03 15:23:57.861169 |     - ⏭️ Skipped Job(ID:16926) with rank B
+2025-11-03 15:24:01.646824 |     - ⏭️ Skipped Job(ID:16927) with rank C
+2025-11-03 15:24:04.945647 |     - ⏭️ Skipped Job(ID:16928) with rank C
+2025-11-03 15:24:08.411509 |     - ⏭️ Skipped Job(ID:16929) with rank B
+2025-11-03 15:24:12.242982 |     - ⏭️ Skipped Job(ID:16930) with rank B
+2025-11-03 15:24:14.163372 | Updated last processed IDs for request 22.
+2025-11-03 15:24:14.163850 | --- Auto-matcher batch finished ---
+
+2025-11-03 15:31:37.357428 | --- Script execution started ---
+2025-11-03 15:31:37.357852 | Importing libraries...
+2025-11-03 15:31:38.359842 | Libraries imported successfully.
+2025-11-03 15:31:38.360285 | __main__ block entered. Calling main().
+2025-11-03 15:31:38.360491 | --- Auto-matcher batch started ---
+2025-11-03 15:31:38.360656 | INFO: Google Generative AI API configured.
+2025-11-03 15:31:38.360790 | INFO: Configuration loaded successfully.
+2025-11-03 15:31:39.239784 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16930)
+2025-11-03 15:31:40.271737 |   - Evaluating batch of 7 jobs (offset: 0)
+2025-11-03 15:31:43.390389 |     - ⏭️ Skipped Job(ID:16931) with rank A
+2025-11-03 15:31:46.975390 |     - ⏭️ Skipped Job(ID:16932) with rank A
+2025-11-03 15:31:50.335827 |     - ⏭️ Skipped Job(ID:16933) with rank D
+2025-11-03 15:31:53.677823 |     - ⏭️ Skipped Job(ID:16934) with rank B
+2025-11-03 15:31:57.247890 |     - ⏭️ Skipped Job(ID:16935) with rank D
+2025-11-03 15:32:00.500314 |     - ⏭️ Skipped Job(ID:16936) with rank B
+2025-11-03 15:32:04.049311 |     - ⏭️ Skipped Job(ID:16937) with rank A
+2025-11-03 15:32:05.000008 | Updated last processed IDs for request 22.
+2025-11-03 15:32:05.000829 | --- Auto-matcher batch finished ---
+
+2025-11-03 15:41:37.065838 | --- Script execution started ---
+2025-11-03 15:41:37.066222 | Importing libraries...
+2025-11-03 15:41:38.030601 | Libraries imported successfully.
+2025-11-03 15:41:38.030786 | __main__ block entered. Calling main().
+2025-11-03 15:41:38.030872 | --- Auto-matcher batch started ---
+2025-11-03 15:41:38.031018 | INFO: Google Generative AI API configured.
+2025-11-03 15:41:38.031124 | INFO: Configuration loaded successfully.
+2025-11-03 15:41:38.896409 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16937)
+2025-11-03 15:41:39.760285 |   - Evaluating batch of 4 jobs (offset: 0)
+2025-11-03 15:41:42.952878 |     - ⏭️ Skipped Job(ID:16938) with rank C
+2025-11-03 15:41:45.980449 |     - ⏭️ Skipped Job(ID:16939) with rank C
+2025-11-03 15:41:48.950855 |     - ⏭️ Skipped Job(ID:16940) with rank C
+2025-11-03 15:41:52.487242 |     - ⏭️ Skipped Job(ID:16941) with rank C
+2025-11-03 15:41:53.731797 | Updated last processed IDs for request 22.
+2025-11-03 15:41:53.732710 | --- Auto-matcher batch finished ---
+
+2025-11-03 15:52:06.032964 | --- Script execution started ---
+2025-11-03 15:52:06.033447 | Importing libraries...
+2025-11-03 15:52:07.030290 | Libraries imported successfully.
+2025-11-03 15:52:07.030500 | __main__ block entered. Calling main().
+2025-11-03 15:52:07.030591 | --- Auto-matcher batch started ---
+2025-11-03 15:52:07.030744 | INFO: Google Generative AI API configured.
+2025-11-03 15:52:07.030868 | INFO: Configuration loaded successfully.
+2025-11-03 15:52:07.904754 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16941)
+2025-11-03 15:52:08.826594 |   - Evaluating batch of 14 jobs (offset: 0)
+2025-11-03 15:52:11.948039 |     - ⏭️ Skipped Job(ID:16942) with rank C
+2025-11-03 15:52:14.841800 |     - ⏭️ Skipped Job(ID:16943) with rank C
+2025-11-03 15:52:18.244776 |     - ⏭️ Skipped Job(ID:16944) with rank A
+2025-11-03 15:52:21.392336 |     - ⏭️ Skipped Job(ID:16945) with rank D
+2025-11-03 15:52:24.645854 |     - ⏭️ Skipped Job(ID:16946) with rank D
+2025-11-03 15:52:27.874921 |     - ⏭️ Skipped Job(ID:16947) with rank D
+2025-11-03 15:52:31.466463 |     - ⏭️ Skipped Job(ID:16948) with rank C
+2025-11-03 15:52:34.487247 |     - ⏭️ Skipped Job(ID:16949) with rank C
+2025-11-03 15:52:37.301818 |     - ⏭️ Skipped Job(ID:16950) with rank D
+2025-11-03 15:52:40.474282 |     - ⏭️ Skipped Job(ID:16951) with rank C
+2025-11-03 15:52:43.488413 |     - ⏭️ Skipped Job(ID:16952) with rank C
+2025-11-03 15:52:46.886617 |     - ⏭️ Skipped Job(ID:16953) with rank C
+2025-11-03 15:52:50.040380 |     - ⏭️ Skipped Job(ID:16954) with rank C
+2025-11-03 15:52:53.075658 |     - ⏭️ Skipped Job(ID:16955) with rank B
+2025-11-03 15:52:54.034931 | Updated last processed IDs for request 22.
+2025-11-03 15:52:54.035531 | --- Auto-matcher batch finished ---
+
+2025-11-03 16:07:47.880884 | --- Script execution started ---
+2025-11-03 16:07:47.881301 | Importing libraries...
+2025-11-03 16:07:49.046764 | Libraries imported successfully.
+2025-11-03 16:07:49.046944 | __main__ block entered. Calling main().
+2025-11-03 16:07:49.047034 | --- Auto-matcher batch started ---
+2025-11-03 16:07:49.047162 | INFO: Google Generative AI API configured.
+2025-11-03 16:07:49.047250 | INFO: Configuration loaded successfully.
+2025-11-03 16:07:49.979561 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16955)
+2025-11-03 16:07:51.012825 |   - Evaluating batch of 24 jobs (offset: 0)
+2025-11-03 16:07:54.658719 |     - ⏭️ Skipped Job(ID:16956) with rank C
+2025-11-03 16:07:57.786581 |     - ⏭️ Skipped Job(ID:16957) with rank B
+2025-11-03 16:08:01.011045 |     - ⏭️ Skipped Job(ID:16958) with rank B
+2025-11-03 16:08:03.861854 |     - ⏭️ Skipped Job(ID:16959) with rank C
+2025-11-03 16:08:07.163857 |     - ⏭️ Skipped Job(ID:16960) with rank C
+2025-11-03 16:08:10.336798 |     - ⏭️ Skipped Job(ID:16961) with rank D
+2025-11-03 16:08:14.314123 |     - ⏭️ Skipped Job(ID:16962) with rank C
+2025-11-03 16:08:17.986947 |     - ⏭️ Skipped Job(ID:16963) with rank C
+2025-11-03 16:08:21.098855 |     - ⏭️ Skipped Job(ID:16964) with rank C
+2025-11-03 16:08:24.275275 |     - ⏭️ Skipped Job(ID:16965) with rank C
+2025-11-03 16:08:27.536106 |     - ⏭️ Skipped Job(ID:16966) with rank C
+2025-11-03 16:08:30.600482 |     - ⏭️ Skipped Job(ID:16967) with rank D
+2025-11-03 16:08:34.029275 |     - ⏭️ Skipped Job(ID:16968) with rank C
+2025-11-03 16:08:37.284137 |     - ⏭️ Skipped Job(ID:16969) with rank C
+2025-11-03 16:08:40.715615 |     - ⏭️ Skipped Job(ID:16970) with rank B
+2025-11-03 16:08:44.019412 |     - ⏭️ Skipped Job(ID:16971) with rank C
+2025-11-03 16:08:47.407333 |     - ⏭️ Skipped Job(ID:16972) with rank D
+2025-11-03 16:08:50.877438 |     - ⏭️ Skipped Job(ID:16973) with rank C
+2025-11-03 16:08:53.737312 |     - ⏭️ Skipped Job(ID:16974) with rank D
+2025-11-03 16:08:57.247606 |     - ⏭️ Skipped Job(ID:16975) with rank B
+2025-11-03 16:09:00.614851 |     - ⏭️ Skipped Job(ID:16976) with rank D
+2025-11-03 16:09:03.869933 |     - ⏭️ Skipped Job(ID:16977) with rank C
+2025-11-03 16:09:07.352970 |     - ⏭️ Skipped Job(ID:16978) with rank C
+2025-11-03 16:09:11.955093 |     - ⏭️ Skipped Job(ID:16979) with rank C
+2025-11-03 16:09:15.134629 | Updated last processed IDs for request 22.
+2025-11-03 16:09:15.135332 | --- Auto-matcher batch finished ---
+
+2025-11-03 16:16:47.267289 | --- Script execution started ---
+2025-11-03 16:16:47.267750 | Importing libraries...
+2025-11-03 16:16:48.724104 | Libraries imported successfully.
+2025-11-03 16:16:48.724335 | __main__ block entered. Calling main().
+2025-11-03 16:16:48.724426 | --- Auto-matcher batch started ---
+2025-11-03 16:16:48.724615 | INFO: Google Generative AI API configured.
+2025-11-03 16:16:48.724789 | INFO: Configuration loaded successfully.
+2025-11-03 16:16:49.615419 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 16979)
+2025-11-03 16:16:51.773136 |   - Evaluating batch of 55 jobs (offset: 0)
+2025-11-03 16:16:54.996100 |     - ⏭️ Skipped Job(ID:16980) with rank D
+2025-11-03 16:16:58.561203 |     - ⏭️ Skipped Job(ID:16981) with rank C
+2025-11-03 16:17:02.047102 |     - ⏭️ Skipped Job(ID:16982) with rank D
+2025-11-03 16:17:05.068758 |     - ⏭️ Skipped Job(ID:16983) with rank D
+2025-11-03 16:17:08.285014 |     - ⏭️ Skipped Job(ID:16984) with rank D
+2025-11-03 16:17:12.023578 |     - ⏭️ Skipped Job(ID:16985) with rank C
+2025-11-03 16:17:15.626453 |     - ⏭️ Skipped Job(ID:16986) with rank C
+2025-11-03 16:17:18.836134 |     - ⏭️ Skipped Job(ID:16987) with rank B
+2025-11-03 16:17:21.905174 |     - ⏭️ Skipped Job(ID:16988) with rank A
+2025-11-03 16:17:24.907520 |     - ⏭️ Skipped Job(ID:16989) with rank D
+2025-11-03 16:17:28.576900 |     - ⏭️ Skipped Job(ID:16990) with rank C
+2025-11-03 16:17:32.177039 |     - ⏭️ Skipped Job(ID:16991) with rank A
+2025-11-03 16:17:35.337534 |     - ⏭️ Skipped Job(ID:16992) with rank D
+2025-11-03 16:17:38.822704 |     - ⏭️ Skipped Job(ID:16993) with rank B
+2025-11-03 16:17:41.801861 |     - ⏭️ Skipped Job(ID:16994) with rank C
+2025-11-03 16:17:44.889878 |     - ⏭️ Skipped Job(ID:16995) with rank D
+2025-11-03 16:17:47.820940 |     - ⏭️ Skipped Job(ID:16996) with rank D
+2025-11-03 16:17:50.613674 |     - ⏭️ Skipped Job(ID:16997) with rank C
+2025-11-03 16:17:54.232912 |     - ⏭️ Skipped Job(ID:16998) with rank D
+2025-11-03 16:17:57.195961 |     - ⏭️ Skipped Job(ID:16999) with rank D
+2025-11-03 16:18:00.773221 |     - ⏭️ Skipped Job(ID:17000) with rank C
+2025-11-03 16:18:04.135914 |     - ⏭️ Skipped Job(ID:17001) with rank D
+2025-11-03 16:18:07.428091 |     - ⏭️ Skipped Job(ID:17002) with rank D
+2025-11-03 16:18:10.270570 |     - ⏭️ Skipped Job(ID:17003) with rank D
+2025-11-03 16:18:13.274543 |     - ⏭️ Skipped Job(ID:17004) with rank D
+2025-11-03 16:18:17.011237 |     - ⏭️ Skipped Job(ID:17005) with rank C
+2025-11-03 16:18:20.298556 |     - ⏭️ Skipped Job(ID:17006) with rank C
+2025-11-03 16:18:23.684628 |     - ⏭️ Skipped Job(ID:17007) with rank A
+2025-11-03 16:18:27.223729 |     - ⏭️ Skipped Job(ID:17008) with rank B
+2025-11-03 16:18:30.983223 |     - ⏭️ Skipped Job(ID:17009) with rank B
+2025-11-03 16:18:34.551554 |     - ⏭️ Skipped Job(ID:17010) with rank A
+2025-11-03 16:18:38.288695 |     - ⏭️ Skipped Job(ID:17011) with rank C
+2025-11-03 16:18:41.627504 |     - ⏭️ Skipped Job(ID:17012) with rank C
+2025-11-03 16:18:45.279392 |     - ⏭️ Skipped Job(ID:17013) with rank C
+2025-11-03 16:18:48.959736 |     - ⏭️ Skipped Job(ID:17014) with rank B
+2025-11-03 16:18:52.884734 |     - ⏭️ Skipped Job(ID:17015) with rank A
+2025-11-03 16:18:56.359109 |     - ⏭️ Skipped Job(ID:17016) with rank A
+2025-11-03 16:18:59.271491 |     - ⏭️ Skipped Job(ID:17017) with rank D
+2025-11-03 16:19:03.101359 |     - ⏭️ Skipped Job(ID:17018) with rank C
+2025-11-03 16:19:06.126901 |     - ⏭️ Skipped Job(ID:17019) with rank B
+2025-11-03 16:19:10.108043 |     - ⏭️ Skipped Job(ID:17020) with rank B
+2025-11-03 16:19:13.407197 |     - ⏭️ Skipped Job(ID:17021) with rank D
+2025-11-03 16:19:16.710510 |     - ⏭️ Skipped Job(ID:17022) with rank C
+2025-11-03 16:19:19.584949 |     - ⏭️ Skipped Job(ID:17023) with rank D
+2025-11-03 16:19:23.652086 |     - ⏭️ Skipped Job(ID:17024) with rank C
+2025-11-03 16:19:26.717145 |     - ⏭️ Skipped Job(ID:17025) with rank C
+2025-11-03 16:19:30.426713 |     - ⏭️ Skipped Job(ID:17026) with rank A
+2025-11-03 16:19:33.499116 |     - ⏭️ Skipped Job(ID:17027) with rank D
+2025-11-03 16:19:36.908745 |     - ⏭️ Skipped Job(ID:17028) with rank D
+2025-11-03 16:19:39.493104 |     - ⏭️ Skipped Job(ID:17029) with rank D
+2025-11-03 16:19:42.305843 |     - ⏭️ Skipped Job(ID:17030) with rank D
+2025-11-03 16:19:46.061986 |     - ⏭️ Skipped Job(ID:17031) with rank C
+2025-11-03 16:19:49.516357 |     - ⏭️ Skipped Job(ID:17032) with rank B
+2025-11-03 16:19:53.028867 |     - ⏭️ Skipped Job(ID:17033) with rank C
+2025-11-03 16:19:56.224296 |     - ⏭️ Skipped Job(ID:17034) with rank D
+2025-11-03 16:19:57.323741 | Updated last processed IDs for request 22.
+2025-11-03 16:19:57.324409 | --- Auto-matcher batch finished ---
+
+2025-11-03 16:26:25.222214 | --- Script execution started ---
+2025-11-03 16:26:25.222658 | Importing libraries...
+2025-11-03 16:26:26.195915 | Libraries imported successfully.
+2025-11-03 16:26:26.196217 | __main__ block entered. Calling main().
+2025-11-03 16:26:26.196334 | --- Auto-matcher batch started ---
+2025-11-03 16:26:26.196483 | INFO: Google Generative AI API configured.
+2025-11-03 16:26:26.196569 | INFO: Configuration loaded successfully.
+2025-11-03 16:26:27.090870 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 17034)
+2025-11-03 16:26:29.639218 |   - Evaluating batch of 32 jobs (offset: 0)
+2025-11-03 16:26:33.284401 |     - ⏭️ Skipped Job(ID:17035) with rank C
+2025-11-03 16:26:36.817755 |     - ⏭️ Skipped Job(ID:17036) with rank C
+2025-11-03 16:26:39.789827 |     - ⏭️ Skipped Job(ID:17037) with rank D
+2025-11-03 16:26:43.212819 |     - ⏭️ Skipped Job(ID:17038) with rank D
+2025-11-03 16:26:46.568479 |     - ⏭️ Skipped Job(ID:17039) with rank C
+2025-11-03 16:26:50.042354 |     - ⏭️ Skipped Job(ID:17040) with rank C
+2025-11-03 16:26:52.874918 |     - ⏭️ Skipped Job(ID:17041) with rank D
+2025-11-03 16:26:56.827839 |     - ⏭️ Skipped Job(ID:17042) with rank C
+2025-11-03 16:27:00.336130 |     - ⏭️ Skipped Job(ID:17043) with rank B
+2025-11-03 16:27:03.699094 |     - ⏭️ Skipped Job(ID:17044) with rank C
+2025-11-03 16:27:06.766807 |     - ⏭️ Skipped Job(ID:17045) with rank C
+2025-11-03 16:27:09.668981 |     - ⏭️ Skipped Job(ID:17046) with rank C
+2025-11-03 16:27:13.560521 |     - ⏭️ Skipped Job(ID:17047) with rank B
+2025-11-03 16:27:16.943006 |     - ⏭️ Skipped Job(ID:17048) with rank C
+2025-11-03 16:27:20.468152 |     - ⏭️ Skipped Job(ID:17049) with rank B
+2025-11-03 16:27:24.241705 |     - ⏭️ Skipped Job(ID:17050) with rank B
+2025-11-03 16:27:27.406941 |     - ⏭️ Skipped Job(ID:17051) with rank A
+2025-11-03 16:27:30.848325 |     - ⏭️ Skipped Job(ID:17052) with rank C
+2025-11-03 16:27:33.907447 |     - ⏭️ Skipped Job(ID:17053) with rank D
+2025-11-03 16:27:37.129773 |     - ⏭️ Skipped Job(ID:17054) with rank C
+2025-11-03 16:27:40.353669 |     - ⏭️ Skipped Job(ID:17055) with rank C
+2025-11-03 16:27:43.139035 |     - ⏭️ Skipped Job(ID:17056) with rank A
+2025-11-03 16:27:46.522883 |     - ⏭️ Skipped Job(ID:17057) with rank C
+2025-11-03 16:27:50.117694 |     - ⏭️ Skipped Job(ID:17058) with rank B
+2025-11-03 16:27:52.729266 |     - ⏭️ Skipped Job(ID:17059) with rank D
+2025-11-03 16:27:55.367312 |     - ⏭️ Skipped Job(ID:17060) with rank D
+2025-11-03 16:27:58.141561 |     - ⏭️ Skipped Job(ID:17061) with rank C
+2025-11-03 16:28:01.360490 |     - ⏭️ Skipped Job(ID:17062) with rank B
+2025-11-03 16:28:04.780894 |     - ⏭️ Skipped Job(ID:17063) with rank C
+2025-11-03 16:28:07.923268 |     - ⏭️ Skipped Job(ID:17064) with rank D
+2025-11-03 16:28:10.986825 |     - ⏭️ Skipped Job(ID:17065) with rank D
+2025-11-03 16:28:14.021590 |     - ⏭️ Skipped Job(ID:17066) with rank D
+2025-11-03 16:28:15.055298 | Updated last processed IDs for request 22.
+2025-11-03 16:28:15.055922 | --- Auto-matcher batch finished ---
+
+2025-11-03 16:37:29.149914 | --- Script execution started ---
+2025-11-03 16:37:29.150348 | Importing libraries...
+2025-11-03 16:37:30.273070 | Libraries imported successfully.
+2025-11-03 16:37:30.273366 | __main__ block entered. Calling main().
+2025-11-03 16:37:30.273460 | --- Auto-matcher batch started ---
+2025-11-03 16:37:30.273629 | INFO: Google Generative AI API configured.
+2025-11-03 16:37:30.273735 | INFO: Configuration loaded successfully.
+2025-11-03 16:37:31.303731 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 17066)
+2025-11-03 16:37:32.331121 |   - Evaluating batch of 29 jobs (offset: 0)
+2025-11-03 16:37:35.477953 |     - ⏭️ Skipped Job(ID:17067) with rank C
+2025-11-03 16:37:39.010456 |     - ⏭️ Skipped Job(ID:17068) with rank C
+2025-11-03 16:37:42.344324 |     - ⏭️ Skipped Job(ID:17069) with rank C
+2025-11-03 16:37:45.392595 |     - ⏭️ Skipped Job(ID:17070) with rank D
+2025-11-03 16:37:48.855169 |     - ⏭️ Skipped Job(ID:17071) with rank B
+2025-11-03 16:37:51.989137 |     - ⏭️ Skipped Job(ID:17072) with rank C
+2025-11-03 16:37:55.676266 |     - ⏭️ Skipped Job(ID:17073) with rank C
+2025-11-03 16:37:58.861983 |     - ⏭️ Skipped Job(ID:17074) with rank D
+2025-11-03 16:38:02.035314 |     - ⏭️ Skipped Job(ID:17075) with rank C
+2025-11-03 16:38:05.582471 |     - ⏭️ Skipped Job(ID:17076) with rank A
+2025-11-03 16:38:09.274462 |     - ⏭️ Skipped Job(ID:17077) with rank C
+2025-11-03 16:38:12.877942 |     - ⏭️ Skipped Job(ID:17078) with rank C
+2025-11-03 16:38:16.135356 |     - ⏭️ Skipped Job(ID:17079) with rank C
+2025-11-03 16:38:19.956101 |     - ⏭️ Skipped Job(ID:17080) with rank B
+2025-11-03 16:38:22.871394 |     - ⏭️ Skipped Job(ID:17081) with rank D
+2025-11-03 16:38:26.240294 |     - ⏭️ Skipped Job(ID:17082) with rank B
+2025-11-03 16:38:29.574702 |     - ⏭️ Skipped Job(ID:17083) with rank C
+2025-11-03 16:38:33.034756 |     - ⏭️ Skipped Job(ID:17084) with rank B
+2025-11-03 16:38:36.516254 |     - ⏭️ Skipped Job(ID:17085) with rank B
+2025-11-03 16:38:39.983602 |     - ⏭️ Skipped Job(ID:17086) with rank C
+2025-11-03 16:38:43.421732 |     - ⏭️ Skipped Job(ID:17087) with rank D
+2025-11-03 16:38:46.991228 |     - ⏭️ Skipped Job(ID:17088) with rank B
+2025-11-03 16:38:50.036926 |     - ⏭️ Skipped Job(ID:17089) with rank B
+2025-11-03 16:38:52.990814 |     - ⏭️ Skipped Job(ID:17090) with rank D
+2025-11-03 16:38:56.507444 |     - ⏭️ Skipped Job(ID:17091) with rank B
+2025-11-03 16:38:59.584346 |     - ⏭️ Skipped Job(ID:17092) with rank C
+2025-11-03 16:39:02.797595 |     - ⏭️ Skipped Job(ID:17093) with rank C
+2025-11-03 16:39:06.063112 |     - ⏭️ Skipped Job(ID:17094) with rank C
+2025-11-03 16:39:10.420400 |     - ⏭️ Skipped Job(ID:17095) with rank B
+2025-11-03 16:39:11.738535 | Updated last processed IDs for request 22.
+2025-11-03 16:39:11.740148 | --- Auto-matcher batch finished ---
+
+2025-11-03 16:47:39.052111 | --- Script execution started ---
+2025-11-03 16:47:39.052557 | Importing libraries...
+2025-11-03 16:47:40.343841 | Libraries imported successfully.
+2025-11-03 16:47:40.344087 | __main__ block entered. Calling main().
+2025-11-03 16:47:40.344236 | --- Auto-matcher batch started ---
+2025-11-03 16:47:40.344392 | INFO: Google Generative AI API configured.
+2025-11-03 16:47:40.344533 | INFO: Configuration loaded successfully.
+2025-11-03 16:47:41.258511 | 
+Processing request for Engineer ID 25465 against new jobs (ID > 17095)
+2025-11-03 16:47:42.527291 |   - Evaluating batch of 69 jobs (offset: 0)
+2025-11-03 16:47:46.018811 |     - ⏭️ Skipped Job(ID:17096) with rank C
+2025-11-03 16:47:49.582355 |     - ⏭️ Skipped Job(ID:17097) with rank C
+2025-11-03 16:47:52.695149 |     - ⏭️ Skipped Job(ID:17098) with rank D
+2025-11-03 16:47:56.240681 |     - ⏭️ Skipped Job(ID:17099) with rank C
+2025-11-03 16:47:59.522135 |     - ⏭️ Skipped Job(ID:17100) with rank A
+2025-11-03 16:48:02.531415 |     - ⏭️ Skipped Job(ID:17101) with rank D
+2025-11-03 16:48:06.291590 |     - ⏭️ Skipped Job(ID:17102) with rank C
+2025-11-03 16:48:09.156014 |     - ⏭️ Skipped Job(ID:17103) with rank D
+2025-11-03 16:48:14.018801 |     - ⏭️ Skipped Job(ID:17104) with rank A
+2025-11-03 16:48:17.547773 |     - ⏭️ Skipped Job(ID:17105) with rank C
+2025-11-03 16:48:20.500117 |     - ⏭️ Skipped Job(ID:17106) with rank D
+2025-11-03 16:48:24.019747 |     - ⏭️ Skipped Job(ID:17107) with rank C
+2025-11-03 16:48:26.938971 |     - ⏭️ Skipped Job(ID:17108) with rank C
+2025-11-03 16:48:29.735422 |     - ⏭️ Skipped Job(ID:17109) with rank C
+2025-11-03 16:48:33.127627 |     - ⏭️ Skipped Job(ID:17110) with rank C
+2025-11-03 16:48:36.684156 |     - ⏭️ Skipped Job(ID:17111) with rank C
+2025-11-03 16:48:40.877373 |     - ⏭️ Skipped Job(ID:17112) with rank C
+2025-11-03 16:48:43.591900 |     - ⏭️ Skipped Job(ID:17113) with rank D
+2025-11-03 16:48:46.900776 |     - ⏭️ Skipped Job(ID:17114) with rank B
+2025-11-03 16:48:50.122567 |     - ⏭️ Skipped Job(ID:17115) with rank D
+2025-11-03 16:48:52.970529 |     - ⏭️ Skipped Job(ID:17116) with rank D
+2025-11-03 16:48:55.657128 |     - ⏭️ Skipped Job(ID:17117) with rank D
+2025-11-03 16:48:58.599908 |     - ⏭️ Skipped Job(ID:17118) with rank C
+2025-11-03 16:49:02.122168 |     - ⏭️ Skipped Job(ID:17119) with rank C
+2025-11-03 16:49:05.020531 |     - ⏭️ Skipped Job(ID:17120) with rank D
+2025-11-03 16:49:08.447195 |     - ⏭️ Skipped Job(ID:17121) with rank C
+2025-11-03 16:49:12.189162 |     - ⏭️ Skipped Job(ID:17122) with rank C
+2025-11-03 16:49:15.426089 |     - ⏭️ Skipped Job(ID:17123) with rank C
+2025-11-03 16:49:18.937011 |     - ⏭️ Skipped Job(ID:17124) with rank D
+2025-11-03 16:49:22.205748 |     - ⏭️ Skipped Job(ID:17125) with rank C
+2025-11-03 16:49:25.538015 |     - ⏭️ Skipped Job(ID:17126) with rank D
+2025-11-03 16:49:28.505453 |     - ⏭️ Skipped Job(ID:17127) with rank D
+2025-11-03 16:49:32.286442 |     - ⏭️ Skipped Job(ID:17128) with rank A
+2025-11-03 16:49:35.643438 |     - ⏭️ Skipped Job(ID:17129) with rank C
+2025-11-03 16:49:39.430420 |     - ⏭️ Skipped Job(ID:17130) with rank B
+2025-11-03 16:49:42.892546 |     - ⏭️ Skipped Job(ID:17131) with rank B
+2025-11-03 16:49:46.025160 |     - ⏭️ Skipped Job(ID:17132) with rank C
+2025-11-03 16:49:49.184008 |     - ⏭️ Skipped Job(ID:17133) with rank C
+2025-11-03 16:49:52.408176 |     - ⏭️ Skipped Job(ID:17134) with rank C
+2025-11-03 16:49:56.260271 |     - ⏭️ Skipped Job(ID:17135) with rank C
+2025-11-03 16:49:59.273745 |     - ⏭️ Skipped Job(ID:17136) with rank B
+2025-11-03 16:50:03.105291 |     - ⏭️ Skipped Job(ID:17137) with rank C
+2025-11-03 16:50:06.307347 |     - ⏭️ Skipped Job(ID:17138) with rank C
+2025-11-03 16:50:10.180974 |     - ⏭️ Skipped Job(ID:17139) with rank D
+2025-11-03 16:50:13.922038 |     - ⏭️ Skipped Job(ID:17140) with rank B
+2025-11-03 16:50:17.079623 |     - ⏭️ Skipped Job(ID:17141) with rank B
+2025-11-03 16:50:20.012312 |     - ⏭️ Skipped Job(ID:17142) with rank C
+2025-11-03 16:50:23.725238 |     - ⏭️ Skipped Job(ID:17143) with rank D
+2025-11-03 16:50:27.534864 |     - ⏭️ Skipped Job(ID:17144) with rank B
+2025-11-03 16:50:32.249818 |     - ⏭️ Skipped Job(ID:17145) with rank A
+2025-11-03 16:50:35.816555 |     - ⏭️ Skipped Job(ID:17146) with rank D
+2025-11-03 16:50:39.401707 |     - ⏭️ Skipped Job(ID:17147) with rank D
+2025-11-03 16:50:42.888385 |     - ⏭️ Skipped Job(ID:17148) with rank A
+2025-11-03 16:50:45.695213 |     - ⏭️ Skipped Job(ID:17149) with rank D
+2025-11-03 16:50:49.129411 |     - ⏭️ Skipped Job(ID:17150) with rank D
+2025-11-03 16:50:52.402302 |     - ⏭️ Skipped Job(ID:17151) with rank C
+2025-11-03 16:50:55.671744 |     - ⏭️ Skipped Job(ID:17152) with rank C
+2025-11-03 16:50:59.036832 |     - ⏭️ Skipped Job(ID:17153) with rank B
+2025-11-03 16:51:01.926713 |     - ⏭️ Skipped Job(ID:17154) with rank D
+2025-11-03 16:51:05.394464 |     - ⏭️ Skipped Job(ID:17155) with rank C
+2025-11-03 16:51:08.304202 |     - ⏭️ Skipped Job(ID:17156) with rank D
+2025-11-03 16:51:12.161122 |     - ⏭️ Skipped Job(ID:17157) with rank A
+2025-11-03 16:51:15.583133 |     - ⏭️ Skipped Job(ID:17158) with rank C
+2025-11-03 16:51:18.940459 |     - ⏭️ Skipped Job(ID:17159) with rank D
+2025-11-03 16:51:22.377019 |     - ⏭️ Skipped Job(ID:17160) with rank C
+2025-11-03 16:51:25.933394 |     - ⏭️ Skipped Job(ID:17161) with rank D
+2025-11-03 16:51:29.163065 |     - ⏭️ Skipped Job(ID:17162) with rank C
+2025-11-03 16:51:32.472853 |     - ⏭️ Skipped Job(ID:17163) with rank C
+2025-11-03 16:51:36.379936 |     - ⏭️ Skipped Job(ID:17164) with rank B
+2025-11-03 16:51:37.360454 | Updated last processed IDs for request 22.
+2025-11-03 16:51:37.360947 | --- Auto-matcher batch finished ---
+

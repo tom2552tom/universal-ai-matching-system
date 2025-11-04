@@ -19,7 +19,9 @@ except ImportError:
 ui.apply_global_styles()
 st.set_page_config(page_title="技術者詳細", layout="wide")
 
-
+if not ui.check_password():
+    st.stop() # 認証が通らない場合、ここで処理を停止
+    
 
 # ▼▼▼【ここからが修正箇所】▼▼▼
 

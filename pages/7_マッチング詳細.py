@@ -19,7 +19,10 @@ import backend as be
 
 ui.apply_global_styles()
 st.set_page_config(page_title="マッチング詳細", layout="wide")
+if not ui.check_password():
+    st.stop() # 認証が通らない場合、ここで処理を停止
 
+    
 st.title("マッチング詳細")
 
 # --- マッチングIDの取得ロジック ---
