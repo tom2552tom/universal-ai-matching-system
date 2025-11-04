@@ -3289,61 +3289,54 @@ def get_live_dashboard_data():
             # 10. リアルタイム活動ログ
             cur.execute("""
                 SELECT * FROM (
-                    -- サブクエリ1: マッチング結果の最新5件を取得
-                    (SELECT 
+                    SELECT 
                         'processing' as log_type, 
                         j.project_name, 
                         e.name as engineer_name, 
                         r.grade, 
                         r.created_at, 
                         j.id as job_id, 
-                        e.id as engineer_id
+                        e.id as engineer_id,
+                        r.id as result_id  -- ★★★ マッチング結果IDを追加
                     FROM matching_results r 
                     JOIN jobs j ON r.job_id = j.id 
                     JOIN engineers e ON r.engineer_id = e.id
                     WHERE r.is_hidden = 0
-                    ORDER BY r.created_at DESC
-                    LIMIT 5)
 
                     UNION ALL
 
-                    -- サブクエリ2: 案件登録の最新5件を取得
-                    (SELECT 
+                    SELECT 
                         'input' as log_type, 
                         project_name, 
                         NULL as engineer_name, 
                         NULL as grade, 
                         created_at, 
                         id as job_id, 
-                        NULL as engineer_id
-                    FROM jobs 
-                    WHERE is_hidden = 0
-                    ORDER BY created_at DESC
-                    LIMIT 5)
+                        NULL as engineer_id,
+                        NULL as result_id -- ★★★ 型を合わせるためNULLを追加
+
+                    FROM jobs WHERE is_hidden = 0
 
                     UNION ALL
 
-                    -- サブクエリ3: 技術者登録の最新5件を取得
-                    (SELECT 
+                    SELECT 
                         'input' as log_type, 
                         NULL as project_name, 
                         name as engineer_name, 
                         NULL as grade, 
                         created_at, 
                         NULL as job_id, 
-                        id as engineer_id
-                    FROM engineers 
-                    WHERE is_hidden = 0
-                    ORDER BY created_at DESC
-                    LIMIT 5)
-                    
+                        id as engineer_id,
+                        NULL as result_id -- ★★★ 型を合わせるためNULLを追加
+                        
+                    FROM engineers WHERE is_hidden = 0
                 ) AS combined_logs
-                -- 最後に全体を時刻順に並べ替える
-                ORDER BY created_at DESC;
+                ORDER BY created_at DESC
+                LIMIT 10;
             """)
-                    
             data["live_log_feed"] = [dict(row) for row in cur.fetchall()]
             # ▲▲▲【修正ここまで】▲▲▲
+                    
 
 
 

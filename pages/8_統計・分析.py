@@ -92,6 +92,20 @@ CHAT_LOG_HTML = """
             const msgEl = document.createElement('a');
             msgEl.id = logId;
             msgEl.className = `chat-message ${log.type}`;
+
+            // ▼▼▼【ここからが修正の核】▼▼▼
+            if (log.url) {
+                msgEl.href = log.url; // 1. Pythonから渡された完全なURLを設定
+                msgEl.target = "_blank"; // 2. 新しいタブで開くように設定
+                msgEl.rel = "noopener noreferrer"; // 3. セキュリティ対策
+            } else {
+                // URLがない場合はクリックできないようにする
+                msgEl.href = "javascript:void(0);";
+                msgEl.style.cursor = "default";
+            }
+            // ▲▲▲【修正ここまで】▲▲▲
+
+
             msgEl.href = '#';
             if (log.link_data) {
                 msgEl.onclick = (event) => {
@@ -355,6 +369,19 @@ live_log_feed = dashboard_data.get('live_log_feed', [])
 
 if live_log_feed:
     log_feed_data = []
+
+    # ▼▼▼【ここからが修正の核】▼▼▼
+    # st.secrets からアプリケーションのベースURLを安全に取得
+    try:
+        APP_BASE_URL = st.secrets.app_settings.base_url
+    except (AttributeError, KeyError):
+        # secretsに設定がない場合のフォールバック（相対パスになる）
+        APP_BASE_URL = "" 
+        st.warning("`secrets.toml`に [app_settings] base_url が設定されていません。ログのリンクが正しく機能しない可能性があります。")
+    # ▲▲▲【修正ここまで】▲▲▲
+
+
+
     for log in live_log_feed:
         # ★★★【ここからが修正の核】★★★
         # created_at の処理は変更なし
@@ -373,6 +400,31 @@ if live_log_feed:
         }
         # ▲▲▲【修正ここまで】▲▲▲
 
+
+
+        # ▼▼▼【ここからが修正の核】▼▼▼
+        # URL生成ロジックを、ログの種類に応じて変更
+        url = None
+        log_type = log.get('log_type')
+        
+        if log_type == 'processing' and log.get('result_id'):
+            # AI MATCH ログの場合、マッチング詳細ページへのリンクを生成
+            page_path = "マッチング詳細"
+            url = f"{APP_BASE_URL}/{page_path}?result_id={log.get('result_id')}"
+        
+        elif log_type == 'input':
+            # NEW DATA ログの場合、案件または技術者詳細ページへのリンクを生成
+            if log.get('job_id'):
+                page_path = "案件詳細"
+                url = f"{APP_BASE_URL}/{page_path}?id={log.get('job_id')}"
+            elif log.get('engineer_id'):
+                page_path = "技術者詳細"
+                url = f"{APP_BASE_URL}/{page_path}?id={log.get('engineer_id')}"
+
+        log_entry['url'] = url
+        # ▲▲▲【修正ここまで】▲▲▲
+        
+
         link_data = None
         if log['log_type'] == 'input':
             # ▼▼▼【ここからが修正の核】▼▼▼
@@ -386,12 +438,14 @@ if live_log_feed:
             log_entry['type'] = 'input'
             log_entry['icon'] = '📥'
             log_entry['source_text'] = 'NEW DATA'
-            log_entry['html_content'] = f"新しいデータ <strong>{safe_item_name}</strong> が登録されました。"
+            
             
             if log.get('job_id'):
                 link_data = {"type": "job", "id": log['job_id']}
+                log_entry['html_content'] = f"新しい案件 <strong>{safe_item_name}</strong> が登録されました。"
             elif log.get('engineer_id'):
                 link_data = {"type": "engineer", "id": log['engineer_id']}
+                log_entry['html_content'] = f"新しい技術者 <strong>{safe_item_name}</strong> が登録されました。"
 
         elif log['log_type'] == 'processing':
             # ▼▼▼【ここからが修正の核】▼▼▼
