@@ -112,7 +112,7 @@ CHAT_LOG_HTML = """
                 <div class="content-wrapper" style="width: 100%;">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <span class="source">${log.source_text}</span>
-                        <span style="font-size: 0.75rem; color: #8b949e; margin-left: 0.5rem; white-space: nowrap;">${log.display_time}</span>
+                        <!--<span style="font-size: 0.75rem; color: #8b949e; margin-left: 0.5rem; white-space: nowrap;">${log.display_time}</span>-->
                     </div>
                     <span class="text">${log.html_content}</span>
                 </div>
@@ -232,31 +232,55 @@ def generate_dynamic_ai_advice(dashboard_data_json_str):
             "現在の時刻": datetime.now().strftime('%H:%M'),
         }
 
-        # AIへの指示（プロンプト）
-        prompt = f"""
-        あなたは、企業の営業担当者やリクルーターが利用するAIマッチングシステムの優秀なアシスタントです。
-        以下のシステム状況を分析し、ユーザーのモチベーションを高め、次にしてほしい行動を優しく促すような、短くて気の利いたアドバイスを生成してください。
 
-        # 制約条件:
-        - 非常に簡潔に、40字以内で記述してください。
-        - 親しみやすいですが、プロフェッショナルなトーンを保ってください。
-        - 生成するのはアドバイスの文章のみです。余計な前置きや記号は含めないでください。
+        prompt = f"""
+        あなたは、IT人材紹介事業を支援する、非常に思慮深く、教育熱心なAIコンシェルジュです。
+        あなたの重要な役割の一つは、ユーザーが「自動マッチング」機能の価値を理解し、使いこなせるように、最適なタイミングで優しくガイドすることです。
+
+        # あなたの思考プロセス:
+        1.  まず、与えられたシステム状況、特に「自動マッチング」の利用状況を分析します。
+        2.  状況に応じて、以下の3つのレベルのいずれかのアドバイスを生成するのが適切かを判断します。
+            - **レベル3 (チュートリアル)**: 機能が全く使われていないなら、機能の価値と具体的な使い方を丁寧に教える。
+            - **レベル2 (メリット訴求)**: 機能は使われているが、登録すべき新しい有望なアイテムがあるなら、そのメリットを伝えて登録を促す。
+            - **レベル1 (リマインダー)**: 上記以外の場合は、日々の業務に役立つ短いアドバイスを送る。
+        3.  判断したレベルに従って、最も効果的なメッセージを生成します。
+
+        # アドバイスのレベルと具体例:
+
+        ## レベル3: 機能が全く使われていない場合 (最優先)
+        - (状況: 自動マッチング依頼数が0)
+        - **目的**: 最初の「一歩」を踏み出させる。
+        - **出力例**:
+        「『自動マッチング』は、あなたが眠っている間もAIが最適なペアを探し続ける強力な味方です。使い方は簡単。気になる案件や技術者の詳細ページで『🤖 自動マッチングを開始』を押すだけ。まずは一件試してみませんか？」
+
+        ## レベル2: 登録すべき有望なアイテムがある場合
+        - (状況: 未登録の有望アイテムが1件以上)
+        - **目的**: 機会損失を防ぎ、具体的な登録アクションを促す。
+        - **出力例**:
+        「新着の有望な案件が、まだAIの見守り対象になっていません。自動マッチングに登録すれば、最適な候補者が現れた際に即座にお知らせします。手間をかけずにチャンスを掴みましょう。」
+
+        ## レベル1: 上記以外の通常時
+        - (目的): 日々の業務をサポートする。
+        - **出力例**:
+        - 「確度の高いSランクのマッチングが見つかりました。優先的なアプローチがおすすめです。」
+        - 「結果待ちの案件が増えていますね。クライアントへの丁寧な状況確認が、次の展開を呼ぶかもしれません。」
+
+        # 制約:
+        - レベル3と2の場合は、少し長くなっても構いませんが、分かりやすさを最優先してください。
+        - レベル1の場合は、40字以内で簡潔にしてください。
+        - 常に丁寧で、ユーザーに寄り添うプロフェッショナルなトーンを維持してください。
+        - 出力はアドバイスの文章のみです。
 
         # システムの現在の状況:
         {json.dumps(context_summary, indent=2, ensure_ascii=False)}
 
-        # アドバイスの例:
-        - 新しい案件がまだ未チェックですよ！
-        - 採用決定おめでとうございます！素晴らしい成果です！
-        - 午後もこの調子で頑張りましょう！
-
-        # アドバイスを生成してください:
+        # あなたからの的確なガイダンスを生成してください:
         """
 
         # --- 重要：ご自身の環境に合わせて修正してください ---
         # バックエンドのGemini呼び出し関数を使用します。
         # "be.ask_gemini" の部分を、backend.pyに実際に存在する関数名に置き換えてください。
-        advice = be.generate_text(prompt, max_tokens=60) # 例: be.generate_text に修正
+        advice = be.generate_text(prompt, max_tokens=500) # 例: be.generate_text に修正
 
         # AIの応答が空でないことを確認
         if advice and advice.strip():
@@ -273,58 +297,57 @@ def generate_dynamic_ai_advice(dashboard_data_json_str):
 
 # ★★★【ここまでが追加する関数の定義】★★★
 
-
+import pytz
 # ==================================
 # === ヘッダーエリア ===
 # ==================================
-col_title, col_ai_comment = st.columns([3, 2])
+col_title, col_ai_comment = st.columns([5, 4])
 
 with col_title:
     st.title("🚀 AI リアルタイム分析")
-    st.caption(f"最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    jst_now_str = be.get_current_time_str_in_jst()
 
-with col_ai_comment:
-    st.write("") 
-    with st.container(border=True):
-        col_anim, col_text = st.columns([1, 2], gap="small")
-        with col_anim:
-            # (Lottieアニメーションのコードは変更なし)
-            lottie_url = "https://lottie.host/6944da1c-9801-4b65-a942-df7837fc1157/eFcKKThSu1.json"
-            lottie_json = load_lottie_url(lottie_url)
-            if lottie_json:
-                st_lottie(lottie_json, speed=1, height=100, width=100, key="ai_robot") 
+    st.caption(f"最終更新: {jst_now_str} (JST)")
 
-        with col_text:
-            st.markdown("###### 🤖 AIからのアドバイス")
-            
 
-            # ★★★【ここからが修正の核】★★★
+# --- 2. AIからのアドバイスセクション ---
+# st.container を使ってセクション全体をグループ化
+with st.container(border=True):
+    # a. アイコンとタイトルを横並びにする
+    col_icon, col_title_text = st.columns([1, 15], vertical_alignment="center") # 比率を調整
+    with col_icon:
+        lottie_url = "https://lottie.host/6944da1c-9801-4b65-a942-df7837fc1157/eFcKKThSu1.json"
+        lottie_json = load_lottie_url(lottie_url)
+        if lottie_json:
+            st_lottie(lottie_json, speed=1, height=60, width=60, key="ai_robot") 
+    
+    with col_title_text:
+        st.markdown("###### 🤖 AIからのアドバイス")
 
-            # 1. コンテンツを表示するための空のプレースホルダーを作成
-            advice_placeholder = st.empty()
+    # b. アドバイス本文を、タイトルの下に全幅で表示
+    advice_placeholder = st.empty()
 
-            # datetimeオブジェクトをJSONシリアライズ可能にするためのカスタムエンコーダー
-            def datetime_encoder(obj):
-                if isinstance(obj, datetime):
-                    return obj.isoformat()
-                raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+    def datetime_encoder(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
+    
+    try:
+        dashboard_data_str = json.dumps(dashboard_data, default=datetime_encoder)
+        advice = generate_dynamic_ai_advice(dashboard_data_str)
+        
+        with advice_placeholder.container():
+            st.info(f"**{advice}**")
 
-            try:
-                dashboard_data_str = json.dumps(dashboard_data, default=datetime_encoder)
-                advice = generate_dynamic_ai_advice(dashboard_data_str)
-                
-                # 2. プレースホルダーを使ってコンテンツを描画
-                advice_placeholder.info(f"**{advice}**")
+    except Exception as e:
+        with advice_placeholder.container():
+            st.error("AIアドバイスの表示中にエラーが発生しました。")
+        print(f"AIアドバイス表示エラー: {e}")
 
-                
+# ▲▲▲【修正ここまで】▲▲▲
 
-            except Exception as e:
-                # json.dumpsで予期せぬエラーが発生した場合のフォールバック
-                st.error("AIアドバイスの表示中にエラーが発生しました。")
-                print(f"AIアドバイス表示エラー: {e}")
-
-            # ★★★【修正ここまで】★★★
-
+        
 
 st.divider()
 

@@ -3380,3 +3380,35 @@ def generate_text(prompt: str, max_tokens: int = 150) -> str:
         print(f"Gemini APIの初期化に失敗しました: {e}")
         gemini_model = None
 
+
+
+
+def get_current_time_str_in_jst(format_str: str = '%Y-%m-%d %H:%M:%S') -> str:
+    """
+    現在の時刻をJST（日本標準時）で取得し、指定されたフォーマットの文字列として返す。
+
+    Args:
+        format_str (str, optional): 
+            時刻のフォーマット文字列。
+            デフォルトは '%Y-%m-%d %H:%M:%S'。
+
+    Returns:
+        str: フォーマットされたJST時刻の文字列。
+    """
+    try:
+        # 1. 東京のタイムゾーンオブジェクトを取得
+        jst_tz = pytz.timezone('Asia/Tokyo')
+        
+        # 2. 東京時間での現在時刻を取得
+        now_in_jst = datetime.now(jst_tz)
+        
+        # 3. 指定されたフォーマットで文字列に変換して返す
+        return now_in_jst.strftime(format_str)
+        
+    except Exception as e:
+        # pytzが見つからないなどのエラーが発生した場合のフォールバック
+        print(f"ERROR in get_current_time_str_in_jst: {e}")
+        # とりあえず、タイムゾーン情報なしの現在時刻を返す
+        return datetime.now().strftime(format_str)
+    
+

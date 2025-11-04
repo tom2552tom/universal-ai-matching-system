@@ -65,3 +65,8 @@ status = [
     "クローズ"
 ]
 
+
+
+default_timezone = "Asia/Tokyo"
+
+
