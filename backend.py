@@ -3222,7 +3222,7 @@ def get_live_dashboard_data():
     try:
         with conn.cursor() as cur:
 
-            target_tz = pytz.timezone('Asia/Tokyo') #Asia/Tokyo
+            target_tz = pytz.timezone('America/Los_Angeles') #Asia/Tokyo
             now_in_target_tz = datetime.now(target_tz)
             
             # 「過去24時間前」の時刻を計算
@@ -3289,7 +3289,23 @@ def get_live_dashboard_data():
             # 10. リアルタイム活動ログ
             cur.execute("""
                 SELECT * FROM (
-                    
+                    -- サブクエリ1: マッチング結果の最新5件を取得
+                    (SELECT 
+                        'processing' as log_type, 
+                        j.project_name, 
+                        e.name as engineer_name, 
+                        r.grade, 
+                        r.created_at, 
+                        j.id as job_id, 
+                        e.id as engineer_id
+                    FROM matching_results r 
+                    JOIN jobs j ON r.job_id = j.id 
+                    JOIN engineers e ON r.engineer_id = e.id
+                    WHERE r.is_hidden = 0
+                    ORDER BY r.created_at DESC
+                    LIMIT 5)
+
+                    UNION ALL
 
                     -- サブクエリ2: 案件登録の最新5件を取得
                     (SELECT 
