@@ -21,6 +21,9 @@ st.set_page_config(page_title=f"{APP_TITLE} | リリースノート", layout="wi
 #    st.stop()
 ui.apply_global_styles()
 
+if not ui.check_password():
+    st.stop() # 認証が通らない場合、ここで処理を停止
+
 # --- メインコンテンツ ---
 st.markdown("このアプリケーションのバージョンごとの変更履歴です。")
 st.divider()
