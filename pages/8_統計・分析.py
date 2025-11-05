@@ -137,6 +137,18 @@ CHAT_LOG_HTML = """
 </script>
 """
 
+st.markdown("""
+<style>
+    /* st.metric の値（大きな数字）部分のスタイルを上書き */
+    div[data-testid="stMetricValue"] > div {
+        font-size: 1.5rem !important; /* お好みのサイズに調整してください */
+    }
+    /* st.metric のラベル（小さな文字）部分のスタイルを上書き */
+    div[data-testid="stMetricLabel"] > div {
+        font-size: 0.8rem !important; /* お好みのサイズに調整してください */
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # --- ページの基本設定 ---
 st.set_page_config(page_title="リアルタイム分析", layout="wide", initial_sidebar_state="collapsed")
@@ -701,15 +713,26 @@ else:
                 
                 # AI要約のプレビュー (変更なし)
                 st.caption(main_doc_preview)
-            
-            with col2:
-                # チップ風に情報を表示
-                chips_html = ""
-                chips_html += f"<span style='...'>🎯 {target_rank}以上</span>" # スタイルは適宜調整
-                if match_count > 0:
-                    chips_html += f"<span style='...'>🤝 {match_count}件</span>"
-                st.markdown(chips_html, unsafe_allow_html=True)
 
+
+            with col2:
+                # ▼▼▼【ここが修正箇所】▼▼▼
+                # 幅の比率を調整 (例: 2:3)。お好みで変更してください。
+                metric_col1, metric_col2 = st.columns([2, 3])
+                # ▲▲▲【修正ここまで】▲▲▲
+                
+                with metric_col1:
+                    st.metric(
+                        label="🎯 ランク", 
+                        value=f"{target_rank} 以上"
+                    )
+                
+                with metric_col2:
+                    st.metric(
+                        label="🤝 現在マッチ数", 
+                        value=f"{match_count} 件"
+                    )
+                    
 
 
 # pages/8_統計・分析.py の末尾に追加
