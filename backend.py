@@ -3891,3 +3891,78 @@ def extract_keywords(text_content: str, item_type: str, count: int = 20) -> list
         print(f"  > ❌ LLMによるキーワード抽出中にエラー: {e}")
         return []
     
+
+
+
+
+
+def register_item_from_text(input_text: str):
+    """
+    【手動登録用・共通関数】
+    入力されたテキストを解析・登録し、登録されたアイテムの
+    タイプとIDを返すジェネレータ。
+    """
+    conn = None
+    try:
+        # --- ステップ1: 入力テキストの解析 ---
+        yield "ステップ1/3: 入力情報をAIが解析しています..."
+        
+        parsed_data, llm_logs = split_text_with_llm(input_text)
+        for log in llm_logs: yield f"  > {log}"
+        if not parsed_data:
+            yield "❌ エラー: 入力情報から構造化データを抽出できませんでした。"; return
+
+        # --- ステップ2: 登録対象のデータを特定 ---
+        item_type, item_data = (None, None)
+        if parsed_data.get("jobs") and parsed_data["jobs"]:
+            item_type = 'job'
+            item_data = parsed_data["jobs"][0]
+        elif parsed_data.get("engineers") and parsed_data["engineers"]:
+            item_type = 'engineer'
+            item_data = parsed_data["engineers"][0]
+        
+        if not item_type or not item_data:
+            yield "❌ エラー: 構造化データから案件または技術者情報が見つかりませんでした。"; return
+        
+        yield f"  > ✅ 『{item_type}』情報として認識しました。キーワードを抽出します..."
+
+        # --- ステップ3: キーワード抽出とDB登録 ---
+        yield "ステップ2/3: キーワードを抽出し、データベースに登録しています..."
+        
+        conn = get_db_connection()
+        with conn.cursor() as cur:
+            target_tz = pytz.timezone('America/Los_Angeles')
+            now_in_la = datetime.now(target_tz)
+            
+            name_column = 'project_name' if item_type == 'job' else 'name'
+            name = item_data.get(name_column, "名称未定")
+            
+            meta_info = _build_meta_info_string(item_type, item_data)
+            doc_body = item_data.get("document") or input_text
+            full_document = meta_info + doc_body
+            
+            keywords = extract_keywords(full_document, item_type)
+            yield f"  > ✅ 抽出キーワード: {keywords}"
+            
+            # source_data_jsonには、元のテキストだけを保存する
+            source_json_str = json.dumps({"body": input_text}, ensure_ascii=False, indent=2)
+
+            sql = f"""
+                INSERT INTO {item_type + 's'} ({name_column}, document, keywords, created_at, source_data_json)
+                VALUES (%s, %s, %s, %s, %s) RETURNING id;
+            """
+            cur.execute(sql, (name, full_document, keywords, now_in_la, source_json_str))
+            item_id = cur.fetchone()['id']
+            conn.commit()
+            
+            yield f"  > ✅ 『{name}』を新規登録しました (ID: {item_id})。"
+
+        # --- ステップ4: 完了と結果の返却 ---
+        yield "ステップ3/3: 詳細ページへ移動します..."
+        yield {"type": "complete", "item_type": item_type, "item_id": item_id}
+
+    except Exception as e:
+        yield f"❌ 処理中に予期せぬエラーが発生しました: {e}"
+        import traceback; yield f"```\n{traceback.format_exc()}\n```"
+    finally:
+        if conn: conn.close()

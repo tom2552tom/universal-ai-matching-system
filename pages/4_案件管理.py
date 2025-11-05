@@ -14,6 +14,48 @@ if not ui.check_password():
 
     
 st.title("💼 案件管理")
+
+# --- 新規登録用の expander とフォーム ---
+with st.expander("＋ 新規データ登録"):
+    with st.form("new_item_form", clear_on_submit=True):
+        st.info("ここに案件情報または技術者情報のテキストを貼り付けて登録できます。AIが自動でタイプを判別します。")
+        
+        input_text = st.text_area(
+            "登録する情報",
+            height=250,
+            placeholder="メール本文やスキルシートのテキストを貼り付け..."
+        )
+        
+        submitted = st.form_submit_button("この内容で登録する", type="primary", use_container_width=True)
+
+    if submitted:
+        if not input_text.strip():
+            st.warning("登録する情報が入力されていません。")
+        else:
+            # 登録処理を実行し、結果に基づいて画面遷移
+            with st.spinner("AIが解析・登録処理を実行中です..."):
+                final_result = None
+                # st.status は使わず、完了後に一気に遷移する
+                for result in be.register_item_from_text(input_text):
+                    if isinstance(result, dict) and result.get("type") == "complete":
+                        final_result = result
+                
+                if final_result:
+                    item_type = final_result.get("item_type")
+                    item_id = final_result.get("item_id")
+                    
+                    if item_type == 'job':
+                        st.session_state['selected_job_id'] = item_id
+                        st.switch_page("pages/6_案件詳細.py")
+                    elif item_type == 'engineer':
+                        st.session_state['selected_engineer_id'] = item_id
+                        st.switch_page("pages/5_技術者詳細.py")
+                else:
+                    # ジェネレータから完了通知が来なかった場合
+                    st.error("登録処理に失敗しました。詳細はコンソールログを確認してください。")
+
+st.divider()
+
 st.markdown("登録されている案件の一覧表示、検索、並び替えができます。")
 
 ITEMS_PER_PAGE = 20
