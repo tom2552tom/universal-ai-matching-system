@@ -641,6 +641,7 @@ st.divider()
 # ==================================
 # === ビジネス成果エリア (OUTPUT) ===
 # ==================================
+"""
 st.header("📈 マッチングの進捗状況")
 
 # ファネルチャートと担当者ランキングを横に並べる
@@ -675,6 +676,7 @@ with col_rank:
             st.markdown(f"{icon} {performer['username']} : **{performer['adoption_count']}** 件")
 
 st.divider()
+"""
 
 
 # ★★★【ここからが修正の核】★★★
@@ -694,6 +696,10 @@ else:
     
     # ★★★【ここからが修正の核】★★★
     for req in active_requests:
+
+        
+
+
         item_type = req['item_type']
         item_id = req['item_id']
         
@@ -716,15 +722,24 @@ else:
         main_doc_preview = (doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]).replace('\n', ' ').strip()
         main_doc_preview = main_doc_preview[:100] + "..." if len(main_doc_preview) > 100 else main_doc_preview
 
+
+        assigned_username = req.get('assigned_username') or "未割り当て"
+
         with st.container(border=True):
             col1, col2 = st.columns([3, 1])
             with col1:
-                # タイトルをクリック可能にする
-                if st.button(f"**{item_type_icon} {item_name}** (ID: {item_id})", key=f"req_title_{req['id']}", use_container_width=True):
+                # ▼▼▼【ここからが修正の核】▼▼▼
+                # タイトルのボタンテキストを修正
+                button_label = f"**{item_type_icon} {item_name}**"
+                if st.button(button_label, key=f"req_title_{req['id']}", use_container_width=True):
                     st.session_state[session_key] = item_id
                     st.switch_page(page_path)
                 
-                # AI要約のプレビュー
+                # IDと担当者名を caption で表示
+                st.caption(f"ID: {item_id} | 担当: {assigned_username}")
+                # ▲▲▲【修正ここまで】▲▲▲
+                
+                # AI要約のプレビュー (変更なし)
                 st.caption(main_doc_preview)
             
             with col2:

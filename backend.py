@@ -2996,16 +2996,50 @@ def get_live_dashboard_data():
             # アクティブな自動マッチング依頼
             cur.execute("SELECT COUNT(*) FROM auto_matching_requests WHERE is_active = TRUE")
             data["active_auto_request_count"] = cur.fetchone()['count']
+
             cur.execute("""
-                (SELECT req.*, j.project_name as item_name, j.document, COALESCE(mc.match_count, 0) as match_count FROM auto_matching_requests req JOIN jobs j ON req.item_id = j.id AND req.item_type = 'job' LEFT JOIN (SELECT job_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY job_id) mc ON j.id = mc.job_id WHERE req.is_active = TRUE)
-                UNION ALL
-                (SELECT req.*, e.name as item_name, e.document, COALESCE(mc.match_count, 0) as match_count FROM auto_matching_requests req JOIN engineers e ON req.item_id = e.id AND req.item_type = 'engineer' LEFT JOIN (SELECT engineer_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY engineer_id) mc ON e.id = mc.engineer_id WHERE req.is_active = TRUE)
+                SELECT * FROM (
+                    (SELECT 
+                        req.id, req.item_id, req.item_type, req.target_rank,
+                        j.project_name as item_name,
+                        j.document,
+                        u.username as assigned_username, -- ★ 担当者名を追加
+                        COALESCE(mc.match_count, 0) as match_count,
+                        req.created_at
+                    FROM auto_matching_requests req
+                    JOIN jobs j ON req.item_id = j.id AND req.item_type = 'job'
+                    LEFT JOIN users u ON j.assigned_user_id = u.id -- ★ usersテーブルをJOIN
+                    LEFT JOIN (
+                        SELECT job_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY job_id
+                    ) mc ON j.id = mc.job_id
+                    WHERE req.is_active = TRUE)
+                    
+                    UNION ALL
+                    
+                    (SELECT 
+                        req.id, req.item_id, req.item_type, req.target_rank,
+                        e.name as item_name,
+                        e.document,
+                        u.username as assigned_username, -- ★ 担当者名を追加
+                        COALESCE(mc.match_count, 0) as match_count,
+                        req.created_at
+                    FROM auto_matching_requests req
+                    JOIN engineers e ON req.item_id = e.id AND req.item_type = 'engineer'
+                    LEFT JOIN users u ON e.assigned_user_id = u.id -- ★ usersテーブルをJOIN
+                    LEFT JOIN (
+                        SELECT engineer_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY engineer_id
+                    ) mc ON e.id = mc.engineer_id
+                    WHERE req.is_active = TRUE)
+                ) AS combined_requests
                 ORDER BY created_at DESC
+                LIMIT 10; -- 表示件数はお好みで調整
             """)
+              
             data["active_auto_requests"] = [dict(row) for row in cur.fetchall()]
 
             # ▼▼▼【ここからが修正の核】▼▼▼
             # 10. リアルタイム活動ログ
+
             cur.execute("""
                 SELECT * FROM (
                     SELECT 
