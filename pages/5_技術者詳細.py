@@ -411,7 +411,7 @@ else:
                 # ここでは仮のログインユーザー情報を利用
                 # 実際の運用では st.session_state.email などを参照する
                 login_user_email = "default.user@example.com" 
-                req_email = st.text_input("通知先のメールアドレス", value=login_user_email)
+                req_email = st.text_input("通知先のメールアドレス", placeholder="your.email@example.com")
             
             # ログイン機能があれば、ログインユーザーのIDを取得
             # ここでは仮に user_id = 1 とする
