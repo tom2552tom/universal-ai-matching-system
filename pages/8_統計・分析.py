@@ -682,7 +682,7 @@ st.divider()
 active_request_count = dashboard_data.get('active_auto_request_count', 0)
 
 # ヘッダーに総数を表示
-st.header(f"🤖 現在有効な自動マッチング依頼 ({active_request_count} 件)")
+st.header(f"🤖 現在有効な自動マッチング ({active_request_count} 件)")
 
 active_requests = dashboard_data.get('active_auto_requests', [])
 

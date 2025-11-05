@@ -3000,7 +3000,7 @@ def get_live_dashboard_data():
                 (SELECT req.*, j.project_name as item_name, j.document, COALESCE(mc.match_count, 0) as match_count FROM auto_matching_requests req JOIN jobs j ON req.item_id = j.id AND req.item_type = 'job' LEFT JOIN (SELECT job_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY job_id) mc ON j.id = mc.job_id WHERE req.is_active = TRUE)
                 UNION ALL
                 (SELECT req.*, e.name as item_name, e.document, COALESCE(mc.match_count, 0) as match_count FROM auto_matching_requests req JOIN engineers e ON req.item_id = e.id AND req.item_type = 'engineer' LEFT JOIN (SELECT engineer_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY engineer_id) mc ON e.id = mc.engineer_id WHERE req.is_active = TRUE)
-                ORDER BY created_at DESC LIMIT 5
+                ORDER BY created_at DESC
             """)
             data["active_auto_requests"] = [dict(row) for row in cur.fetchall()]
 
