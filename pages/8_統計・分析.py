@@ -347,7 +347,7 @@ with st.container(border=True):
             st_lottie(lottie_json, speed=1, height=60, width=60, key="ai_robot") 
     
     with col_title_text:
-        st.markdown("###### 🤖 AIからのアドバイス")
+        st.markdown("###### 🤖 AIからひとこと")
 
     # b. アドバイス本文を、タイトルの下に全幅で表示
     advice_placeholder = st.empty()
