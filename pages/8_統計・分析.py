@@ -638,46 +638,6 @@ if live_log_feed:
             
 st.divider()
 
-# ==================================
-# === ビジネス成果エリア (OUTPUT) ===
-# ==================================
-"""
-st.header("📈 マッチングの進捗状況")
-
-# ファネルチャートと担当者ランキングを横に並べる
-col_funnel, col_rank = st.columns([2, 1], gap="large")
-
-with col_funnel:
-    st.subheader("ステータス別の状況")
-    funnel_data = dashboard_data.get('funnel_data', {})
-    funnel_stages = ["新規", "提案準備中", "提案中", "クライアント面談", "結果待ち", "採用"]
-    funnel_df = pd.DataFrame({
-        "ステータス": [stage for stage in funnel_stages if stage in funnel_data],
-        "件数": [funnel_data.get(stage, 0) for stage in funnel_stages if stage in funnel_data]
-    })
-    
-    if not funnel_df.empty:
-        fig = px.funnel(funnel_df, x='件数', y='ステータス', orientation='h')
-        fig.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=10))
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info("ファネルデータがありません。")
-
-with col_rank:
-    st.subheader("トップパフォーマー")
-    st.caption("今月の採用件数ランキング")
-    top_performers = dashboard_data.get('top_performers', [])
-    if not top_performers:
-        st.info("今月の採用実績はまだありません。")
-    else:
-        rank_icons = ["🥇", "🥈", "🥉"]
-        for i, performer in enumerate(top_performers):
-            icon = rank_icons[i] if i < len(rank_icons) else f"**{i+1}.**"
-            st.markdown(f"{icon} {performer['username']} : **{performer['adoption_count']}** 件")
-
-st.divider()
-"""
-
 
 # ★★★【ここからが修正の核】★★★
 # バックエンドから総数を取得
