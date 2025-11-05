@@ -28,7 +28,6 @@ import feedparser # RSSフィードをパースするためのライブラリ
 import random
 
 
-
 # --- 1. 初期設定と定数 (変更なし) ---
 try:
     API_KEY = st.secrets["GOOGLE_API_KEY"]
@@ -625,6 +624,21 @@ def process_single_content(source_data: dict, progress_bar, base_progress: float
                 project_name = item_data.get("project_name", "名称未定の案件")
                 meta_info = _build_meta_info_string('job', item_data)
                 full_document = meta_info + doc
+
+
+                # --- キーワード抽出 ---
+                st.write(f"  - 案件『{project_name}』のキーワードを抽出中...")
+                # extract_keywords_with_llm は run_auto_matcher.py から移動・改名が必要
+                # ここでは仮に be.extract_keywords(full_document, 'job') とする
+                keywords = extract_keywords(full_document, 'job') 
+
+                sql = """
+                    INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at, keywords) 
+                    VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+                """
+                cursor.execute(sql, (engineer_name, full_document, source_json_str, now_str, received_at_dt, keywords))
+
+
                 cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (project_name, full_document, source_json_str, now_str, received_at_dt))
                 item_id = cursor.fetchone()[0]
                 st.write(f"✅ 新しい案件を登録しました: 『{project_name}』 (ID: {item_id})")
@@ -635,6 +649,15 @@ def process_single_content(source_data: dict, progress_bar, base_progress: float
                 engineer_name = item_data.get("name", "名称不明の技術者")
                 meta_info = _build_meta_info_string('engineer', item_data)
                 full_document = meta_info + doc
+
+                keywords = extract_keywords(full_document, 'engineer')
+                sql = """
+                    INSERT INTO engineers (name, document, source_data_json, created_at, received_at, keywords) 
+                    VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+                """
+                cursor.execute(sql, (engineer_name, full_document, source_json_str, now_str, received_at_dt, keywords))
+
+
                 cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (engineer_name, full_document, source_json_str, now_str, received_at_dt))
                 item_id = cursor.fetchone()[0]
                 st.write(f"✅ 新しい技術者を登録しました: 『{engineer_name}』 (ID: {item_id})")
@@ -3560,7 +3583,7 @@ def summarize_ai_learnings(feedback_logs: list) -> str:
 # feedparserがインストールされていなければインストール
 # pip install feedparser
 
-@st.cache_data(ttl=3600) # 1時間キャッシュ
+
 def get_latest_japan_news(num_headlines=3):
     """Yahoo!ニュースの主要トピックスRSSから最新ヘッドラインを取得する"""
     try:
@@ -3574,7 +3597,7 @@ def get_latest_japan_news(num_headlines=3):
         print(f"Error fetching Japan IT news: {e}")
         return []
 
-@st.cache_data(ttl=3600) # 1時間キャッシュ
+
 def get_latest_ai_news(num_headlines=3):
     """Google NewsのAI関連RSSから最新ヘッドラインを取得する"""
     try:
@@ -3587,5 +3610,284 @@ def get_latest_ai_news(num_headlines=3):
         return []
     except Exception as e:
         print(f"Error fetching AI news: {e}")
+        return []
+
+
+
+#@st.cache_data(ttl=3600) # 1時間キャッシュ
+def get_latest_news_from_feeds():
+    """
+    config.tomlに定義されたRSSフィードをすべて巡回し、
+    カテゴリーごとの最新ニュースヘッドラインを辞書として返す。
+    """
+    news_data = {}
+    try:
+        with open("config.toml", "r", encoding="utf-8") as f:
+            config = toml.load(f)
+        
+        news_feeds = config.get("news_feeds", {})
+        if not news_feeds:
+            return {}
+
+        for category, url in news_feeds.items():
+            try:
+                feed = feedparser.parse(url)
+                if feed.entries:
+                    headline = feed.entries[0].title.split(' - ')[0]
+                    news_data[category] = headline
+            except Exception as e:
+                print(f"Error fetching news for category '{category}' from {url}: {e}")
+                continue
+                
+        return news_data
+
+    except Exception as e:
+        print(f"Error in get_latest_news_from_feeds: {e}")
+        return {}
+
+
+
+# backend.py に追加
+
+def calculate_keyword_score(job_id: int, engineer_id: int, conn=None) -> dict:
+    """
+    案件IDと技術者IDを受け取り、DBに保存されたキーワードを基に
+    マッチングスコアと一致したキーワードを計算して辞書で返す、共通関数。
+
+    Args:
+        job_id (int): 案件のID
+        engineer_id (int): 技術者のID
+        conn: (オプション) 既存のDB接続オブジェクト。指定されなければ新規に接続。
+
+    Returns:
+        dict: {
+                "score": int,      # 共通キーワードの数
+                "matched_keys": list[str] # 共通したキーワードのリスト
+              }
+              エラー時は {"score": 0, "matched_keys": []} を返す。
+    """
+    # IDが不正な場合は、即座に0点と空リストを返す
+    if not job_id or not engineer_id:
+        return {"score": 0, "matched_keys": []}
+
+    # この関数が外部から呼ばれた際に、自身の接続を管理するためのフラグ
+    should_close_conn = False
+    if conn is None:
+        conn = get_db_connection()
+        if not conn: 
+            return {"score": 0, "matched_keys": []}
+        should_close_conn = True
+    
+    try:
+        with conn.cursor() as cur:
+            # 1. 案件のキーワードリストを取得 (TEXT[]型を想定)
+            cur.execute("SELECT keywords FROM jobs WHERE id = %s", (job_id,))
+            job_record = cur.fetchone()
+            # DBから取得したリストがNoneでないことを確認してからセットに変換
+            job_keywords = set(job_record['keywords']) if job_record and job_record['keywords'] else set()
+
+            # 2. 技術者のキーワードリストを取得 (TEXT[]型を想定)
+            cur.execute("SELECT keywords FROM engineers WHERE id = %s", (engineer_id,))
+            engineer_record = cur.fetchone()
+            engineer_keywords = set(engineer_record['keywords']) if engineer_record and engineer_record['keywords'] else set()
+
+        # 3. キーワードリストが片方でも空の場合は、スコアは0
+        if not job_keywords or not engineer_keywords:
+            return {"score": 0, "matched_keys": []}
+
+        # 4. 積集合（共通のキーワード）を計算
+        # ▼▼▼【ここからが修正の核】▼▼▼
+        
+        matched_keys = set() # 重複を防ぐためにセットを使用
+
+        # 案件キーワードが、技術者キーワードのいずれかに部分一致するかチェック
+        for j_kw in job_keywords:
+            for e_kw in engineer_keywords:
+                if j_kw in e_kw or e_kw in j_kw:
+                    # 'spring' in 'springboot' や 'springboot' in 'spring' のようなケースを拾う
+                    # より一般的なキーワード（短い方）を記録すると分かりやすい
+                    matched_keys.add(j_kw if len(j_kw) <= len(e_kw) else e_kw)
+        
+        score = len(matched_keys)
+        
+        
+        return {"score": score, "matched_keys": matched_keys}
+
+    except Exception as e:
+        print(f"Error in calculate_keyword_score (job:{job_id}, eng:{engineer_id}): {e}")
+        return {"score": 0, "matched_keys": []}
+    finally:
+        # この関数内で新規に接続した場合のみ、接続を閉じる
+        if should_close_conn and conn:
+            conn.close()
+
+
+def regenerate_document_and_keywords(item_id: int, item_type: str):
+    """
+    【ロジック最終確定版】
+    指定されたIDの案件または技術者の情報を、「元のソーステキスト」から再生成・更新する。
+    """
+    if not item_id or item_type not in ['job', 'engineer']:
+        yield "❌ エラー: 無効なIDまたはタイプが指定されました。"
+        return
+
+    table_name = item_type + 's'
+    name_column = 'project_name' if item_type == 'job' else 'name'
+    
+    conn = get_db_connection()
+    if not conn:
+        yield "❌ データベースに接続できませんでした。"
+        return
+        
+    try:
+        with conn.cursor() as cur:
+            # --- 1. 元のソース情報を取得 & 元テキストを復元 ---
+            yield "📄 元のテキスト情報をデータベースから取得・復元しています..."
+            sql_select = f"SELECT {name_column}, source_data_json FROM {table_name} WHERE id = %s"
+            params = (item_id,)
+            cur.execute(sql_select, params)
+            record = cur.fetchone()
+            
+            if not record or not record.get('source_data_json'):
+                yield f"❌ ID:{item_id} の元情報(source_data_json)が見つかりませんでした。再評価できません。"
+                return
+
+            try:
+                # DBから取得したJSON文字列をPythonの辞書にパース
+                source_data = json.loads(record['source_data_json'])
+                original_text = source_data.get('body', '')
+                if attachments := source_data.get('attachments'):
+                    if isinstance(attachments, list):
+                        original_text += "".join([f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in attachments if att.get('content')])
+                if not original_text.strip():
+                    yield "❌ 元情報からテキストを復元できませんでした。処理を中断します。"
+                    return
+                yield "  > ✅ 元テキストの復元完了。"
+            except (json.JSONDecodeError, TypeError):
+                yield "❌ source_data_jsonの解析に失敗しました。データが破損している可能性があります。"
+                return
+            except Exception as e:
+                yield f"❌ 元テキストの復元中に予期せぬエラーが発生しました: {e}"
+                return
+
+            # ▼▼▼【ここからが修正の核】▼▼▼
+
+            # --- 2. AIによる情報の再構造化 ---
+            yield "🤖 AIが情報を再構造化しています..."
+            parsed_data, llm_logs = split_text_with_llm(original_text)
+            for log_msg in llm_logs:
+                yield f"  > {log_msg}"
+
+            if not parsed_data or not parsed_data.get(table_name):
+                yield "❌ AIによる情報構造化に失敗しました。処理を中断します。"
+                return
+            
+            # --- 3. 新しいdocumentとキーワードを生成 ---
+            yield "🔑 新しいドキュメントとキーワードを生成しています..."
+            
+            # parsed_dataから、このアイテムに関する最初のデータブロックを取得
+            item_data_from_llm = parsed_data[table_name][0]
+            
+            # 新しい名前を取得（なければ元の名前を使う）
+            new_name = item_data_from_llm.get(name_column) or record[name_column]
+            
+            # 新しいdocumentを構築
+            meta_info = _build_meta_info_string(item_type, item_data_from_llm)
+            doc_body = item_data_from_llm.get("document") or original_text
+            new_full_document = meta_info + doc_body
+            
+            # 新しいdocumentを基に、新しいキーワードを抽出
+            new_keywords = extract_keywords(new_full_document, item_type)
+            yield f"  > ✅ 新しいキーワード: {new_keywords}"
+
+            # --- 4. データベースを更新 ---
+            yield "💾 データベースの情報を更新しています..."
+            sql_update = f"""
+                UPDATE {table_name}
+                SET 
+                    {name_column} = %s,
+                    document = %s,
+                    keywords = %s
+                WHERE id = %s;
+            """
+            cur.execute(sql_update, (new_name, new_full_document, new_keywords, item_id))
+            
+            # ▲▲▲【修正ここまで】▲▲▲
+        
+        conn.commit()
+        # new_nameが定義されていることを保証
+        yield f"🎉 完了！『{new_name if 'new_name' in locals() else record[name_column]}』(ID:{item_id})の情報が正常に更新されました。"
+
+    except Exception as e:
+        if conn: conn.rollback()
+        import traceback
+        yield f"❌ 処理中に予期せぬエラーが発生しました: {e}"
+        yield f"```\n{traceback.format_exc()}\n```"
+    finally:
+        if conn: conn.close()
+
+
+
+
+def extract_keywords(text_content: str, item_type: str, count: int = 20) -> list:
+    """
+    【共通関数】
+    AI(LLM)を使って、与えられたテキストから最も重要なスキルを「最大count個のリスト」として抽出する。
+    """
+    # この関数はUIスレッドとバッチ処理の両方から呼ばれる可能性があるため、
+    # st.spinner のようなUI要素は含めない。
+    
+    if not text_content or not text_content.strip():
+        print("  > ⚠️ キーワード抽出の対象テキストが空です。")
+        return []
+
+    try:
+        # --- 1. AIアクティビティログを記録 ---
+        try:
+            with get_db_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("INSERT INTO ai_activity_log (activity_type, created_at) VALUES ('keyword_extraction', NOW())")
+                conn.commit()
+        except Exception as db_err:
+            print(f"Warning: Failed to record 'keyword_extraction' activity log: {db_err}")
+
+        # --- 2. プロンプトの生成 ---
+        if item_type == 'job':
+            instruction = f"以下の案件情報から、技術者を探す上で最も重要度が高いと思われる「必須スキル」を、重要なものから順番に最大{count}個抽出してください。"
+        else: # item_type == 'engineer'
+            instruction = f"以下の技術者情報から、その人のキャリアで最も核となっている「コアスキル」を、得意なものから順番に最大{count}個抽出してください。"
+        
+        prompt = f"""
+        あなたは、与えられたテキストから最も重要な検索キーワードを抽出する専門家です。
+        # 絶対的なルール:
+        - 抽出するキーワードは、必ず**{count}個以内**に厳選してください。
+        - 出力は、**カンマ区切りの単語リストのみ**とし、他のテキストは一切含めないでください。
+        # 指示:
+        {instruction}
+        バージョン情報や経験年数などの付随情報は含めず、技術名や役職名などの単語のみを抽出してください。
+        # 具体例:
+        入力:「Java(SpringBoot)での開発経験が10年あり、直近ではPHP(Laravel)も使用。AWSの経験も豊富です。」
+        出力: Java, AWS, PHP, SpringBoot, Laravel
+        # 本番:
+        入力テキスト: ---
+        {text_content}
+        ---
+        出力:
+        """
+        
+        # --- 3. AIの呼び出しと結果の整形 ---
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        response = model.generate_content(prompt)
+        
+        keywords = [kw.strip().lower() for kw in response.text.strip().split(',') if kw.strip()]
+        
+        if not keywords:
+            print("  > ⚠️ AIはキーワードを返しませんでした。")
+            return []
+            
+        return keywords[:count]
+
+    except Exception as e:
+        print(f"  > ❌ LLMによるキーワード抽出中にエラー: {e}")
         return []
     

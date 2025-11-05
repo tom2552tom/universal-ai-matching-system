@@ -125,6 +125,51 @@ def get_email_contents(msg):
 
 # --- LLM・DB処理関連 ---
 
+
+# ▼▼▼【ここに関数を追加】▼▼▼
+def extract_keywords_with_llm(text_content: str, item_type: str, count: int = 20) -> list:
+    """
+    AI(LLM)を使って、与えられたテキストから最も重要なスキルを「最大count個のリスト」として抽出する。
+    """
+    try:
+        if item_type == 'job':
+            instruction = f"以下の案件情報から、技術者を探す上で最も重要度が高いと思われる「必須スキル」を、重要なものから順番に最大{count}個抽出してください。"
+        else: # item_type == 'engineer'
+            instruction = f"以下の技術者情報から、その人のキャリアで最も核となっている「コアスキル」を、得意なものから順番に最大{count}個抽出してください。"
+        
+        prompt = f"""
+        あなたは、与えられたテキストから最も重要な検索キーワードを抽出する専門家です。
+        # 絶対的なルール:
+        - 抽出するキーワードは、必ず**{count}個以内**に厳選してください。
+        - 出力は、**カンマ区切りの単語リストのみ**とし、他のテキストは一切含めないでください。
+        # 指示:
+        {instruction}
+        バージョン情報や経験年数などの付随情報は含めず、技術名や役職名などの単語のみを抽出してください。
+        # 本番:
+        入力テキスト: ---
+        {text_content}
+        ---
+        出力:
+        """
+        
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+        response = model.generate_content(prompt)
+        
+        keywords = [kw.strip().lower() for kw in response.text.strip().split(',') if kw.strip()]
+        
+        if not keywords:
+            print("  > ⚠️ AIはキーワードを返しませんでした。")
+            return []
+            
+        return keywords[:count]
+
+    except Exception as e:
+        print(f"  > ❌ LLMによるキーワード抽出中にエラー: {e}")
+        return []
+# ▲▲▲【追加ここまで】▲▲▲
+
+
+
 def get_extraction_prompt(doc_type, text_content):
     """
     LLMに与える、情報抽出用のプロンプトを生成する。
@@ -301,15 +346,49 @@ def process_single_email_core(source_data: dict) -> (bool, list):
                 received_at_dt = source_data.get('received_at')
                 source_json_str = json.dumps({k: v.isoformat() if isinstance(v, datetime) else v for k, v in source_data.items()}, ensure_ascii=False, indent=2)
                 for item_data in new_jobs:
+
+
+                    
+
                     name = item_data.get("project_name", "名称未定の案件")
                     full_document = _build_meta_info_string('job', item_data) + (item_data.get("document") or full_text_for_llm)
-                    cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (name, full_document, source_json_str, now_str, received_at_dt))
-                    logs.append(f"    -> 新規案件: 『{name}』 (ID: {cursor.fetchone()[0]})")
+
+                                         # --- キーワード抽出処理を追加 ---
+                    logs.append(f"    -> 案件『{name}』のキーワードを抽出中...")
+                    keywords = extract_keywords_with_llm(full_document, 'job')
+                    logs.append(f"    -> 抽出キーワード: {keywords}")
+
+                    # --- INSERT文を修正 ---
+                    sql = """
+                        INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at, keywords) 
+                        VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+                    """
+                    cursor.execute(sql, (name, full_document, source_json_str, now_str, received_at_dt, keywords))
+                    logs.append(f"    -> 新規案件を登録: 『{name}』 (ID: {cursor.fetchone()[0]})")
+
+
+                    #cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (name, full_document, source_json_str, now_str, received_at_dt))
+                    #logs.append(f"    -> 新規案件: 『{name}』 (ID: {cursor.fetchone()[0]})")
                 for item_data in new_engineers:
                     name = item_data.get("name", "名称不明の技術者")
                     full_document = _build_meta_info_string('engineer', item_data) + (item_data.get("document") or full_text_for_llm)
-                    cursor.execute('INSERT INTO engineers (name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (name, full_document, source_json_str, now_str, received_at_dt))
-                    logs.append(f"    -> 新規技術者: 『{name}』 (ID: {cursor.fetchone()[0]})")
+
+                    # --- キーワード抽出処理を追加 ---
+                    logs.append(f"    -> 技術者『{name}』のキーワードを抽出中...")
+                    keywords = extract_keywords_with_llm(full_document, 'engineer')
+                    logs.append(f"    -> 抽出キーワード: {keywords}")
+
+                    # --- INSERT文を修正 ---
+                    sql = """
+                        INSERT INTO engineers (name, document, source_data_json, created_at, received_at, keywords) 
+                        VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
+                    """
+                    cursor.execute(sql, (name, full_document, source_json_str, now_str, received_at_dt, keywords))
+                    logs.append(f"    -> 新規技術者を登録: 『{name}』 (ID: {cursor.fetchone()[0]})")
+                
+
+
+                    
             conn.commit()
     except Exception as e:
         logs.append(f"❌ DB保存中にエラーが発生: {e}")

@@ -29,7 +29,7 @@ version = "1.0.4"  #
 fetch_limit = 100
 
 [llm]
-model_name = "models/gemini-2.5-pro"
+model_name = "models/gemini-2.5-flash-lite"
 
 
 [messages]
@@ -69,4 +69,12 @@ status = [
 
 default_timezone = "Asia/Tokyo"
 
+
+[news_feeds]
+"国内ITニュース" = "https://news.yahoo.co.jp/rss/topics/it.xml"
+"経済全般" = "https://news.yahoo.co.jp/rss/topics/business.xml"
+"エンタメ" = "https://news.yahoo.co.jp/rss/topics/entertainment.xml"
+"スポーツ" = "https://news.yahoo.co.jp/rss/categories/sports.xml"
+
+"AI業界の最新動向" = "https://news.google.com/rss/search?q=%EAI%20%E4%BA%BA%E5%B7%A5%E7%9F%A5%E8%83%BD&hl=ja&gl=JP&ceid=JP:ja"
 

@@ -64,13 +64,15 @@ try:
         engineer_query = """
         SELECT 
             e.id, e.name, e.document, e.source_data_json, e.assigned_user_id, e.is_hidden,
-            u.username as assigned_username
+            u.username as assigned_username,e.keywords as keywords
         FROM engineers e
         LEFT JOIN users u ON e.assigned_user_id = u.id
         WHERE e.id = %s
         """
         cursor.execute(engineer_query, (selected_id,))
         engineer_data = cursor.fetchone()
+
+        
 
         if engineer_data:
             matched_jobs_query = """
@@ -175,8 +177,44 @@ if engineer_data:
                         st.error("技術者の削除に失敗しました。")
     st.divider()
 
+
+    
     # --- AIによる要約情報の表示 ---
     st.header("🤖 AIによる要約情報")
+
+    # DBから取得したキーワードのリスト
+    keywords = engineer_data.get('keywords')
+    
+
+
+    if keywords and isinstance(keywords, list):
+        # 1行に表示するチップの数
+        CHIPS_PER_ROW = 5
+        
+        # キーワードのリストを、指定した数ずつの小さなリストに分割する
+        # 例: 7個のキーワード、CHIPS_PER_ROW=5 -> [[kw1, ..., kw5], [kw6, kw7]]
+        rows_of_keywords = [keywords[i:i + CHIPS_PER_ROW] for i in range(0, len(keywords), CHIPS_PER_ROW)]
+        
+        # 行ごとにループ
+        for row_keywords in rows_of_keywords:
+            # その行のキーワードの数に合わせてカラムを作成
+            cols = st.columns(len(row_keywords))
+            
+            # 各カラムに、無効化したボタンとしてキーワードを配置
+            for i, kw in enumerate(row_keywords):
+                with cols[i]:
+                    st.button(
+                        label=kw, 
+                        key=f"kw_{selected_id}_{kw}", # キーは一意にする
+                        disabled=True, 
+                        use_container_width=True
+                    )
+        # ▲▲▲【修正ここまで】▲▲▲
+        
+    else:
+        st.info("キーワードが設定されていません。「AI再評価」を実行すると生成されます。")
+
+
 
     # ▼▼▼【ここからが修正箇所です】▼▼▼
     doc_parts = engineer_data['document'].split('\n---\n', 1)
@@ -373,7 +411,22 @@ else:
 
 
 
-
+st.divider()
+    
+# --- AI再評価ボタン ---
+if st.button("🤖 AI再評価を実行", help="元のメール情報を基に、AIによる要約とキーワードを再生成します。"):
+    with st.status("AIによる再評価処理を実行中...", expanded=True) as status:
+        # バックエンドのジェネレータ関数を呼び出し、進捗をリアルタイムで表示
+        for log_message in be.regenerate_document_and_keywords(selected_id, 'engineer'):
+            status.write(log_message)
+        
+        # 完了メッセージ
+        status.update(label="再評価が完了しました！", state="complete")
+    
+    # 処理完了後、キャッシュをクリアしてページをリフレッシュ
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    st.rerun()
 
 
 
