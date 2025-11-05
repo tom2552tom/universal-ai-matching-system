@@ -352,6 +352,7 @@ with st.container(border=True):
     # b. アドバイス本文を、タイトルの下に全幅で表示
     advice_placeholder = st.empty()
 
+
     def datetime_encoder(obj):
         if isinstance(obj, datetime):
             return obj.isoformat()
@@ -393,7 +394,7 @@ def animated_metric(label, value):
 
 # ★★★【ここからが修正の核】★★★
 # 4つのKPIを横に並べて表示するために st.columns(4) に変更
-kpi_cols = st.columns(5) 
+kpi_cols = st.columns(6) 
 
 # AI総思考回数を計算
 total_ai_activities = sum(dashboard_data.get('ai_activity_counts', {}).values())
@@ -403,6 +404,7 @@ kpi_map = {
     "新規案件": dashboard_data.get('jobs_today', 0),
     "新規技術者": dashboard_data.get('engineers_today', 0),
     "マッチング": dashboard_data.get('new_matches_today', 0),
+    "自動マッチ": dashboard_data.get('active_auto_request_count', 0),
     "提案": dashboard_data.get('proposal_count_total', 0),
     "新規決定": dashboard_data.get('adopted_count_today', 0)
     
