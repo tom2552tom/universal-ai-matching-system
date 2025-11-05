@@ -75,7 +75,7 @@ def main(is_dry_run: bool):
             # 案件テーブル用のSQL (typo: enginees -> engineers)
             jobs_sql_select = """
                 SELECT id FROM jobs
-                WHERE created_at <= NOW() - INTERVAL '60 hours'
+                WHERE created_at <= NOW() - INTERVAL '120 hours'
                 AND NOT EXISTS (
                     SELECT 1 FROM matching_results mr WHERE mr.job_id = jobs.id
                 );
@@ -102,7 +102,7 @@ def main(is_dry_run: bool):
             # 技術者テーブル用のSQL (typo: enginees.id -> engineers.id)
             engineers_sql_select = """
                 SELECT id FROM engineers
-                WHERE created_at <= NOW() - INTERVAL '60 hours'
+                WHERE created_at <= NOW() - INTERVAL '120 hours'
                 AND NOT EXISTS (
                     SELECT 1 FROM matching_results mr WHERE mr.engineer_id = engineers.id
                 );
