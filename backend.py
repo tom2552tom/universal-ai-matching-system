@@ -2531,145 +2531,6 @@ def get_items_by_ids_stream(item_type: str, ids: list):
 
 
 
-# backend.py の末尾に、以下の新しい関数を追加してください
-# backend.py の rematch_engineer_with_keyword_filtering 関数をこちらに置き換えてください
-
-def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target_count=5):
-    """
-    【技術者詳細ページ専用・完成版】
-    AIキーワード抽出→DB絞り込み→逐次評価を行うジェネレータ。
-    DIパターンに対応し、st.secretsに依存しない。
-    """
-    if not engineer_id:
-        yield "❌ 技術者IDが指定されていません。"
-        return
-
-
-    # ▼▼▼【ここからが修正の核】▼▼▼
-    # --- 1. 引数で渡されたランクと件数を基に、評価条件を設定 ---
-    rank_order = ['S', 'A', 'B', 'C', 'D']
-    try:
-        valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
-    except ValueError:
-        yield f"❌ 無効な目標ランクが指定されました: {target_rank}"
-        return
-    
-    yield f"🎯 目標: 「**{target_rank}**」ランク以上のマッチングを最大 **{target_count}** 件探します。"
-    # ▲▲▲【修正ここまで】▲▲▲
-
-
-    # ★★★ DIパターンのため、この関数はUIから直接呼び出されることを前提とし、
-    # get_db_connection() を使う。バッチ処理からは呼ばない。
-    conn = get_db_connection()
-    if not conn:
-        yield "❌ データベース接続に失敗しました。"
-        return
-
-    try:
-        with conn.cursor() as cursor:
-
-            # ▼▼▼【ここからが修正の核】▼▼▼
-            # --- ステップ1: 技術者の「キーワード」「ドキュメント」「名前」をDBから取得 ---
-            yield "📄 対象技術者の登録済みキーワード情報を取得しています..."
-            cursor.execute("SELECT keywords, document, name FROM engineers WHERE id = %s", (engineer_id,))
-            engineer_record = cursor.fetchone()
-            
-            if not engineer_record:
-                yield f"❌ 技術者ID:{engineer_id} が見つかりませんでした。"
-                return
-            
-            # 取得したキーワードを source_keywordsとして使用
-            source_keywords = engineer_record.get('keywords')
-            engineer_doc = engineer_record.get('document')
-            engineer_name = engineer_record.get('name')
-
-            if not source_keywords or not isinstance(source_keywords, list):
-                yield f"⚠️ 技術者『{engineer_name}』にキーワードが登録されていません。先に「AI情報更新」でキーワードを生成してください。"
-                return
-            yield f"  > ✅ 登録済みキーワード: `{', '.join(source_keywords)}`"
-
-            # --- ステップ2: 登録済みキーワードで案件をDBから絞り込み ---
-            yield "🔍 キーワードに一致する案件候補をDBからリストアップしています..."
-            
-            # 案件のkeywordsカラムに対してOR検索を行う
-            query_clauses = ["%s = ANY(keywords)" for _ in source_keywords]
-            params = tuple(source_keywords)
-            
-            sql = f"""
-                SELECT * FROM jobs
-                WHERE is_hidden = 0 AND ({' OR '.join(query_clauses)});
-            """
-            cursor.execute(sql, params)
-            candidate_jobs = cursor.fetchall()
-            # ▲▲▲【修正ここまで】▲▲▲
-
-            if not candidate_jobs:
-                yield "⚠️ キーワードに一致する案件が見つかりませんでした。"; conn.commit(); return
-            yield f"  > DBから最新 **{len(candidate_jobs)}件** の評価対象候補をリストアップしました。"
-            
-
-            # --- ステップ4: 既存マッチングのクリアと逐次評価 ---
-            # このトランザクション内でDELETEを実行
-            cursor.execute("DELETE FROM matching_results WHERE engineer_id = %s", (engineer_id,))
-            yield f"🗑️ 技術者ID:{engineer_id} の既存マッチング結果をクリアしました。"
-            
-            yield "🔄 絞り込んだ候補案件リストに対して、順にマッチング処理を開始します..."
-
-            found_count = 0
-            processed_count = 0
-            
-            # 取得した candidate_jobs を直接ループで回す
-            for job in candidate_jobs:
-                processed_count += 1
-                yield f"  `({processed_count}/{len(candidate_jobs)})` 案件 **{job['project_name']}** とマッチング評価中..."
-                
-                
-                # ★★★【ここからが修正の核】★★★
-                # AI評価の実行前に、アクティビティログを記録する
-                try:
-                    cursor.execute(
-                        "INSERT INTO ai_activity_log (activity_type) VALUES ('evaluation')"
-                    )
-                except Exception as log_err:
-                    yield f"  - ⚠️ AIアクティビティログの記録に失敗: {log_err}"
-                # ★★★【修正ここまで】★★★
-
-                llm_result = get_match_summary_with_llm(job['document'], engineer_doc)
-                if llm_result and 'summary' in llm_result:
-                    grade = llm_result.get('summary')
-                    # ▼▼▼【ここが修正箇所】▼▼▼
-                    # 評価ランクが、引数で指定された有効なランクに含まれるかチェック
-                    if grade in valid_ranks:
-                        # (DBへの保存処理)
-                        create_or_update_match_record(job['id'], engineer_id, 0.0, grade, llm_result, conn=conn)
-                        yield f"    -> 評価: **{grade}** ... ✅ ヒット！ DBに保存しました。"
-                        found_count += 1
-                    else:
-                        yield f"    -> 評価: **{grade}** ... ⏭️ スキップ"
-                    # ▲▲▲【修正ここまで】▲▲▲
-                else:
-                    yield f"    -> <span style='color: #ffc107;'>⏭️ スキップ</span> (評価: {llm_result.get('summary', '失敗') if llm_result else '失敗'})"
-                
-                # ▼▼▼【ここが修正箇所】▼▼▼
-                # ヒット数が目標件数に達したら、ループを中断
-                if found_count >= target_count:
-                    yield f"\n🎉 目標の {target_count} 件に到達したため、処理を終了します。"
-                    break
-                
-                
-            if found_count < target_count:
-                yield f"ℹ️ すべての候補案件の評価が完了しました。(ヒット数: {found_count}件)"
-
-        conn.commit()
-        yield "✅ すべての処理が正常に完了しました。"
-    except Exception as e:
-        conn.rollback()
-        yield f"❌ 再評価・再マッチング中に予期せぬエラーが発生しました: {e}"
-        import traceback; yield f"```\n{traceback.format_exc()}\n```"
-    finally:
-        if conn:
-            conn.close()
-
 
 
 
@@ -3847,9 +3708,14 @@ def rematch_job_with_keyword_filtering(job_id: int, target_rank: str, target_cou
                 return
             yield f"  > ✅ 取得キーワード: `{', '.join(source_keywords)}`"
 
-            # --- ステップ2: キーワードで技術者をDBから絞り込み ---
-            yield "🔍 キーワードに一致する技術者候補をDBからリストアップしています..."
-            
+
+            # --- ステップ2a: 絞り込み前の、全技術者の総数を取得 ---
+            cur.execute("SELECT COUNT(*) FROM engineers WHERE is_hidden = 0")
+            result = cur.fetchone()
+            total_engineers = result['count'] if result else 0
+            yield f"🔍 全{total_engineers}名の技術者の中から、キーワードに一致する候補を検索します..."
+
+            # --- ステップ2b: 登録済みキーワードで技術者をDBから絞り込み ---
             query_clauses = ["%s = ANY(keywords)" for _ in source_keywords]
             params = tuple(source_keywords)
             
@@ -3860,13 +3726,19 @@ def rematch_job_with_keyword_filtering(job_id: int, target_rank: str, target_cou
             cur.execute(sql, params)
             candidate_engineers = cur.fetchall()
 
+
+
+
             if not candidate_engineers:
                 yield "ℹ️ キーワードに一致する技術者が見つかりませんでした。既存のマッチングをクリアします。"
                 cur.execute("DELETE FROM matching_results WHERE job_id = %s", (job_id,))
                 conn.commit()
                 yield "✅ 処理が完了しました。"
                 return
-            yield f"  > ✅ {len(candidate_engineers)}名の評価対象候補をリストアップしました。"
+            
+
+            yield f"  > ✅ 全{total_engineers}名の中から、**{len(candidate_engineers)}名**の評価対象候補に絞り込みました。"
+
 
             # --- ステップ3: 既存マッチングのクリアとAI評価の実行 ---
             yield f"🗑️ 案件『{project_name}』の既存マッチング結果をクリアしています..."
@@ -3908,3 +3780,154 @@ def rematch_job_with_keyword_filtering(job_id: int, target_rank: str, target_cou
         yield f"```\n{traceback.format_exc()}\n```"
     finally:
         if conn: conn.close()
+
+
+
+
+
+# backend.py の末尾に、以下の新しい関数を追加してください
+# backend.py の rematch_engineer_with_keyword_filtering 関数をこちらに置き換えてください
+
+def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target_count=5):
+    """
+    【技術者詳細ページ専用・完成版】
+    AIキーワード抽出→DB絞り込み→逐次評価を行うジェネレータ。
+    DIパターンに対応し、st.secretsに依存しない。
+    """
+    if not engineer_id:
+        yield "❌ 技術者IDが指定されていません。"
+        return
+
+
+    # ▼▼▼【ここからが修正の核】▼▼▼
+    # --- 1. 引数で渡されたランクと件数を基に、評価条件を設定 ---
+    rank_order = ['S', 'A', 'B', 'C', 'D']
+    try:
+        valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
+    except ValueError:
+        yield f"❌ 無効な目標ランクが指定されました: {target_rank}"
+        return
+    
+    yield f"🎯 目標: 「**{target_rank}**」ランク以上のマッチングを最大 **{target_count}** 件探します。"
+    # ▲▲▲【修正ここまで】▲▲▲
+
+
+    # ★★★ DIパターンのため、この関数はUIから直接呼び出されることを前提とし、
+    # get_db_connection() を使う。バッチ処理からは呼ばない。
+    conn = get_db_connection()
+    if not conn:
+        yield "❌ データベース接続に失敗しました。"
+        return
+
+    try:
+        with conn.cursor() as cursor:
+
+            # ▼▼▼【ここからが修正の核】▼▼▼
+            # --- ステップ1: 技術者の「キーワード」「ドキュメント」「名前」をDBから取得 ---
+            yield "📄 対象技術者の登録済みキーワード情報を取得しています..."
+            cursor.execute("SELECT keywords, document, name FROM engineers WHERE id = %s", (engineer_id,))
+            engineer_record = cursor.fetchone()
+            
+            if not engineer_record:
+                yield f"❌ 技術者ID:{engineer_id} が見つかりませんでした。"
+                return
+            
+            # 取得したキーワードを source_keywordsとして使用
+            source_keywords = engineer_record.get('keywords')
+            engineer_doc = engineer_record.get('document')
+            engineer_name = engineer_record.get('name')
+
+            if not source_keywords or not isinstance(source_keywords, list):
+                yield f"⚠️ 技術者『{engineer_name}』にキーワードが登録されていません。先に「AI情報更新」でキーワードを生成してください。"
+                return
+            yield f"  > ✅ 登録済みキーワード: `{', '.join(source_keywords)}`"
+
+            # --- ステップ2: 登録済みキーワードで案件をDBから絞り込み ---
+            yield "🔍 キーワードに一致する案件候補をDBからリストアップしています..."
+            
+
+            # --- ステップ2a: 絞り込み前の、全案件の総数を取得 ---
+            cursor.execute("SELECT COUNT(*) FROM jobs WHERE is_hidden = 0")
+            result = cursor.fetchone()
+            total_jobs = result['count'] if result else 0
+
+            yield f"🔍 全{total_jobs}件の案件の中から、キーワードに一致する候補を検索します..."
+
+            # --- ステップ2b: 登録済みキーワードで案件をDBから絞り込み ---
+            query_clauses = ["%s = ANY(keywords)" for _ in source_keywords]
+            params = tuple(source_keywords)
+            
+            sql = f"""
+                SELECT * FROM jobs
+                WHERE is_hidden = 0 AND ({' OR '.join(query_clauses)});
+            """
+            cursor.execute(sql, params)
+            candidate_jobs = cursor.fetchall()
+
+
+            if not candidate_jobs:
+                yield "⚠️ キーワードに一致する案件が見つかりませんでした。"; conn.commit(); return
+            yield f"  > DBから最新 **{len(candidate_jobs)}件** の評価対象候補をリストアップしました。"
+            
+
+            # --- ステップ4: 既存マッチングのクリアと逐次評価 ---
+            # このトランザクション内でDELETEを実行
+            cursor.execute("DELETE FROM matching_results WHERE engineer_id = %s", (engineer_id,))
+            yield f"🗑️ 技術者ID:{engineer_id} の既存マッチング結果をクリアしました。"
+            
+            yield "🔄 絞り込んだ候補案件リストに対して、順にマッチング処理を開始します..."
+
+            found_count = 0
+            processed_count = 0
+            
+            # 取得した candidate_jobs を直接ループで回す
+            for job in candidate_jobs:
+                processed_count += 1
+                yield f"  `({processed_count}/{len(candidate_jobs)})` 案件 **{job['project_name']}** とマッチング評価中..."
+                
+                
+                # ★★★【ここからが修正の核】★★★
+                # AI評価の実行前に、アクティビティログを記録する
+                try:
+                    cursor.execute(
+                        "INSERT INTO ai_activity_log (activity_type) VALUES ('evaluation')"
+                    )
+                except Exception as log_err:
+                    yield f"  - ⚠️ AIアクティビティログの記録に失敗: {log_err}"
+                # ★★★【修正ここまで】★★★
+
+                llm_result = get_match_summary_with_llm(job['document'], engineer_doc)
+                if llm_result and 'summary' in llm_result:
+                    grade = llm_result.get('summary')
+                    # ▼▼▼【ここが修正箇所】▼▼▼
+                    # 評価ランクが、引数で指定された有効なランクに含まれるかチェック
+                    if grade in valid_ranks:
+                        # (DBへの保存処理)
+                        create_or_update_match_record(job['id'], engineer_id, 0.0, grade, llm_result, conn=conn)
+                        yield f"    -> 評価: **{grade}** ... ✅ ヒット！ DBに保存しました。"
+                        found_count += 1
+                    else:
+                        yield f"    -> 評価: **{grade}** ... ⏭️ スキップ"
+                    # ▲▲▲【修正ここまで】▲▲▲
+                else:
+                    yield f"    -> <span style='color: #ffc107;'>⏭️ スキップ</span> (評価: {llm_result.get('summary', '失敗') if llm_result else '失敗'})"
+                
+                # ▼▼▼【ここが修正箇所】▼▼▼
+                # ヒット数が目標件数に達したら、ループを中断
+                if found_count >= target_count:
+                    yield f"\n🎉 目標の {target_count} 件に到達したため、処理を終了します。"
+                    break
+                
+                
+            if found_count < target_count:
+                yield f"ℹ️ すべての候補案件の評価が完了しました。(ヒット数: {found_count}件)"
+
+        conn.commit()
+        yield "✅ すべての処理が正常に完了しました。"
+    except Exception as e:
+        conn.rollback()
+        yield f"❌ 再評価・再マッチング中に予期せぬエラーが発生しました: {e}"
+        import traceback; yield f"```\n{traceback.format_exc()}\n```"
+    finally:
+        if conn:
+            conn.close()
