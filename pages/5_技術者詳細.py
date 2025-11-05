@@ -435,7 +435,7 @@ else:
 
 
 st.divider()
-st.header("⚙️ マッチング")
+st.header("⚙️ 再マッチング実行")
 
 # --- UIと状態管理 ---
 # selected_id はこのページの技術者ID
@@ -499,12 +499,15 @@ if st.session_state.get(RUN_KEY):
     
     with st.status("AIキーワード抽出による再マッチングを実行中...", expanded=True) as status:
         try:
-            # ★★★ 技術者用の新しい専用関数を呼び出す ★★★
+            # ▼▼▼【ここが修正箇所】▼▼▼
+            # st.session_stateからランクと件数の値を取得し、引数として渡す
             response_generator = be.rematch_engineer_with_keyword_filtering(
-                engineer_id=selected_id, # ここでは技術者IDを渡す
+                engineer_id=selected_id,
                 target_rank=st.session_state[RANK_KEY],
                 target_count=st.session_state[COUNT_KEY]
             )
+            # ▲▲▲【修正ここまで】▲▲▲
+            
             
             final_message = ""
             for log_message in response_generator:
@@ -513,8 +516,11 @@ if st.session_state.get(RUN_KEY):
 
             if "✅" in final_message or "🎉" in final_message or "ℹ️" in final_message:
                 status.update(label="処理が正常に完了しました！", state="complete", expanded=False)
-                st.success("再マッチングが完了しました。ページをリロードして結果を確認してください。")
+                st.success("再マッチングが完了しました。ページが自動でリフレッシュされます。")
                 st.balloons()
+                time.sleep(2)
+                st.rerun()
+
             else:
                 status.update(label="処理が完了しませんでした。", state="error", expanded=True)
                 st.error("処理が完了しませんでした。上記のログを確認してください。")

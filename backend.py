@@ -2408,160 +2408,6 @@ def evaluate_next_candidates(candidate_ids: list, source_doc: str, search_target
 
 
 
-def rematch_job_with_keyword_filtering(job_id, target_rank='B', target_count=5):
-    """
-    【案件詳細ページ専用】
-    AIキーワード抽出による絞り込みを行い、最新の技術者から順にマッチング評価を実行する。
-    処理の全ステップをログとしてyieldするジェネレータ。
-    """
-    if not job_id:
-        yield "❌ 案件IDが指定されていません。"
-        return
-
-    rank_order = ['S', 'A', 'B', 'C', 'D']
-    try:
-        valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
-    except ValueError:
-        yield f"❌ 無効な目標ランクが指定されました: {target_rank}"
-        return
-
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cursor:
-            # --- ステップ1: 案件情報の取得 ---
-            yield "📄 対象案件の元情報を取得しています..."
-            cursor.execute("SELECT source_data_json, document FROM jobs WHERE id = %s", (job_id,))
-            job_record = cursor.fetchone()
-            if not job_record or not job_record['source_data_json']:
-                yield f"❌ 案件ID:{job_id} の元情報が見つかりませんでした。"
-                return
-            
-            job_doc = job_record['document']
-            source_data = json.loads(job_record['source_data_json'])
-            original_text = source_data.get('body', '') + "".join([f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content')])
-
-            # --- ステップ2: 検索キーワードの抽出 ---
-            yield "🤖 検索の核となるキーワードをAIが抽出しています..."
-
-            # ★★★ AIアクティビティログを記録 (キーワード抽出) ★★★
-            try:
-                cursor.execute("INSERT INTO ai_activity_log (activity_type) VALUES ('keyword_extraction')")
-                # ここではまだコミットしない（トランザクションの一部とする）
-            except Exception as log_err:
-                yield f"  - ⚠️ AIアクティビティログの記録に失敗: {log_err}"
-
-            search_keywords = []
-            try:
-                keyword_extraction_prompt = f"""
-                    以下の案件情報テキストから、技術者を探す上で重要となる検索キーワードを最大10個、カンマ区切りの単語リストとして抜き出してください。
-                    「必須」「歓迎」などの枕詞や、経験年数、単価などの付随情報は含めず、技術名や役職名などの単語のみを抽出してください。
-                    入力テキスト: --- {original_text} ---
-                    出力:
-                """
-                model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-                response = model.generate_content(keyword_extraction_prompt)
-                search_keywords = [kw.strip() for kw in response.text.strip().split(',') if kw.strip()]
-                if not search_keywords: raise ValueError("AI did not return keywords.")
-                yield f"  > 抽出キーワード: `{', '.join(search_keywords)}`"
-            except Exception as e:
-                yield f"⚠️ キーワードのAI抽出に失敗({e})。全技術者を対象に処理を続行します。"
-
-            # --- ステップ3: DB一次絞り込み (キーワードに一致する技術者IDを取得) ---
-            yield "🔍 キーワードに一致する技術者候補をDBからリストアップしています..."
-
-            # ★★★【ここからが修正の核】★★★
-            CANDIDATE_LIMIT = 1000 # 評価対象の上限数を定義
-
-            base_query = "SELECT id FROM engineers WHERE is_hidden = 0"
-            where_clauses = []
-            params = []
-
-            if search_keywords:
-                or_conditions = [f"(document ILIKE %s OR name ILIKE %s)" for _ in search_keywords]
-                where_clauses.append(f"({ ' OR '.join(or_conditions) })")
-                params.extend([f"%{kw}%" for kw in search_keywords for _ in (0, 1)])
-            
-            if where_clauses:
-                base_query += " AND " + " AND ".join(where_clauses)
-            
-            # ORDER BYで最新順に並べ、LIMITで上限を設定
-            final_query = f"{base_query} ORDER BY id DESC LIMIT {CANDIDATE_LIMIT}"
-            
-            cursor.execute(final_query, tuple(params))
-            # ★★★【修正ここまで】★★★
-            
-            
-            candidate_ids = [item['id'] for item in cursor.fetchall()]
-
-            if not candidate_ids:
-                yield "⚠️ キーワードに一致する技術者が見つかりませんでした。処理を終了します。"
-                conn.commit()
-                return
-            yield f"  > **{len(candidate_ids)}名** の評価対象候補をリストアップしました。"
-            
-            # --- ステップ4: 既存マッチングのクリアと逐次評価 ---
-            cursor.execute("DELETE FROM matching_results WHERE job_id = %s", (job_id,))
-            yield f"🗑️ 案件ID:{job_id} の既存マッチング結果をクリアしました。"
-            yield "🔄 絞り込んだ候補者リストに対して、順にマッチング処理を開始します..."
-
-            candidate_records = get_items_by_ids_sync('engineers', candidate_ids) # 同期版で一括取得
-            
-            found_count = 0
-            processed_count = 0
-            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-            for engineer in candidate_records:
-                processed_count += 1
-                yield f"  `({processed_count}/{len(candidate_records)})` 技術者 **{engineer['name']}** とマッチング中..."
-                
-                # ★★★【ここからが修正の核】★★★
-                # AI評価の実行前に、アクティビティログを記録する
-                try:
-                    cursor.execute(
-                        "INSERT INTO ai_activity_log (activity_type) VALUES ('evaluation')"
-                    )
-                    # このINSERTはトランザクションの一部なので、ここではまだcommitしない
-                except Exception as log_err:
-                    yield f"  - ⚠️ AIアクティビティログの記録に失敗: {log_err}"
-                # ★★★【修正ここまで】★★★
-
-                llm_result = get_match_summary_with_llm(job_doc, engineer['document'])
-
-                if llm_result and 'summary' in llm_result:
-                    grade = llm_result.get('summary')
-                    if grade in valid_ranks:
-                        positive_points = json.dumps(llm_result.get('positive_points', []), ensure_ascii=False)
-                        concern_points = json.dumps(llm_result.get('concern_points', []), ensure_ascii=False)
-                        score = 0.0
-                        
-                        try:
-                            cursor.execute(
-                                'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                                (job_id, engineer['id'], score, now_str, grade, positive_points, concern_points)
-                            )
-                            yield f"    -> **<span style='color: #28a745;'>✅ ヒット！</span>** 評価: **{grade}** ... DBに保存しました。"
-                            found_count += 1
-                        except Exception as db_err:
-                            yield f"    -> <span style='color: #dc3545;'>❌ DB保存エラー</span>: {db_err}"
-                    else:
-                        yield f"    -> <span style='color: #ffc107;'>⏭️ スキップ</span> (評価: {grade})"
-                else:
-                    yield "    -> <span style='color: #dc3545;'>❌ LLM評価失敗</span>"
-
-                if found_count >= target_count:
-                    yield f"🎉 目標の {target_count} 件に到達したため、処理を終了します。"
-                    break
-            
-            if found_count < target_count:
-                yield f"ℹ️ すべての候補者の評価が完了しました。(ヒット数: {found_count}件)"
-
-        conn.commit()
-        yield "✅ すべての処理が正常に完了しました。"
-    except Exception as e:
-        conn.rollback()
-        yield f"❌ 再評価・再マッチング中に予期せぬエラーが発生しました: {e}"
-        import traceback
-        yield f"```\n{traceback.format_exc()}\n```"
 
 def get_items_by_ids_sync(item_type: str, ids: list, conn=None) -> list:
     """
@@ -2698,12 +2544,19 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
         yield "❌ 技術者IDが指定されていません。"
         return
 
+
+    # ▼▼▼【ここからが修正の核】▼▼▼
+    # --- 1. 引数で渡されたランクと件数を基に、評価条件を設定 ---
     rank_order = ['S', 'A', 'B', 'C', 'D']
     try:
         valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
     except ValueError:
         yield f"❌ 無効な目標ランクが指定されました: {target_rank}"
         return
+    
+    yield f"🎯 目標: 「**{target_rank}**」ランク以上のマッチングを最大 **{target_count}** 件探します。"
+    # ▲▲▲【修正ここまで】▲▲▲
+
 
     # ★★★ DIパターンのため、この関数はUIから直接呼び出されることを前提とし、
     # get_db_connection() を使う。バッチ処理からは呼ばない。
@@ -2714,74 +2567,47 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
 
     try:
         with conn.cursor() as cursor:
-            # --- ステップ1: 技術者情報の取得 ---
-            yield "📄 対象技術者の元情報を取得しています..."
-            cursor.execute("SELECT source_data_json, document FROM engineers WHERE id = %s", (engineer_id,))
+
+            # ▼▼▼【ここからが修正の核】▼▼▼
+            # --- ステップ1: 技術者の「キーワード」「ドキュメント」「名前」をDBから取得 ---
+            yield "📄 対象技術者の登録済みキーワード情報を取得しています..."
+            cursor.execute("SELECT keywords, document, name FROM engineers WHERE id = %s", (engineer_id,))
             engineer_record = cursor.fetchone()
-            if not engineer_record or not engineer_record['source_data_json']:
-                yield f"❌ 技術者ID:{engineer_id} の元情報が見つかりませんでした。"; return
             
-            engineer_doc = engineer_record['document']
-            source_data = json.loads(engineer_record['source_data_json'])
-            original_text = source_data.get('body', '') + "".join([f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content')])
+            if not engineer_record:
+                yield f"❌ 技術者ID:{engineer_id} が見つかりませんでした。"
+                return
+            
+            # 取得したキーワードを source_keywordsとして使用
+            source_keywords = engineer_record.get('keywords')
+            engineer_doc = engineer_record.get('document')
+            engineer_name = engineer_record.get('name')
 
-            # --- ステップ2: 検索キーワードの抽出 ---
-            yield "🤖 検索の核となるキーワードをAIが抽出しています..."
-            search_keywords = []
-            try:
-                # ▼▼▼【ここからが修正の核】▼▼▼
-                keyword_extraction_prompt = f"""
-                    以下の技術者情報テキストから、案件を探す上で重要となる検索キーワードを最大10個、カンマ区切りの単語リストとして抜き出してください。
-                    「必須」「歓迎」などの枕詞や、経験年数、単価などの付随情報は含めず、技術名や役職名などの単語のみを抽出してください。
-                    例:
-                    入力:「Java(SpringBoot), PHP(CakePHP)でのバックエンド開発経験が豊富です。AWS上でのインフラ構築も対応可能です。」
-                    出力: Java, SpringBoot, PHP, CakePHP, AWS
+            if not source_keywords or not isinstance(source_keywords, list):
+                yield f"⚠️ 技術者『{engineer_name}』にキーワードが登録されていません。先に「AI情報更新」でキーワードを生成してください。"
+                return
+            yield f"  > ✅ 登録済みキーワード: `{', '.join(source_keywords)}`"
 
-                    入力テキスト: ---
-                    {original_text}
-                    ---
-                    出力:
-                """
-                # ▲▲▲【修正ここまで】▲▲▲
-
-                
-                model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-                response = model.generate_content(keyword_extraction_prompt)
-                search_keywords = [kw.strip() for kw in response.text.strip().split(',') if kw.strip()]
-                if not search_keywords: raise ValueError("AI did not return keywords.")
-                yield f"  > 抽出キーワード: `{', '.join(search_keywords)}`"
-            except Exception as e:
-                yield f"⚠️ キーワードのAI抽出に失敗({e})。全案件を対象に処理を続行します。"
-
-            # --- ステップ3: DB一次絞り込み ---
+            # --- ステップ2: 登録済みキーワードで案件をDBから絞り込み ---
             yield "🔍 キーワードに一致する案件候補をDBからリストアップしています..."
-            CANDIDATE_LIMIT = 1000
-            base_query = "SELECT id FROM jobs WHERE is_hidden = 0"
-            where_clauses = []
-            params = []
+            
+            # 案件のkeywordsカラムに対してOR検索を行う
+            query_clauses = ["%s = ANY(keywords)" for _ in source_keywords]
+            params = tuple(source_keywords)
+            
+            sql = f"""
+                SELECT * FROM jobs
+                WHERE is_hidden = 0 AND ({' OR '.join(query_clauses)});
+            """
+            cursor.execute(sql, params)
+            candidate_jobs = cursor.fetchall()
+            # ▲▲▲【修正ここまで】▲▲▲
 
-            if search_keywords:
-                or_conditions = [f"(document ILIKE %s OR project_name ILIKE %s)" for _ in search_keywords]
-                where_clauses.append(f"({ ' OR '.join(or_conditions) })")
-                # ★★★【ここが修正の核】★★★
-                # ループの外でまとめてextendするのではなく、ループの中で都度追加する
-                for kw in search_keywords:
-                    param = f"%{kw}%"
-                    params.extend([param, param])
-                # ★★★【修正ここまで】★★★
-            
-            if where_clauses:
-                base_query += " AND " + " AND ".join(where_clauses)
-            
-            final_query = f"{base_query} ORDER BY id DESC LIMIT {CANDIDATE_LIMIT}"
-            cursor.execute(final_query, tuple(params))
-            
-            candidate_ids = [item['id'] for item in cursor.fetchall()]
-
-            if not candidate_ids:
+            if not candidate_jobs:
                 yield "⚠️ キーワードに一致する案件が見つかりませんでした。"; conn.commit(); return
-            yield f"  > DBから最新 **{len(candidate_ids)}件** (最大{CANDIDATE_LIMIT}件) の評価対象候補をリストアップしました。"
+            yield f"  > DBから最新 **{len(candidate_jobs)}件** の評価対象候補をリストアップしました。"
             
+
             # --- ステップ4: 既存マッチングのクリアと逐次評価 ---
             # このトランザクション内でDELETEを実行
             cursor.execute("DELETE FROM matching_results WHERE engineer_id = %s", (engineer_id,))
@@ -2789,15 +2615,14 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
             
             yield "🔄 絞り込んだ候補案件リストに対して、順にマッチング処理を開始します..."
 
-            # get_items_by_ids_sync に現在の接続オブジェクトを渡す
-            candidate_records = get_items_by_ids_sync('jobs', candidate_ids, conn=conn)
+            found_count = 0
+            processed_count = 0
             
-            found_count, processed_count = 0, 0
-            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-            for job in candidate_records:
+            # 取得した candidate_jobs を直接ループで回す
+            for job in candidate_jobs:
                 processed_count += 1
-                yield f"  `({processed_count}/{len(candidate_records)})` 案件 **{job.get('project_name', 'N/A')}** とマッチング中..."
+                yield f"  `({processed_count}/{len(candidate_jobs)})` 案件 **{job['project_name']}** とマッチング評価中..."
+                
                 
                 # ★★★【ここからが修正の核】★★★
                 # AI評価の実行前に、アクティビティログを記録する
@@ -2812,19 +2637,26 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
                 llm_result = get_match_summary_with_llm(job['document'], engineer_doc)
                 if llm_result and 'summary' in llm_result:
                     grade = llm_result.get('summary')
+                    # ▼▼▼【ここが修正箇所】▼▼▼
+                    # 評価ランクが、引数で指定された有効なランクに含まれるかチェック
                     if grade in valid_ranks:
-                        try:
-                            # create_or_update_match_record に現在の接続オブジェクトを渡す
-                            create_or_update_match_record(job['id'], engineer_id, 0.0, grade, llm_result, conn=conn)
-                            yield f"    -> **<span style='color: #28a745;'>✅ ヒット！</span>** 評価: **{grade}**"
-                            found_count += 1
-                        except Exception as db_err:
-                            yield f"    -> <span style='color: #dc3545;'>❌ DB保存エラー</span>: {db_err}"
+                        # (DBへの保存処理)
+                        create_or_update_match_record(job['id'], engineer_id, 0.0, grade, llm_result, conn=conn)
+                        yield f"    -> 評価: **{grade}** ... ✅ ヒット！ DBに保存しました。"
+                        found_count += 1
+                    else:
+                        yield f"    -> 評価: **{grade}** ... ⏭️ スキップ"
+                    # ▲▲▲【修正ここまで】▲▲▲
                 else:
                     yield f"    -> <span style='color: #ffc107;'>⏭️ スキップ</span> (評価: {llm_result.get('summary', '失敗') if llm_result else '失敗'})"
+                
+                # ▼▼▼【ここが修正箇所】▼▼▼
+                # ヒット数が目標件数に達したら、ループを中断
                 if found_count >= target_count:
-                    yield f"🎉 目標の {target_count} 件に到達したため、処理を終了します。"; break
-            
+                    yield f"\n🎉 目標の {target_count} 件に到達したため、処理を終了します。"
+                    break
+                
+                
             if found_count < target_count:
                 yield f"ℹ️ すべての候補案件の評価が完了しました。(ヒット数: {found_count}件)"
 
@@ -3964,5 +3796,115 @@ def register_item_from_text(input_text: str):
     except Exception as e:
         yield f"❌ 処理中に予期せぬエラーが発生しました: {e}"
         import traceback; yield f"```\n{traceback.format_exc()}\n```"
+    finally:
+        if conn: conn.close()
+
+
+
+
+
+def rematch_job_with_keyword_filtering(job_id: int, target_rank: str, target_count: int):
+    """
+    【案件詳細ページ専用】
+    DBに登録されているキーワードで技術者を絞り込み、再マッチングを実行するジェネレータ。
+    """
+    if not job_id:
+        yield "❌ 案件IDが指定されていません。"
+        return
+
+    # --- ランク条件の設定 ---
+    rank_order = ['S', 'A', 'B', 'C', 'D']
+    try:
+        valid_ranks = rank_order[:rank_order.index(target_rank) + 1]
+    except ValueError:
+        yield f"❌ 無効な目標ランクが指定されました: {target_rank}"
+        return
+    
+    yield f"🎯 目標: 「**{target_rank}**」ランク以上のマッチングを最大 **{target_count}** 件探します。"
+
+    conn = get_db_connection()
+    if not conn:
+        yield "❌ データベースに接続できませんでした。"
+        return
+        
+    try:
+        with conn.cursor() as cur:
+            # --- ステップ1: 案件のキーワードとドキュメントを取得 ---
+            yield "📄 対象案件の登録済みキーワード情報を取得しています..."
+            cur.execute("SELECT keywords, document, project_name FROM jobs WHERE id = %s", (job_id,))
+            job_record = cur.fetchone()
+            
+            if not job_record:
+                yield f"❌ 案件ID:{job_id} が見つかりませんでした。"
+                return
+            
+            source_keywords = job_record.get('keywords')
+            job_doc = job_record.get('document')
+            project_name = job_record.get('project_name')
+
+            if not source_keywords or not isinstance(source_keywords, list):
+                yield f"⚠️ 案件『{project_name}』にキーワードが登録されていません。先に「AI情報更新」を実行してください。"
+                return
+            yield f"  > ✅ 取得キーワード: `{', '.join(source_keywords)}`"
+
+            # --- ステップ2: キーワードで技術者をDBから絞り込み ---
+            yield "🔍 キーワードに一致する技術者候補をDBからリストアップしています..."
+            
+            query_clauses = ["%s = ANY(keywords)" for _ in source_keywords]
+            params = tuple(source_keywords)
+            
+            sql = f"""
+                SELECT * FROM engineers
+                WHERE is_hidden = 0 AND ({' OR '.join(query_clauses)});
+            """
+            cur.execute(sql, params)
+            candidate_engineers = cur.fetchall()
+
+            if not candidate_engineers:
+                yield "ℹ️ キーワードに一致する技術者が見つかりませんでした。既存のマッチングをクリアします。"
+                cur.execute("DELETE FROM matching_results WHERE job_id = %s", (job_id,))
+                conn.commit()
+                yield "✅ 処理が完了しました。"
+                return
+            yield f"  > ✅ {len(candidate_engineers)}名の評価対象候補をリストアップしました。"
+
+            # --- ステップ3: 既存マッチングのクリアとAI評価の実行 ---
+            yield f"🗑️ 案件『{project_name}』の既存マッチング結果をクリアしています..."
+            cur.execute("DELETE FROM matching_results WHERE job_id = %s", (job_id,))
+            
+            yield "🔄 絞り込んだ候補技術者リストに対して、順にAI評価を開始します..."
+            
+            found_count = 0
+            processed_count = 0
+            
+            for engineer in candidate_engineers:
+                processed_count += 1
+                yield f"  `({processed_count}/{len(candidate_engineers)})` 技術者 **{engineer['name']}** とマッチング評価中..."
+                
+                llm_result = get_match_summary_with_llm(job_doc, engineer['document'])
+                
+                if llm_result and llm_result.get('summary'):
+                    grade = llm_result.get('summary')
+                    if grade in valid_ranks:
+                        create_or_update_match_record(job_id, engineer['id'], 0.0, grade, llm_result, conn)
+                        yield f"    -> 評価: **{grade}** ... ✅ ヒット！ DBに保存しました。"
+                        found_count += 1
+                    else:
+                        yield f"    -> 評価: **{grade}** ... ⏭️ スキップ"
+                else:
+                    yield "    -> ⚠️ LLM評価失敗のためスキップ"
+
+                if found_count >= target_count:
+                    yield f"\n🎉 目標の {target_count} 件に到達したため、処理を終了します。"
+                    break
+        
+        conn.commit()
+        yield "🎉 すべての処理が正常に完了しました。"
+
+    except Exception as e:
+        if conn: conn.rollback()
+        import traceback
+        yield f"❌ 処理中に予期せぬエラーが発生しました: {e}"
+        yield f"```\n{traceback.format_exc()}\n```"
     finally:
         if conn: conn.close()

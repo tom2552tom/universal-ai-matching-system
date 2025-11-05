@@ -423,15 +423,15 @@ else:
 
 
 
-
 st.divider()
-st.header("⚙️ マッチング")
+st.header("⚙️ マッチング実行")
 
 # --- UIと状態管理 ---
-CONFIRM_KEY = f"rematch_confirm_{selected_id}"
-RUN_KEY = f"run_rematch_{selected_id}"
-RANK_KEY = f"rematch_rank_{selected_id}"
-COUNT_KEY = f"rematch_count_{selected_id}"
+# selected_id はこのページの案件ID
+CONFIRM_KEY = f"rematch_confirm_job_{selected_id}"
+RUN_KEY = f"run_rematch_job_{selected_id}"
+RANK_KEY = f"rematch_rank_job_{selected_id}"
+COUNT_KEY = f"rematch_count_job_{selected_id}"
 
 if CONFIRM_KEY not in st.session_state:
     st.session_state[CONFIRM_KEY] = False
@@ -440,7 +440,7 @@ if RUN_KEY not in st.session_state:
 
 # --- UI定義 ---
 with st.container(border=True):
-    st.info("この案件の元情報からAIがキーワードを抽出し、関連する技術者候補を絞り込んでから、最新のAI評価に基づいたマッチングを実行します。")
+    st.info("この案件の登録済みキーワードを基に、関連する技術者候補を絞り込んでから、AI評価に基づいたマッチングを再実行します。")
     
     st.markdown("##### マッチング条件設定")
     col1, col2 = st.columns(2)
@@ -455,7 +455,7 @@ with st.container(border=True):
             help="指定ランク以上のマッチングがこの件数に達すると処理を終了します。"
         )
 
-    if st.button("🤖 AIキーワード抽出による再マッチングを実行", type="primary", use_container_width=True):
+    if st.button("🔄 キーワードで再マッチングを実行", type="primary", use_container_width=True):
         st.session_state[CONFIRM_KEY] = True
         st.rerun()
 
@@ -465,11 +465,11 @@ if st.session_state.get(CONFIRM_KEY):
         st.warning(f"**本当に再マッチングを実行しますか？**\n\nこの案件に関する既存のマッチング結果は**すべて削除**されます。")
         st.markdown(f"""
         **実行条件:**
-        - **目標ランク:** `{st.session_state[RANK_KEY]}` ランク以上
-        - **目標件数:** `{st.session_state[COUNT_KEY]}` 件
+        - **目標ランク:** `{st.session_state.get(RANK_KEY, 'A')}` ランク以上
+        - **目標件数:** `{st.session_state.get(COUNT_KEY, 5)}` 件
         """)
         
-        agree = st.checkbox("はい、既存のマッチング結果の削除を承認し、再実行します。")
+        agree = st.checkbox("はい、既存のマッチング結果の削除を承認し、再実行します。", key=f"agree_job_{selected_id}")
         
         col_run, col_cancel = st.columns(2)
         with col_run:
@@ -478,7 +478,7 @@ if st.session_state.get(CONFIRM_KEY):
                 st.session_state[CONFIRM_KEY] = False
                 st.rerun()
         with col_cancel:
-            if st.button("キャンセル"):
+            if st.button("キャンセル", use_container_width=True):
                 st.session_state[CONFIRM_KEY] = False
                 st.rerun()
 
@@ -486,9 +486,9 @@ if st.session_state.get(CONFIRM_KEY):
 if st.session_state.get(RUN_KEY):
     st.session_state[RUN_KEY] = False
     
-    with st.status("AIキーワード抽出による再マッチングを実行中...", expanded=True) as status:
+    with st.status("キーワードによる再マッチングを実行中...", expanded=True) as status:
         try:
-            # ★★★ 新しい専用関数を呼び出す ★★★
+            # ★★★ 案件用の専用関数を呼び出す ★★★
             response_generator = be.rematch_job_with_keyword_filtering(
                 job_id=selected_id,
                 target_rank=st.session_state[RANK_KEY],
@@ -497,13 +497,17 @@ if st.session_state.get(RUN_KEY):
             
             final_message = ""
             for log_message in response_generator:
-                st.markdown(log_message, unsafe_allow_html=True)
-                final_message = log_message
+                status.markdown(log_message, unsafe_allow_html=True)
+                if isinstance(log_message, str):
+                    final_message = log_message
 
-            if "✅" in final_message or "🎉" in final_message or "ℹ️" in final_message:
+            # 完了判定
+            if any(icon in final_message for icon in ["✅", "🎉", "ℹ️"]):
                 status.update(label="処理が正常に完了しました！", state="complete", expanded=False)
-                st.success("再マッチングが完了しました。ページをリロードして結果を確認してください。")
+                st.success("再マッチングが完了しました。ページが自動でリフレッシュされます。")
                 st.balloons()
+                time.sleep(2)
+                st.rerun()
             else:
                 status.update(label="処理が完了しませんでした。", state="error", expanded=True)
                 st.error("処理が完了しませんでした。上記のログを確認してください。")
@@ -512,13 +516,7 @@ if st.session_state.get(RUN_KEY):
             st.error(f"UI処理中に予期せぬエラーが発生しました: {e}")
             status.update(label="UIエラー", state="error", expanded=True)
 
-    if st.button("ページを更新して結果を確認"):
-        st.rerun()
-
-
-
 st.divider()
-
 
 if st.button("一覧に戻る"):
     if 'selected_job_id' in st.session_state: del st.session_state['selected_job_id']
