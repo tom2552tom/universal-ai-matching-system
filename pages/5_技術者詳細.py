@@ -137,45 +137,6 @@ if engineer_data:
                     st.error("担当者の更新に失敗しました。")
     st.divider()
 
-    # --- 技術者の操作（表示/非表示/削除）セクション ---
-    with st.expander("技術者の操作", expanded=False):
-        if is_currently_hidden:
-            if st.button("✅ この技術者を再表示する", use_container_width=True):
-                if be.set_engineer_visibility(selected_id, 0): st.success("技術者を再表示しました。"); st.rerun()
-                else: st.error("更新に失敗しました。")
-        else:
-            if st.button("🙈 この技術者を非表示にする (アーカイブ)", type="secondary", use_container_width=True):
-                if be.set_engineer_visibility(selected_id, 1): st.success("技術者を非表示にしました。"); st.rerun()
-                else: st.error("更新に失敗しました。")
-        
-        st.markdown("---")
-        
-        delete_confirmation_key = f"confirm_delete_engineer_{selected_id}"
-
-        if delete_confirmation_key not in st.session_state:
-            st.session_state[delete_confirmation_key] = False
-
-        if st.button("🚨 この技術者を完全に削除する", type="secondary", use_container_width=True, key=f"delete_eng_main_btn_{selected_id}"):
-            st.session_state[delete_confirmation_key] = not st.session_state[delete_confirmation_key]
-
-        if st.session_state[delete_confirmation_key]:
-            st.warning("**本当にこの技術者を削除しますか？**\n\nこの操作は取り消せません。関連するマッチング結果もすべて削除されます。")
-            
-            col_check, col_btn = st.columns([3,1])
-            with col_check:
-                confirm_check = st.checkbox("はい、削除を承認します。", key=f"delete_eng_confirm_checkbox_{selected_id}")
-            with col_btn:
-                if st.button("削除実行", disabled=not confirm_check, use_container_width=True, key=f"delete_eng_execute_btn_{selected_id}"):
-                    if be.delete_engineer(selected_id):
-                        st.success(f"技術者 (ID: {selected_id}) を完全に削除しました。技術者管理ページに戻ります。")
-                        time.sleep(2)
-                        del st.session_state['selected_engineer_id']
-                        if delete_confirmation_key in st.session_state:
-                            del st.session_state[delete_confirmation_key]
-                        st.switch_page("pages/3_技術者管理.py")
-                    else:
-                        st.error("技術者の削除に失敗しました。")
-    st.divider()
 
 
     
@@ -234,6 +195,221 @@ if engineer_data:
         st.markdown("**AIによる要約文**")
         st.write(main_doc)
     # ▲▲▲【修正ここまで】▲▲▲
+
+
+    st.divider()
+
+    
+
+    st.header("⚙️ AIマッチング")
+
+    # --- UIと状態管理 ---
+    # selected_id はこのページの技術者ID
+    CONFIRM_KEY = f"rematch_confirm_engineer_{selected_id}"
+    RUN_KEY = f"run_rematch_engineer_{selected_id}"
+    RANK_KEY = f"rematch_rank_engineer_{selected_id}"
+    COUNT_KEY = f"rematch_count_engineer_{selected_id}"
+
+    if CONFIRM_KEY not in st.session_state:
+        st.session_state[CONFIRM_KEY] = False
+    if RUN_KEY not in st.session_state:
+        st.session_state[RUN_KEY] = False
+
+    # --- UI定義 ---
+    with st.container(border=True):
+        st.info("この技術者のスキル情報からAIがキーワードを抽出し、関連する案件候補を絞り込んでから、最新のAI評価に基づいたマッチングを実行します。")
+        
+        st.markdown("##### マッチング条件設定")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.selectbox(
+                "最低ランク", ['S', 'A', 'B', 'C'], index=1, key=RANK_KEY,
+                help="ここで選択したランク以上のマッチング結果を生成します。"
+            )
+        with col2:
+            st.number_input(
+                "最大ヒット件数(1-10件)", 1, 10, 5, key=COUNT_KEY,
+                help="指定ランク以上のマッチングがこの件数に達すると処理を終了します。"
+            )
+
+        if st.button("🤖 AIマッチングを実行する", type="primary", use_container_width=True):
+            st.session_state[CONFIRM_KEY] = True
+            st.rerun()
+
+    # --- 確認UIと実行トリガー ---
+    if st.session_state.get(CONFIRM_KEY):
+        with st.container(border=True):
+            st.warning(f"**本当にAIマッチングを実行しますか？**\n\nこの技術者に関する既存のマッチング結果は**すべて削除**されます。")
+            st.markdown(f"""
+            **実行条件:**
+            - **目標ランク:** `{st.session_state[RANK_KEY]}` ランク以上
+            - **目標件数:** `{st.session_state[COUNT_KEY]}` 件
+            """)
+            
+            agree = st.checkbox("はい、既存のマッチング結果の削除を承認し、再実行します。")
+            
+            col_run, col_cancel = st.columns(2)
+            with col_run:
+                if st.button("実行", disabled=not agree, use_container_width=True):
+                    st.session_state[RUN_KEY] = True
+                    st.session_state[CONFIRM_KEY] = False
+                    st.rerun()
+            with col_cancel:
+                if st.button("キャンセル"):
+                    st.session_state[CONFIRM_KEY] = False
+                    st.rerun()
+
+    # --- 実行ロジック (st.status) ---
+    if st.session_state.get(RUN_KEY):
+        st.session_state[RUN_KEY] = False
+        
+        with st.status("AIマッチングを実行中...", expanded=True) as status:
+            try:
+                # ▼▼▼【ここが修正箇所】▼▼▼
+                # st.session_stateからランクと件数の値を取得し、引数として渡す
+                response_generator = be.rematch_engineer_with_keyword_filtering(
+                    engineer_id=selected_id,
+                    target_rank=st.session_state[RANK_KEY],
+                    target_count=st.session_state[COUNT_KEY]
+                )
+                # ▲▲▲【修正ここまで】▲▲▲
+                
+                
+                final_message = ""
+                for log_message in response_generator:
+                    st.markdown(log_message, unsafe_allow_html=True)
+                    final_message = log_message
+
+                if "✅" in final_message or "🎉" in final_message or "ℹ️" in final_message:
+                    status.update(label="処理が正常に完了しました！", state="complete", expanded=False)
+                    st.success("AIマッチングが完了しました。ページが自動でリフレッシュされます。")
+                    st.balloons()
+                    time.sleep(2)
+                    st.rerun()
+
+                else:
+                    status.update(label="処理が完了しませんでした。", state="error", expanded=True)
+                    st.error("処理が完了しませんでした。上記のログを確認してください。")
+
+            except Exception as e:
+                st.error(f"UI処理中に予期せぬエラーが発生しました: {e}")
+                status.update(label="UIエラー", state="error", expanded=True)
+
+        if st.button("ページを更新して結果を確認"):
+            st.rerun()
+
+
+
+
+    st.divider()
+
+
+
+
+
+
+    # --- マッチング済みの案件一覧 ---
+    st.header("🤝 マッチング済みの案件一覧")
+    
+    if not matched_jobs:
+        st.info("この技術者にマッチング済みの案件はありません。")
+    else:
+        st.write(f"計 {len(matched_jobs)} 件の案件がマッチングしています。")
+
+        # ★★★【ここからが修正の核】★★★
+        CLEAR_CONFIRM_KEY = f"clear_matches_confirm_eng_{selected_id}"
+        if CLEAR_CONFIRM_KEY not in st.session_state:
+            st.session_state[CLEAR_CONFIRM_KEY] = False
+
+        if st.button("🗑️ マッチングリストをクリア", type="secondary"):
+            st.session_state[CLEAR_CONFIRM_KEY] = not st.session_state[CLEAR_CONFIRM_KEY]
+            st.rerun()
+        
+        if st.session_state[CLEAR_CONFIRM_KEY]:
+            st.warning(f"**本当にこの技術者のマッチング済みリスト（{len(matched_jobs)}件）をすべてクリアしますか？** この操作は取り消せません。")
+            col_run, col_cancel = st.columns(2)
+            if col_run.button("はい、クリアします", type="primary"):
+                # ★ 技術者用の関数を呼び出す ★
+                if be.clear_matches_for_engineer(selected_id):
+                    st.success("マッチングリストをクリアしました。")
+                    st.session_state[CLEAR_CONFIRM_KEY] = False
+                    time.sleep(1); st.rerun()
+                else:
+                    st.error("クリア処理に失敗しました。")
+            if col_cancel.button("キャンセル"):
+                st.session_state[CLEAR_CONFIRM_KEY] = False
+                st.rerun()
+        # ★★★【修正ここまで】★★★
+        
+        for job in matched_jobs:
+            with st.container(border=True):
+                col1, col2 = st.columns([4, 1])
+                with col1:
+                    project_name = job['project_name'] or f"案件 (ID: {job['job_id']})"
+                    st.markdown(f"##### {project_name}")
+                    job_doc_parts = job['document'].split('\n---\n', 1)
+                    job_main_doc = job_doc_parts[1] if len(job_doc_parts) > 1 else job['document']
+                    st.caption(job_main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
+                with col2:
+                    st.markdown(get_evaluation_html(job['grade'], font_size='2em'), unsafe_allow_html=True)
+                    if st.button("詳細を見る", key=f"matched_job_detail_{job['match_id']}", use_container_width=True):
+                        st.session_state['selected_match_id'] = job['match_id']
+                        st.switch_page("pages/7_マッチング詳細.py")
+                
+    st.divider()
+
+
+
+    # --- AIによる自動マッチング依頼 ---
+    st.header("🤖 AIによる自動マッチング依頼")
+
+    # 現在の依頼状況を取得
+    current_request = be.get_auto_match_request(selected_id, 'engineer')
+
+    if current_request:
+        with st.container(border=True):
+            st.success(f"現在、この技術者の自動マッチングが有効です（通知先: {current_request['notification_email']}）。新しい案件情報が登録されると、`{current_request['target_rank']}` ランク以上でマッチした場合に通知が送信されます。")
+            if st.button("自動マッチングを停止する", type="secondary", use_container_width=True, key=f"stop_auto_match_eng_{selected_id}"):
+                if be.deactivate_auto_match_request(selected_id, 'engineer'):
+                    st.success("自動マッチングを停止しました。")
+                    time.sleep(1); st.rerun()
+                else:
+                    st.error("自動マッチングの停止に失敗しました。")
+    else:
+        with st.container(border=True):
+            with st.form(f"auto_match_form_eng_{selected_id}"):
+                st.info("新しい案件情報がシステムに登録された際に、この技術者とのマッチングを自動で実行し、ヒットした場合にメールで通知します。")
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    req_rank = st.selectbox("通知する最低ランク", ['S', 'A', 'B', 'C'], index=1)
+                with col2:
+                    # ここでは仮のログインユーザー情報を利用
+                    # 実際の運用では st.session_state.email などを参照する
+                    login_user_email = "default.user@example.com" 
+                    req_email = st.text_input("通知先のメールアドレス", placeholder="your.email@example.com")
+                
+                # ログイン機能があれば、ログインユーザーのIDを取得
+                # ここでは仮に user_id = 1 とする
+                current_user_id = 1 
+
+                submitted = st.form_submit_button("この条件で自動マッチングを依頼する", type="primary", use_container_width=True)
+
+                if submitted:
+                    if not req_email:
+                        st.error("通知先のメールアドレスを入力してください。")
+                    else:
+                        if be.add_or_update_auto_match_request(selected_id, 'engineer', req_rank, req_email, current_user_id):
+                            st.success("自動マッチング依頼を登録しました！")
+                            time.sleep(1); st.rerun()
+                        else:
+                            st.error("依頼の登録に失敗しました。")
+
+    st.divider()
+    
+    
+
+
 
 
 
@@ -328,214 +504,53 @@ if engineer_data:
     else: st.warning("このデータには元のテキストが保存されていません。")
     st.divider()
 
-    # --- マッチング済みの案件一覧 ---
-    st.header("🤝 マッチング済みの案件一覧")
+
+
+    # --- 技術者の操作（表示/非表示/削除）セクション ---
+    with st.expander("技術者の操作", expanded=False):
+        if is_currently_hidden:
+            if st.button("✅ この技術者を再表示する", use_container_width=True):
+                if be.set_engineer_visibility(selected_id, 0): st.success("技術者を再表示しました。"); st.rerun()
+                else: st.error("更新に失敗しました。")
+        else:
+            if st.button("🙈 この技術者を非表示にする (アーカイブ)", type="secondary", use_container_width=True):
+                if be.set_engineer_visibility(selected_id, 1): st.success("技術者を非表示にしました。"); st.rerun()
+                else: st.error("更新に失敗しました。")
+        
+        st.markdown("---")
+        
+        delete_confirmation_key = f"confirm_delete_engineer_{selected_id}"
+
+        if delete_confirmation_key not in st.session_state:
+            st.session_state[delete_confirmation_key] = False
+
+        if st.button("🚨 この技術者を完全に削除する", type="secondary", use_container_width=True, key=f"delete_eng_main_btn_{selected_id}"):
+            st.session_state[delete_confirmation_key] = not st.session_state[delete_confirmation_key]
+
+        if st.session_state[delete_confirmation_key]:
+            st.warning("**本当にこの技術者を削除しますか？**\n\nこの操作は取り消せません。関連するマッチング結果もすべて削除されます。")
+            
+            col_check, col_btn = st.columns([3,1])
+            with col_check:
+                confirm_check = st.checkbox("はい、削除を承認します。", key=f"delete_eng_confirm_checkbox_{selected_id}")
+            with col_btn:
+                if st.button("削除実行", disabled=not confirm_check, use_container_width=True, key=f"delete_eng_execute_btn_{selected_id}"):
+                    if be.delete_engineer(selected_id):
+                        st.success(f"技術者 (ID: {selected_id}) を完全に削除しました。技術者管理ページに戻ります。")
+                        time.sleep(2)
+                        del st.session_state['selected_engineer_id']
+                        if delete_confirmation_key in st.session_state:
+                            del st.session_state[delete_confirmation_key]
+                        st.switch_page("pages/3_技術者管理.py")
+                    else:
+                        st.error("技術者の削除に失敗しました。")
+    st.divider()
     
-    if not matched_jobs:
-        st.info("この技術者にマッチング済みの案件はありません。")
-    else:
-        st.write(f"計 {len(matched_jobs)} 件の案件がマッチングしています。")
 
-        # ★★★【ここからが修正の核】★★★
-        CLEAR_CONFIRM_KEY = f"clear_matches_confirm_eng_{selected_id}"
-        if CLEAR_CONFIRM_KEY not in st.session_state:
-            st.session_state[CLEAR_CONFIRM_KEY] = False
-
-        if st.button("🗑️ マッチングリストをクリア", type="secondary"):
-            st.session_state[CLEAR_CONFIRM_KEY] = not st.session_state[CLEAR_CONFIRM_KEY]
-            st.rerun()
-        
-        if st.session_state[CLEAR_CONFIRM_KEY]:
-            st.warning(f"**本当にこの技術者のマッチング済みリスト（{len(matched_jobs)}件）をすべてクリアしますか？** この操作は取り消せません。")
-            col_run, col_cancel = st.columns(2)
-            if col_run.button("はい、クリアします", type="primary"):
-                # ★ 技術者用の関数を呼び出す ★
-                if be.clear_matches_for_engineer(selected_id):
-                    st.success("マッチングリストをクリアしました。")
-                    st.session_state[CLEAR_CONFIRM_KEY] = False
-                    time.sleep(1); st.rerun()
-                else:
-                    st.error("クリア処理に失敗しました。")
-            if col_cancel.button("キャンセル"):
-                st.session_state[CLEAR_CONFIRM_KEY] = False
-                st.rerun()
-        # ★★★【修正ここまで】★★★
-        
-        for job in matched_jobs:
-            with st.container(border=True):
-                col1, col2 = st.columns([4, 1])
-                with col1:
-                    project_name = job['project_name'] or f"案件 (ID: {job['job_id']})"
-                    st.markdown(f"##### {project_name}")
-                    job_doc_parts = job['document'].split('\n---\n', 1)
-                    job_main_doc = job_doc_parts[1] if len(job_doc_parts) > 1 else job['document']
-                    st.caption(job_main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
-                with col2:
-                    st.markdown(get_evaluation_html(job['grade'], font_size='2em'), unsafe_allow_html=True)
-                    if st.button("詳細を見る", key=f"matched_job_detail_{job['match_id']}", use_container_width=True):
-                        st.session_state['selected_match_id'] = job['match_id']
-                        st.switch_page("pages/7_マッチング詳細.py")
-                
 else:
     st.error("指定されたIDの技術者情報が見つかりませんでした。")
 
-
-
-
-
-st.divider()
-# --- AIによる自動マッチング依頼 ---
-st.header("🤖 AIによる自動マッチング依頼")
-
-# 現在の依頼状況を取得
-current_request = be.get_auto_match_request(selected_id, 'engineer')
-
-if current_request:
-    with st.container(border=True):
-        st.success(f"現在、この技術者の自動マッチングが有効です（通知先: {current_request['notification_email']}）。新しい案件情報が登録されると、`{current_request['target_rank']}` ランク以上でマッチした場合に通知が送信されます。")
-        if st.button("自動マッチングを停止する", type="secondary", use_container_width=True, key=f"stop_auto_match_eng_{selected_id}"):
-            if be.deactivate_auto_match_request(selected_id, 'engineer'):
-                st.success("自動マッチングを停止しました。")
-                time.sleep(1); st.rerun()
-            else:
-                st.error("自動マッチングの停止に失敗しました。")
-else:
-    with st.container(border=True):
-        with st.form(f"auto_match_form_eng_{selected_id}"):
-            st.info("新しい案件情報がシステムに登録された際に、この技術者とのマッチングを自動で実行し、ヒットした場合にメールで通知します。")
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                req_rank = st.selectbox("通知する最低ランク", ['S', 'A', 'B', 'C'], index=1)
-            with col2:
-                # ここでは仮のログインユーザー情報を利用
-                # 実際の運用では st.session_state.email などを参照する
-                login_user_email = "default.user@example.com" 
-                req_email = st.text_input("通知先のメールアドレス", placeholder="your.email@example.com")
-            
-            # ログイン機能があれば、ログインユーザーのIDを取得
-            # ここでは仮に user_id = 1 とする
-            current_user_id = 1 
-
-            submitted = st.form_submit_button("この条件で自動マッチングを依頼する", type="primary", use_container_width=True)
-
-            if submitted:
-                if not req_email:
-                    st.error("通知先のメールアドレスを入力してください。")
-                else:
-                    if be.add_or_update_auto_match_request(selected_id, 'engineer', req_rank, req_email, current_user_id):
-                        st.success("自動マッチング依頼を登録しました！")
-                        time.sleep(1); st.rerun()
-                    else:
-                        st.error("依頼の登録に失敗しました。")
-
-
-
-
-
-
-st.divider()
-st.header("⚙️ 再マッチング実行")
-
-# --- UIと状態管理 ---
-# selected_id はこのページの技術者ID
-CONFIRM_KEY = f"rematch_confirm_engineer_{selected_id}"
-RUN_KEY = f"run_rematch_engineer_{selected_id}"
-RANK_KEY = f"rematch_rank_engineer_{selected_id}"
-COUNT_KEY = f"rematch_count_engineer_{selected_id}"
-
-if CONFIRM_KEY not in st.session_state:
-    st.session_state[CONFIRM_KEY] = False
-if RUN_KEY not in st.session_state:
-    st.session_state[RUN_KEY] = False
-
-# --- UI定義 ---
-with st.container(border=True):
-    st.info("この技術者のスキル情報からAIがキーワードを抽出し、関連する案件候補を絞り込んでから、最新のAI評価に基づいたマッチングを実行します。")
     
-    st.markdown("##### マッチング条件設定")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.selectbox(
-            "最低ランク", ['S', 'A', 'B', 'C'], index=1, key=RANK_KEY,
-            help="ここで選択したランク以上のマッチング結果を生成します。"
-        )
-    with col2:
-        st.number_input(
-            "最大ヒット件数(1-10件)", 1, 10, 5, key=COUNT_KEY,
-            help="指定ランク以上のマッチングがこの件数に達すると処理を終了します。"
-        )
-
-    if st.button("🤖 AIキーワード抽出による再マッチングを実行", type="primary", use_container_width=True):
-        st.session_state[CONFIRM_KEY] = True
-        st.rerun()
-
-# --- 確認UIと実行トリガー ---
-if st.session_state.get(CONFIRM_KEY):
-    with st.container(border=True):
-        st.warning(f"**本当に再マッチングを実行しますか？**\n\nこの技術者に関する既存のマッチング結果は**すべて削除**されます。")
-        st.markdown(f"""
-        **実行条件:**
-        - **目標ランク:** `{st.session_state[RANK_KEY]}` ランク以上
-        - **目標件数:** `{st.session_state[COUNT_KEY]}` 件
-        """)
-        
-        agree = st.checkbox("はい、既存のマッチング結果の削除を承認し、再実行します。")
-        
-        col_run, col_cancel = st.columns(2)
-        with col_run:
-            if st.button("実行", disabled=not agree, use_container_width=True):
-                st.session_state[RUN_KEY] = True
-                st.session_state[CONFIRM_KEY] = False
-                st.rerun()
-        with col_cancel:
-            if st.button("キャンセル"):
-                st.session_state[CONFIRM_KEY] = False
-                st.rerun()
-
-# --- 実行ロジック (st.status) ---
-if st.session_state.get(RUN_KEY):
-    st.session_state[RUN_KEY] = False
-    
-    with st.status("AIキーワード抽出による再マッチングを実行中...", expanded=True) as status:
-        try:
-            # ▼▼▼【ここが修正箇所】▼▼▼
-            # st.session_stateからランクと件数の値を取得し、引数として渡す
-            response_generator = be.rematch_engineer_with_keyword_filtering(
-                engineer_id=selected_id,
-                target_rank=st.session_state[RANK_KEY],
-                target_count=st.session_state[COUNT_KEY]
-            )
-            # ▲▲▲【修正ここまで】▲▲▲
-            
-            
-            final_message = ""
-            for log_message in response_generator:
-                st.markdown(log_message, unsafe_allow_html=True)
-                final_message = log_message
-
-            if "✅" in final_message or "🎉" in final_message or "ℹ️" in final_message:
-                status.update(label="処理が正常に完了しました！", state="complete", expanded=False)
-                st.success("再マッチングが完了しました。ページが自動でリフレッシュされます。")
-                st.balloons()
-                time.sleep(2)
-                st.rerun()
-
-            else:
-                status.update(label="処理が完了しませんでした。", state="error", expanded=True)
-                st.error("処理が完了しませんでした。上記のログを確認してください。")
-
-        except Exception as e:
-            st.error(f"UI処理中に予期せぬエラーが発生しました: {e}")
-            status.update(label="UIエラー", state="error", expanded=True)
-
-    if st.button("ページを更新して結果を確認"):
-        st.rerun()
-
-        
-st.divider()
-
-
 
 
 
