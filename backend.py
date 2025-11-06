@@ -3044,7 +3044,8 @@ def get_live_dashboard_data():
 
             cur.execute("""
                 SELECT * FROM (
-                    SELECT 
+                    -- サブクエリ1: マッチング結果の最新5件を「ID」の降順で取得
+                    (SELECT 
                         'processing' as log_type, 
                         j.project_name, 
                         e.name as engineer_name, 
@@ -3052,15 +3053,18 @@ def get_live_dashboard_data():
                         r.created_at, 
                         j.id as job_id, 
                         e.id as engineer_id,
-                        r.id as result_id  -- ★★★ マッチング結果IDを追加
+                        r.id as result_id
                     FROM matching_results r 
                     JOIN jobs j ON r.job_id = j.id 
                     JOIN engineers e ON r.engineer_id = e.id
                     WHERE r.is_hidden = 0
+                    ORDER BY r.id DESC -- ★★★ created_at から id に変更 ★★★
+                    LIMIT 5)
 
                     UNION ALL
 
-                    SELECT 
+                    -- サブクエリ2: 案件登録の最新5件を「created_at」の降順で取得
+                    (SELECT 
                         'input' as log_type, 
                         project_name, 
                         NULL as engineer_name, 
@@ -3068,13 +3072,16 @@ def get_live_dashboard_data():
                         created_at, 
                         id as job_id, 
                         NULL as engineer_id,
-                        NULL as result_id -- ★★★ 型を合わせるためNULLを追加
-
-                    FROM jobs WHERE is_hidden = 0
+                        NULL as result_id
+                    FROM jobs 
+                    WHERE is_hidden = 0
+                    ORDER BY created_at DESC -- こちらは created_at のまま
+                    LIMIT 5)
 
                     UNION ALL
 
-                    SELECT 
+                    -- サブクエリ3: 技術者登録の最新5件を「created_at」の降順で取得
+                    (SELECT 
                         'input' as log_type, 
                         NULL as project_name, 
                         name as engineer_name, 
@@ -3082,12 +3089,15 @@ def get_live_dashboard_data():
                         created_at, 
                         NULL as job_id, 
                         id as engineer_id,
-                        NULL as result_id -- ★★★ 型を合わせるためNULLを追加
-                        
-                    FROM engineers WHERE is_hidden = 0
+                        NULL as result_id
+                    FROM engineers 
+                    WHERE is_hidden = 0
+                    ORDER BY created_at DESC -- こちらは created_at のまま
+                    LIMIT 5)
+                    
                 ) AS combined_logs
-                ORDER BY created_at DESC
-                LIMIT 10;
+                -- 最後に全体を時刻順に並べ替える
+                ORDER BY created_at DESC;
             """)
             data["live_log_feed"] = [dict(row) for row in cur.fetchall()]
             # ▲▲▲【修正ここまで】▲▲▲
