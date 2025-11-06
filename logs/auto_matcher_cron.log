@@ -11252,3 +11252,5 @@ Processing request for engineer 'TEST1' (ID:25465)
 2025-11-05 06:50:25.519378 |   - No new jobs to process.
 2025-11-05 06:50:25.691598 | --- Auto-matcher batch finished ---
 
+2025-11-05 19:32:40.268344 |     - ⏭️ Skipped engineer(ID:36142) with rank D
+2025-11-05 19:32:43.734005 |     - ⏭️ Skipped engineer(ID:36143) with rank C
