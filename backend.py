@@ -2941,14 +2941,16 @@ def get_live_dashboard_data():
     try:
         with conn.cursor() as cur:
 
-            target_tz = pytz.timezone('America/Los_Angeles') #Asia/Tokyo
-            now_in_target_tz = datetime.now(target_tz)
+            #target_tz = pytz.timezone('America/Los_Angeles') #Asia/Tokyo
+            #now_in_target_tz = datetime.now(target_tz)
             
+            now_str = datetime.now()
+
             # 「過去24時間前」の時刻を計算
-            twenty_four_hours_ago = now_in_target_tz - timedelta(hours=24)
+            twenty_four_hours_ago = now_str - timedelta(hours=24)
             
             # 「今月の始まり」はランキングで使うため残しておく
-            this_month_start = now_in_target_tz.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            this_month_start = now_str.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 
             # 過去24時間以内に登録された案件・技術者の数
@@ -3658,8 +3660,8 @@ def register_item_from_text(input_text: str):
         
         conn = get_db_connection()
         with conn.cursor() as cur:
-            target_tz = pytz.timezone('America/Los_Angeles')
-            now_in_la = datetime.now(target_tz)
+
+            now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
             name_column = 'project_name' if item_type == 'job' else 'name'
             name = item_data.get(name_column, "名称未定")
@@ -3678,7 +3680,7 @@ def register_item_from_text(input_text: str):
                 INSERT INTO {item_type + 's'} ({name_column}, document, keywords, created_at, source_data_json)
                 VALUES (%s, %s, %s, %s, %s) RETURNING id;
             """
-            cur.execute(sql, (name, full_document, keywords, now_in_la, source_json_str))
+            cur.execute(sql, (name, full_document, keywords, now_str, source_json_str))
             item_id = cur.fetchone()['id']
             conn.commit()
             
