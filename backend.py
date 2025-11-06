@@ -3044,7 +3044,7 @@ def get_live_dashboard_data():
 
             cur.execute("""
                 SELECT * FROM (
-                    -- サブクエリ1: マッチング結果の最新5件を「ID」の降順で取得
+                    
                     (SELECT 
                         'processing' as log_type, 
                         j.project_name, 
@@ -3075,7 +3075,7 @@ def get_live_dashboard_data():
                         NULL as result_id
                     FROM jobs 
                     WHERE is_hidden = 0
-                    ORDER BY created_at DESC -- こちらは created_at のまま
+                    ORDER BY id DESC -- こちらは created_at のまま
                     LIMIT 5)
 
                     UNION ALL
@@ -3092,7 +3092,7 @@ def get_live_dashboard_data():
                         NULL as result_id
                     FROM engineers 
                     WHERE is_hidden = 0
-                    ORDER BY created_at DESC -- こちらは created_at のまま
+                    ORDER BY id DESC -- こちらは created_at のまま
                     LIMIT 5)
                     
                 ) AS combined_logs
@@ -3932,7 +3932,15 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
                 yield f"  `({processed_count}/{len(candidate_jobs)})` 案件 **{job['project_name']}** とマッチング評価中..."
                 
                 
-
+                # ★★★【ここからが修正の核】★★★
+                # AI評価の実行前に、アクティビティログを記録する
+                try:
+                    cursor.execute(
+                        "INSERT INTO ai_activity_log (activity_type) VALUES ('evaluation')"
+                    )
+                except Exception as log_err:
+                    yield f"  - ⚠️ AIアクティビティログの記録に失敗: {log_err}"
+                # ★★★【修正ここまで】★★★
 
                 llm_result = get_match_summary_with_llm(job['document'], engineer_doc)
                 if llm_result and 'summary' in llm_result:
