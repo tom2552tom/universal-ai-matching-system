@@ -108,7 +108,7 @@ def get_email_contents(msg):
                 except: body_text += part.get_payload(decode=True).decode('utf-8', errors='ignore')
             if 'attachment' in cdisp and (fname := part.get_filename()):
                 filename = str(make_header(decode_header(fname)))
-                print(f"  > 添付ファイル '{filename}' を発見しました。")
+                #print(f"  > 添付ファイル '{filename}' を発見しました。")
                 fb, lfname = part.get_payload(decode=True), filename.lower()
                 content = ""
                 if lfname.endswith(".pdf"): content = extract_text_from_pdf(fb)
@@ -153,6 +153,9 @@ def extract_keywords_with_llm(text_content: str, item_type: str, count: int = 20
         """
         
         model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
+
+        #request_options = {"timeout": 10}
+
         response = model.generate_content(prompt)
         
         keywords = [kw.strip().lower() for kw in response.text.strip().split(',') if kw.strip()]
@@ -248,6 +251,9 @@ def split_text_with_llm(text_content: str) -> (dict | None, list):
     try:
         model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         logs.append("  > 📄 文書タイプを分類中...")
+
+        #request_options = {"timeout": 10}
+
         response = model.generate_content(classification_prompt)
         doc_type = response.text.strip()
         logs.append(f"  > ✅ AIによる分類結果: {doc_type}")
@@ -268,6 +274,9 @@ def split_text_with_llm(text_content: str) -> (dict | None, list):
     
     try:
         logs.append("  > 🤖 AIが情報を構造化中...")
+
+        #request_options = {"timeout": 20}
+
         response = model.generate_content(extraction_prompt, generation_config=generation_config, safety_settings=safety_settings)
         raw_text = response.text
         
@@ -312,12 +321,27 @@ def split_text_with_llm(text_content: str) -> (dict | None, list):
         logs.append(f"  > ❌ LLMによる構造化処理中に予期せぬエラーが発生しました: {e}")
         return None, logs
 
+
+# run_email_processor.py 内
+
+# ファイルの冒頭で、必要なライブラリがインポートされていることを確認
+from datetime import datetime
+import pytz # タイムゾーン処理に必要
+import json
+# ... 他の必要なimport文
+
 def process_single_email_core(source_data: dict) -> (bool, list):
+    """
+    【完成版】
+    単一のメールコンテンツを解析、キーワードを抽出し、DBに登録する。
+    エラーハンドリングとタイムゾーン処理を強化。
+    """
     logs = []
     if not source_data: 
         logs.append("⚠️ 処理するデータが空です。")
         return False, logs
 
+    # --- 1. テキストコンテンツの準備 ---
     valid_attachments_content = [f"\n\n--- 添付ファイル: {att['filename']} ---\n{att.get('content', '')}" for att in source_data.get('attachments', []) if att.get('content')]
     if valid_attachments_content: 
         logs.append(f"  > ℹ️ {len(valid_attachments_content)}件の添付ファイル内容を解析に含めます。")
@@ -327,74 +351,101 @@ def process_single_email_core(source_data: dict) -> (bool, list):
         logs.append("⚠️ 解析対象のテキストがありません。")
         return False, logs
 
+    # --- 2. AIによる情報構造化 ---
     parsed_data, llm_logs = split_text_with_llm(full_text_for_llm)
     logs.extend(llm_logs)
     if not parsed_data: 
-        logs.append("  > ℹ️ LLMによる構造化に失敗したため、このメールの処理をスキップします。")
         return False, logs
     
-    new_jobs, new_engineers = parsed_data.get("jobs", []), parsed_data.get("engineers", [])
+    new_jobs = parsed_data.get("jobs", [])
+    new_engineers = parsed_data.get("engineers", [])
     if not new_jobs and not new_engineers: 
         logs.append("⚠️ LLMはテキストから案件情報または技術者情報を抽出できませんでした。")
         return False, logs
     
+    # --- 3. データベースへの保存処理 ---
     logs.append("  > ✅ 抽出された情報をデータベースに保存します...")
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
-                now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                
+                # タイムゾーンをLAに統一して、タイムゾーン付きのdatetimeオブジェクトを生成
+                target_tz = pytz.timezone('America/Los_Angeles')
+                now_in_la = datetime.now(target_tz)
+                
                 received_at_dt = source_data.get('received_at')
+                # JSONとして保存するデータのために、datetimeオブジェクトをISO形式の文字列に変換
                 source_json_str = json.dumps({k: v.isoformat() if isinstance(v, datetime) else v for k, v in source_data.items()}, ensure_ascii=False, indent=2)
+
+                # --- jobs の処理 ---
                 for item_data in new_jobs:
-
-
-                    
-
                     name = item_data.get("project_name", "名称未定の案件")
                     full_document = _build_meta_info_string('job', item_data) + (item_data.get("document") or full_text_for_llm)
-
-                                         # --- キーワード抽出処理を追加 ---
+                    
                     logs.append(f"    -> 案件『{name}』のキーワードを抽出中...")
-                    keywords = extract_keywords_with_llm(full_document, 'job')
+                    keywords = extract_keywords_with_llm(full_document, 'job') # このファイル内に定義が必要
                     logs.append(f"    -> 抽出キーワード: {keywords}")
 
-                    # --- INSERT文を修正 ---
                     sql = """
                         INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at, keywords) 
                         VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
                     """
-                    cursor.execute(sql, (name, full_document, source_json_str, now_str, received_at_dt, keywords))
-                    logs.append(f"    -> 新規案件を登録: 『{name}』 (ID: {cursor.fetchone()[0]})")
+                    params = (name, full_document, source_json_str, now_in_la, received_at_dt, keywords)
+                    
+                    try:
+                        log_query = cursor.mogrify(sql, params).decode('utf-8', 'ignore')
+                        logs.append(f"    -> Executing SQL: {log_query[:500]}...")
+                    except Exception as log_err:
+                        logs.append(f"    -> Failed to mogrify query for logging: {log_err}")
+                    
+                    cursor.execute(sql, params)
+                    
+                    result = cursor.fetchone()
+                    if result:
+                        logs.append(f"    -> 新規案件を登録: 『{name}』 (ID: {result['id']})")
+                    else:
+                        logs.append(f"    -> ⚠️ 案件『{name}』のDB登録に失敗、または既に存在します。")
 
-
-                    #cursor.execute('INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at) VALUES (%s, %s, %s, %s, %s) RETURNING id', (name, full_document, source_json_str, now_str, received_at_dt))
-                    #logs.append(f"    -> 新規案件: 『{name}』 (ID: {cursor.fetchone()[0]})")
+                # --- engineers の処理 ---
                 for item_data in new_engineers:
                     name = item_data.get("name", "名称不明の技術者")
                     full_document = _build_meta_info_string('engineer', item_data) + (item_data.get("document") or full_text_for_llm)
 
-                    # --- キーワード抽出処理を追加 ---
                     logs.append(f"    -> 技術者『{name}』のキーワードを抽出中...")
-                    keywords = extract_keywords_with_llm(full_document, 'engineer')
+                    keywords = extract_keywords_with_llm(full_document, 'engineer') # このファイル内に定義が必要
                     logs.append(f"    -> 抽出キーワード: {keywords}")
 
-                    # --- INSERT文を修正 ---
                     sql = """
                         INSERT INTO engineers (name, document, source_data_json, created_at, received_at, keywords) 
                         VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
                     """
-                    cursor.execute(sql, (name, full_document, source_json_str, now_str, received_at_dt, keywords))
-                    logs.append(f"    -> 新規技術者を登録: 『{name}』 (ID: {cursor.fetchone()[0]})")
+                    params = (name, full_document, source_json_str, now_in_la, received_at_dt, keywords)
+
+                    try:
+                        log_query = cursor.mogrify(sql, params).decode('utf-8', 'ignore')
+                        logs.append(f"    -> Executing SQL: {log_query[:500]}...")
+                    except Exception as log_err:
+                        logs.append(f"    -> Failed to mogrify query for logging: {log_err}")
+
+                    cursor.execute(sql, params)
+
+                    result = cursor.fetchone()
+                    if result:
+                        logs.append(f"    -> 新規技術者を登録: 『{name}』 (ID: {result['id']})")
+                    else:
+                        logs.append(f"    -> ⚠️ 技術者『{name}』のDB登録に失敗、または既に存在します。")
                 
-
-
-                    
             conn.commit()
     except Exception as e:
         logs.append(f"❌ DB保存中にエラーが発生: {e}")
+        import traceback
+        logs.append(traceback.format_exc())
         return False, logs
+        
     logs.append("  > ✅ 保存完了！")
     return True, logs
+
+
 
 # ==============================================================================
 # 2. バッチ処理のメインロジック
