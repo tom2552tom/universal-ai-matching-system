@@ -2942,56 +2942,55 @@ def get_live_dashboard_data():
 
     try:
         with conn.cursor() as cur:
-
-            #target_tz = pytz.timezone('America/Los_Angeles') #Asia/Tokyo
-            #now_in_target_tz = datetime.now(target_tz)
             
-            now_str = datetime.now()
-
-            # 「過去24時間前」の時刻を計算
-            twenty_four_hours_ago = now_str - timedelta(hours=24)
+            # --- 1. Python側でJSTの「今日」の範囲オブジェクトを生成 ---
+            jst_tz = pytz.timezone('Asia/Tokyo')
+            now_in_jst = datetime.now(jst_tz)
             
-            # 「今月の始まり」はランキングで使うため残しておく
-            this_month_start = now_str.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            # JSTでの「今日の午前0時」（naiveオブジェクト）
+            today_start_jst_naive = now_in_jst.replace(hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
+            
+            # JSTでの「明日の午前0時」（naiveオブジェクト）
+            tomorrow_start_jst_naive = today_start_jst_naive + timedelta(days=1)
+            
+            # JSTでの「今月の1日」（naiveオブジェクト）
+            this_month_start_jst_naive = today_start_jst_naive.replace(day=1)
 
-
-            # 過去24時間以内に登録された案件・技術者の数
-            cur.execute("SELECT COUNT(*) FROM jobs WHERE is_hidden = 0 AND created_at >= %s", (twenty_four_hours_ago,))
+            # --- 2. 各種KPIの集計（「JSTでの今日」基準）---
+            
+            # 本日登録された案件・技術者の数
+            cur.execute("SELECT COUNT(*) FROM jobs WHERE is_hidden = 0 AND created_at >= %s AND created_at < %s", (today_start_jst_naive, tomorrow_start_jst_naive))
             data["jobs_today"] = cur.fetchone()['count']
             
-            cur.execute("SELECT COUNT(*) FROM engineers WHERE is_hidden = 0 AND created_at >= %s", (twenty_four_hours_ago,))
+            cur.execute("SELECT COUNT(*) FROM engineers WHERE is_hidden = 0 AND created_at >= %s AND created_at < %s", (today_start_jst_naive, tomorrow_start_jst_naive))
             data["engineers_today"] = cur.fetchone()['count']
             
-            # ラベルは「本日」のままだが、中身は過去24時間の集計になる
             data["processed_items_today"] = data["jobs_today"] + data["engineers_today"]
 
-            # 過去24時間以内に作成されたマッチングの総数
-            cur.execute("SELECT COUNT(*) FROM matching_results WHERE is_hidden = 0 AND created_at >= %s", (twenty_four_hours_ago,))
+            # 本日作成されたマッチングの総数
+            cur.execute("SELECT COUNT(*) FROM matching_results WHERE is_hidden = 0 AND created_at >= %s AND created_at < %s", (today_start_jst_naive, tomorrow_start_jst_naive))
             data["new_matches_today"] = cur.fetchone()['count']
 
-            # 過去24時間以内に「採用」にステータス変更された件数
-            cur.execute("SELECT COUNT(*) FROM matching_results WHERE status = '採用' AND status_updated_at >= %s", (twenty_four_hours_ago,))
+            # 本日「採用」にステータス変更された件数
+            cur.execute("SELECT COUNT(*) FROM matching_results WHERE status = '採用' AND status_updated_at >= %s AND status_updated_at < %s", (today_start_jst_naive, tomorrow_start_jst_naive))
             data["adopted_count_today"] = cur.fetchone()['count']
 
-            # 過去24時間のAIアクティビティ
-            cur.execute("SELECT activity_type, COUNT(*) as count FROM ai_activity_log WHERE created_at >= %s GROUP BY activity_type", (twenty_four_hours_ago,))
+            # 本日のAIアクティビティ
+            cur.execute("SELECT activity_type, COUNT(*) as count FROM ai_activity_log WHERE created_at >= %s AND created_at < %s GROUP BY activity_type", (today_start_jst_naive, tomorrow_start_jst_naive))
             for row in cur.fetchall():
                 data["ai_activity_counts"][row['activity_type']] = row['count']
-
+            
             # --- 3. その他の集計 ---
-            # ファネルチャート用データ
-            cur.execute("SELECT status, COUNT(*) as count FROM matching_results WHERE is_hidden = 0 GROUP BY status")
-            for row in cur.fetchall():
-                data['funnel_data'][row['status']] = row['count']
-
-            # 担当者別ランキング（今月の「採用」件数）
+            
+            # 担当者別ランキング（「今月」の採用件数）
             cur.execute("""
                 SELECT u.username, COUNT(r.id) as adoption_count FROM matching_results r
                 JOIN jobs j ON r.job_id = j.id JOIN users u ON j.assigned_user_id = u.id
                 WHERE r.status = '採用' AND r.created_at >= %s GROUP BY u.username
                 ORDER BY adoption_count DESC LIMIT 5
-            """, (this_month_start,))
+            """, (this_month_start_jst_naive,))
             data["top_performers"] = [dict(row) for row in cur.fetchall()]
+
 
             # 提案中の総件数
             cur.execute("SELECT COUNT(*) FROM matching_results WHERE status IN ('提案準備中', '提案中')")
@@ -3041,13 +3040,11 @@ def get_live_dashboard_data():
               
             data["active_auto_requests"] = [dict(row) for row in cur.fetchall()]
 
-            # ▼▼▼【ここからが修正の核】▼▼▼
-            # 10. リアルタイム活動ログ
-
+            
+            # 10. リアルタイム活動ログ（「JSTでの今日」に限定）
             cur.execute("""
                 SELECT * FROM (
-                    
-                    (SELECT 
+                    SELECT 
                         'processing' as log_type, 
                         j.project_name, 
                         e.name as engineer_name, 
@@ -3059,14 +3056,12 @@ def get_live_dashboard_data():
                     FROM matching_results r 
                     JOIN jobs j ON r.job_id = j.id 
                     JOIN engineers e ON r.engineer_id = e.id
-                    WHERE r.is_hidden = 0
-                    ORDER BY r.id DESC -- ★★★ created_at から id に変更 ★★★
-                    LIMIT 5)
+                    WHERE r.is_hidden = 0 
+                      AND r.created_at >= %s
 
                     UNION ALL
 
-                    -- サブクエリ2: 案件登録の最新5件を「created_at」の降順で取得
-                    (SELECT 
+                    SELECT 
                         'input' as log_type, 
                         project_name, 
                         NULL as engineer_name, 
@@ -3076,14 +3071,12 @@ def get_live_dashboard_data():
                         NULL as engineer_id,
                         NULL as result_id
                     FROM jobs 
-                    WHERE is_hidden = 0
-                    ORDER BY id DESC -- こちらは created_at のまま
-                    LIMIT 5)
+                    WHERE is_hidden = 0 
+                      AND created_at >= %s
 
                     UNION ALL
 
-                    -- サブクエリ3: 技術者登録の最新5件を「created_at」の降順で取得
-                    (SELECT 
+                    SELECT 
                         'input' as log_type, 
                         NULL as project_name, 
                         name as engineer_name, 
@@ -3094,15 +3087,15 @@ def get_live_dashboard_data():
                         NULL as result_id
                     FROM engineers 
                     WHERE is_hidden = 0
-                    ORDER BY id DESC -- こちらは created_at のまま
-                    LIMIT 5)
-                    
+                      AND created_at >= %s
+                      
                 ) AS combined_logs
-                -- 最後に全体を時刻順に並べ替える
-                ORDER BY created_at DESC;
-            """)
+                ORDER BY created_at DESC
+                LIMIT 20;
+            """, (today_start_jst_naive, today_start_jst_naive, today_start_jst_naive))
             data["live_log_feed"] = [dict(row) for row in cur.fetchall()]
             # ▲▲▲【修正ここまで】▲▲▲
+            
                     
 
 
@@ -3979,3 +3972,34 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
     finally:
         if conn:
             conn.close()
+
+
+
+def convert_to_jst_str(dt_object: datetime, format_str: str = '%Y-%m-%d %H:%M:%S') -> str:
+    """
+    タイムゾーン情報を持つdatetimeオブジェクト(UTC想定)を受け取り、
+    JST（日本標準時）に変換して、指定されたフォーマットの文字列として返す。
+    """
+    # 入力がdatetimeオブジェクトでない、またはNoneの場合はエラー文字列を返す
+    if not isinstance(dt_object, datetime):
+        return "時刻情報なし"
+
+    try:
+        # 変換先のJSTタイムゾーンを定義
+        jst_tz = pytz.timezone('Asia/Tokyo')
+        
+        # 受け取ったオブジェクトがタイムゾーン情報を持っているか（aware）確認
+        if dt_object.tzinfo is None or dt_object.tzinfo.utcoffset(dt_object) is None:
+            # naiveオブジェクトの場合、まずUTCとして解釈させる
+            utc_tz = pytz.utc
+            dt_object = utc_tz.localize(dt_object)
+
+        # タイムゾーン付きのオブジェクトをJSTに変換
+        dt_in_jst = dt_object.astimezone(jst_tz)
+        
+        # 指定されたフォーマットで文字列に変換して返す
+        return dt_in_jst.strftime(format_str)
+
+    except Exception as e:
+        print(f"ERROR in convert_to_jst_str: {e}")
+        return "時刻変換エラー"

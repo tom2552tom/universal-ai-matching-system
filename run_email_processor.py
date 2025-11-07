@@ -20,6 +20,12 @@ import io
 import fitz
 import docx
 import pandas as pd
+# run_email_processor.py 内
+
+import pytz # タイムゾーン処理に必要
+import json
+# ... 他の必要なimport文
+
 
 # --- グローバル設定 ---
 _SECRETS = None
@@ -322,13 +328,7 @@ def split_text_with_llm(text_content: str) -> (dict | None, list):
         return None, logs
 
 
-# run_email_processor.py 内
 
-# ファイルの冒頭で、必要なライブラリがインポートされていることを確認
-from datetime import datetime
-import pytz # タイムゾーン処理に必要
-import json
-# ... 他の必要なimport文
 
 def process_single_email_core(source_data: dict) -> (bool, list):
     """
@@ -369,9 +369,16 @@ def process_single_email_core(source_data: dict) -> (bool, list):
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
                 
+                # ▼▼▼【ここからが修正の核】▼▼▼
+                jst_tz = pytz.timezone('Asia/Tokyo')
+                now_in_jst = datetime.now(jst_tz)
+                # タイムゾーン情報を取り除いた naive オブジェクトを生成
+                now_jst_naive = now_in_jst.replace(tzinfo=None)
+                # ▲▲▲【修正ここまで】▲▲▲
+
                 # タイムゾーンをLAに統一して、タイムゾーン付きのdatetimeオブジェクトを生成
-                target_tz = pytz.timezone('America/Los_Angeles')
-                now_in_la = datetime.now(target_tz)
+                #target_tz = pytz.timezone('America/Los_Angeles')
+                #now_in_la = datetime.now(target_tz)
                 
                 received_at_dt = source_data.get('received_at')
                 # JSONとして保存するデータのために、datetimeオブジェクトをISO形式の文字列に変換
@@ -390,7 +397,7 @@ def process_single_email_core(source_data: dict) -> (bool, list):
                         INSERT INTO jobs (project_name, document, source_data_json, created_at, received_at, keywords) 
                         VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
                     """
-                    params = (name, full_document, source_json_str, now_in_la, received_at_dt, keywords)
+                    params = (name, full_document, source_json_str, now_jst_naive, received_at_dt, keywords)
                     
                     try:
                         log_query = cursor.mogrify(sql, params).decode('utf-8', 'ignore')
@@ -419,7 +426,7 @@ def process_single_email_core(source_data: dict) -> (bool, list):
                         INSERT INTO engineers (name, document, source_data_json, created_at, received_at, keywords) 
                         VALUES (%s, %s, %s, %s, %s, %s) RETURNING id
                     """
-                    params = (name, full_document, source_json_str, now_in_la, received_at_dt, keywords)
+                    params = (name, full_document, source_json_str, now_jst_naive, received_at_dt, keywords)
 
                     try:
                         log_query = cursor.mogrify(sql, params).decode('utf-8', 'ignore')

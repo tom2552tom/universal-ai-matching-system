@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime, timedelta
 from backend import (
     init_database, load_embedding_model, get_db_connection,
-    hide_match, load_app_config, get_all_users
+    hide_match, load_app_config, get_all_users, convert_to_jst_str
 )
 import os
 import ui_components as ui  # ← 1. 新しいファイルをインポート
@@ -226,9 +226,15 @@ else:
                 
                 header_col1, header_col2 = st.columns([5, 2])
                 with header_col1:
-                    created_at_dt = res['created_at']
-                    if created_at_dt:
-                        st.caption(f"マッチング日時: {created_at_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+                    created_at_utc = res.get('created_at')
+            
+                    # 共通関数を使って、DBから取得したUTC時刻をJST文字列に変換
+                    jst_time_str = convert_to_jst_str(created_at_utc, format_str='%Y-%m-%d %H:%M:%S')
+                    
+                    st.caption(f"マッチング日時: {jst_time_str} (JST)")
+
+
+                    
                 with header_col2:
                     status_html = get_status_badge(res['status'])
                     st.markdown(f"<div style='text-align: right;'>{status_html}</div>", unsafe_allow_html=True)

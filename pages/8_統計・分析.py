@@ -112,7 +112,7 @@ CHAT_LOG_HTML = """
                 <div class="content-wrapper" style="width: 100%;">
                     <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                         <span class="source">${log.source_text}</span>
-                        <!--<span style="font-size: 0.75rem; color: #8b949e; margin-left: 0.5rem; white-space: nowrap;">${log.display_time}</span>-->
+                        <span style="font-size: 0.75rem; color: #8b949e; margin-left: 0.5rem; white-space: nowrap;">${log.display_time}</span>
                     </div>
                     <span class="text">${log.html_content}</span>
                 </div>
@@ -489,7 +489,7 @@ st.divider()
 # ==================================
 # === サマリーKPIエリア ===
 # ==================================
-st.header("📊 今日の活動サマリー（直近24時間）")
+st.header("📊 今日の活動サマリー")
 
 def animated_metric(label, value):
     # (この関数の内容は変更なし)
@@ -546,26 +546,26 @@ if live_log_feed:
         st.warning("`secrets.toml`に [app_settings] base_url が設定されていません。ログのリンクが正しく機能しない可能性があります。")
     # ▲▲▲【修正ここまで】▲▲▲
 
+    st.caption(f"最新 {len(live_log_feed)} 件を表示しています。")
 
 
     for log in live_log_feed:
-        # ★★★【ここからが修正の核】★★★
-        # created_at の処理は変更なし
-        created_at_dt = log['created_at'] 
-        if isinstance(created_at_dt, datetime):
-            display_time_str = created_at_dt.strftime('%m/%d %H:%M')
-            timestamp_iso_str = created_at_dt.isoformat()
-        else:
-            # 万が一 datetime でない場合は、空文字列をデフォルトにするか、エラーログを出す
-            display_time_str = "不明"
-            timestamp_iso_str = str(created_at_dt) # とりあえず文字列にする
 
+        created_at_from_db = log.get('created_at')
+        
+        # 2. 表示用の時刻文字列を生成（タイムゾーン変換は不要）
+        if isinstance(created_at_from_db, datetime):
+            display_time_str = created_at_from_db.strftime('%m/%d %H:%M')
+            timestamp_iso_str = created_at_from_db.isoformat()
+        else:
+            display_time_str = "時刻不明"
+            timestamp_iso_str = str(created_at_from_db)
+        
         log_entry = {
             "timestamp": timestamp_iso_str,
             "display_time": display_time_str
         }
         # ▲▲▲【修正ここまで】▲▲▲
-
 
 
         # ▼▼▼【ここからが修正の核】▼▼▼
