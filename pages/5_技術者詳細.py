@@ -83,6 +83,7 @@ try:
                     r.score, 
                     r.id as match_id, 
                     r.grade,
+                    r.created_at as matching_created_at,
                     COALESCE(u.username, '未割当') as assignee_name -- 案件担当者名を追加
                 FROM matching_results r
                 JOIN jobs j ON r.job_id = j.id
@@ -351,13 +352,20 @@ if engineer_data:
             with st.container(border=True):
                 col1, col2 = st.columns([4, 1])
 
+                print(job)
+
                 # ▼▼▼【ここからが修正の核】▼▼▼
                 with col1:
                     project_name = job['project_name'] or f"案件 (ID: {job['job_id']})"
                     st.markdown(f"##### {project_name}")
                     
                     # IDと担当者名をcaptionで表示
-                    st.caption(f"ID: {job['job_id']} | 担当: {job['assignee_name']}")
+                    created_at_jst = job.get('matching_created_at')
+                    created_at_str = be.convert_to_jst_str(created_at_jst) if isinstance(created_at_jst, datetime) else "不明"
+                    st.caption(f"ID: {job['job_id']} | 担当: {job['assignee_name']} | マッチング日: {created_at_str}")
+
+
+                    #st.caption(f"ID: {job['job_id']} | 担当: {job['assignee_name']}")
                     
                     job_doc_parts = job['document'].split('\n---\n', 1)
                     job_main_doc = job_doc_parts[1] if len(job_doc_parts) > 1 else job['document']

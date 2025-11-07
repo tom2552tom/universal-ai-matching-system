@@ -94,6 +94,7 @@ try:
                     r.score, 
                     r.id as match_id, 
                     r.grade,
+                    r.created_at as matching_created_at,
                     COALESCE(u.username, '未割当') as assignee_name -- 担当者名を追加
                 FROM matching_results r
                 JOIN engineers e ON r.engineer_id = e.id
@@ -362,8 +363,10 @@ if job_data:
                     engineer_name = eng['name'] or f"技術者 (ID: {eng['engineer_id']})"
                     st.markdown(f"##### {engineer_name}")
                     
-                    # IDと担当者名をcaptionで表示
-                    st.caption(f"ID: {eng['engineer_id']} | 担当: {eng['assignee_name']}")
+                    created_at_jst = eng.get('matching_created_at')
+                    created_at_str = be.convert_to_jst_str(created_at_jst) if isinstance(created_at_jst, datetime) else "不明"
+                    st.caption(f"ID: {eng['engineer_id']} | 担当: {eng['assignee_name']} | マッチング日: {created_at_str}")
+
                     
                     eng_doc_parts = eng['document'].split('\n---\n', 1)
                     eng_main_doc = eng_doc_parts[1] if len(eng_doc_parts) > 1 else eng['document']

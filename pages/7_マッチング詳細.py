@@ -177,7 +177,7 @@ def display_summary(title, document_text, assignee, item_id):
         st.caption(f"ID: {item_id} | 担当: {assignee if assignee else '未割当'}")
         
         if meta_info:
-            st.success(meta_info.replace("][", " | ").strip("[]"))
+            st.info(meta_info.replace("][", " | ").strip("[]"))
         
         st.markdown(main_doc)
         # ここにあった st.button(...) のロジックを削除
