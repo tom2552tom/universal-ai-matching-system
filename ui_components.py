@@ -127,4 +127,38 @@ def check_password():
         # 認証済みであれば True を返す
         return True
 
-# ▲▲▲【新しい関数ここまで】▲▲▲
+
+def apply_global_styles():
+    st.markdown("""
+        <style>
+            /* (既存のスタイル定義: .main .block-container など) */
+
+            /* ▼▼▼【ここからが追加・修正箇所】▼▼▼ */
+
+            /* st.container(border=True) で生成されるコンテナのスタイル */
+            [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlockBorderWrapper"] > div[data-testid="stVerticalBlock"] > div.st-emotion-cache-1jicfl2 {
+                /* 上下の余白を小さくする */
+                padding-top: 0rem !important;
+                padding-bottom: 0rem !important;
+            }
+
+            /* カード内のヘッダー（h5）の上下の余白を調整 */
+            .card-container h5 {
+                margin-top: 0 !important;
+                margin-bottom: 0.25rem !important;
+            }
+            
+            /* カード内のキャプション（IDや要約）の上下の余白を調整 */
+            .card-container .stCaption {
+                margin-top: -0.5rem !important;
+                margin-bottom: 0.5rem !important;
+            }
+
+            /* ▲▲▲【追加・修正ここまで】▲▲▲ */
+
+            /* (既存の .card-container, .card-content などのスタイル) */
+
+        </style>
+    """, unsafe_allow_html=True)
+
+

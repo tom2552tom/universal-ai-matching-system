@@ -3977,29 +3977,20 @@ def rematch_engineer_with_keyword_filtering(engineer_id, target_rank='B', target
 
 def convert_to_jst_str(dt_object: datetime, format_str: str = '%Y-%m-%d %H:%M:%S') -> str:
     """
-    タイムゾーン情報を持つdatetimeオブジェクト(UTC想定)を受け取り、
-    JST（日本標準時）に変換して、指定されたフォーマットの文字列として返す。
+    【JST基準DB対応版】
+    datetimeオブジェクトを受け取り、指定されたフォーマットの文字列として返す。
+    DBの時刻は既にJST基準であるため、タイムゾーン変換は行わない。
     """
     # 入力がdatetimeオブジェクトでない、またはNoneの場合はエラー文字列を返す
     if not isinstance(dt_object, datetime):
         return "時刻情報なし"
 
     try:
-        # 変換先のJSTタイムゾーンを定義
-        jst_tz = pytz.timezone('Asia/Tokyo')
-        
-        # 受け取ったオブジェクトがタイムゾーン情報を持っているか（aware）確認
-        if dt_object.tzinfo is None or dt_object.tzinfo.utcoffset(dt_object) is None:
-            # naiveオブジェクトの場合、まずUTCとして解釈させる
-            utc_tz = pytz.utc
-            dt_object = utc_tz.localize(dt_object)
-
-        # タイムゾーン付きのオブジェクトをJSTに変換
-        dt_in_jst = dt_object.astimezone(jst_tz)
-        
-        # 指定されたフォーマットで文字列に変換して返す
-        return dt_in_jst.strftime(format_str)
+        # ▼▼▼【ここからが修正の核】▼▼▼
+        # タイムゾーン変換のロジックをすべて削除し、単純にフォーマットするだけにする
+        return dt_object.strftime(format_str)
+        # ▲▲▲【修正ここまで】▲▲▲
 
     except Exception as e:
-        print(f"ERROR in convert_to_jst_str: {e}")
-        return "時刻変換エラー"
+        print(f"ERROR in format_datetime_str: {e}") # 関数名を変更しても良い
+        return "時刻フォーマットエラー"

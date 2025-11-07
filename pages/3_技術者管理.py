@@ -3,6 +3,7 @@
 import streamlit as st
 import backend as be
 import ui_components as ui
+from datetime import datetime # ★★★ この行を追加 ★★★
 
 # --- ページの基本設定 ---
 config = be.load_app_config()
@@ -112,66 +113,73 @@ else:
         
         st.header(f"検索結果: **{len(all_ids)}** 件中、**{len(engineers_to_display)}** 件を表示中")
 
+
+
+
         for engineer in engineers_to_display:
             with st.container(border=True):
-                col1, col2 = st.columns([6, 1])
                 
-                # --- カラム1: 技術者名、ID、要約 ---
-                with col1:
-                    engineer_name = engineer.get('name') or f"技術者 (ID: {engineer['id']})"
+                # ▼▼▼【ここからが修正の核】▼▼▼
+                
+                st.markdown('<div class="card-container">', unsafe_allow_html=True)
+
+                # --- 左側のコンテンツエリア ---
+                st.markdown('<div class="card-content">', unsafe_allow_html=True)
+
+                engineer_name = engineer.get('name') or f"技術者 (ID: {engineer['id']})"
+                if engineer.get('is_hidden') == 1:
+                    st.markdown(f"##### 🙈 `{engineer_name}`")
+                else:
+                    st.markdown(f"##### {engineer_name}")
+
+                assignee = engineer.get('assigned_username') or "未担当"
+                created_at_jst = engineer.get('created_at')
+                created_at_str = be.convert_to_jst_str(created_at_jst) if isinstance(created_at_jst, datetime) else "不明"
+                st.caption(f"ID: {engineer['id']} | 担当: {assignee} | 登録日: {created_at_str}")
+
+                doc_parts = engineer.get('document', '').split('\n---\n', 1)
+                main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
+                st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
+
+                 # チップ風のHTMLを生成するヘルパー関数
+                def create_chip_html(icon, label):
+                    style = """
+                        display: inline-flex;
+                        align-items: center;
+                        background-color: #31333F;
+                        color: #FAFAFA;
+                        padding: 4px 10px;
+                        border-radius: 16px;
+                        font-size: 0.8rem;
+                        margin-right: 6px;
+                        margin-bottom: 6px;
+                        border: 1px solid #4A4A4A;
+                    """
+                    return f'<span style="{style}">{icon} {label}</span>'
+
+
+                chips_html = ""
+                if engineer.get('auto_match_active'): chips_html += create_chip_html("🤖", "自動マッチ")
+                if (match_count := engineer.get('match_count', 0)) > 0: chips_html += create_chip_html("🤝", f"{match_count} 件")
+                if chips_html: st.markdown(f"<div style='margin-top: auto;'>{chips_html}</div>", unsafe_allow_html=True)
+
+                st.markdown('</div>', unsafe_allow_html=True) # card-content の閉じタグ
+
+                # --- 右側のアクションエリア ---
+                st.markdown('<div class="card-actions">', unsafe_allow_html=True)
+
+                if st.button("詳細を見る", key=f"eng_detail_{engineer['id']}", use_container_width=True):
+                    st.session_state['selected_engineer_id'] = engineer['id']
+                    st.switch_page("pages/5_技術者詳細.py")
+
+                st.markdown('</div>', unsafe_allow_html=True) # card-actions の閉じタグ
+                st.markdown('</div>', unsafe_allow_html=True) # card-container の閉じタグ
+                
+                
                     
-                    # is_hidden の状態に応じて、タイトルにアイコンを追加
-                    if engineer.get('is_hidden') == 1:
-                        st.markdown(f"##### 🙈 `{engineer_name}`")
-                    else:
-                        st.markdown(f"##### {engineer_name}")
-
-                    # 名前の下にIDを表示
-                    #st.caption(f"ID: {engineer['id']}")
-
-                    assignee = engineer.get('assigned_username') or "未割当"
                     
-                    st.caption(f"ID: {engineer['id']} | 担当: {assignee}")
-
                     
-                    # 要約文の表示
-                    doc_parts = engineer.get('document', '').split('\n---\n', 1)
-                    main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
-                    st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
-
-                    # チップ風のHTMLを生成するヘルパー関数
-                    def create_chip_html(icon, label):
-                        style = """
-                            display: inline-flex;
-                            align-items: center;
-                            background-color: #31333F;
-                            color: #FAFAFA;
-                            padding: 4px 10px;
-                            border-radius: 16px;
-                            font-size: 0.8rem;
-                            margin-right: 6px;
-                            margin-bottom: 6px;
-                            border: 1px solid #4A4A4A;
-                        """
-                        return f'<span style="{style}">{icon} {label}</span>'
-
-                    chips_html = ""
-                    if engineer.get('auto_match_active'):
-                        chips_html += create_chip_html("🤖", "自動マッチ")
                     
-                    match_count = engineer.get('match_count', 0)
-                    if match_count > 0:
-                        chips_html += create_chip_html("🤝", f"{match_count} 件")
-                    
-                    if chips_html:
-                        st.markdown(f"<div style='margin-bottom: 8px;'>{chips_html}</div>", unsafe_allow_html=True)
-                    
-
-
-                with col2:
-                    if st.button("詳細を見る", key=f"eng_detail_{engineer['id']}", use_container_width=True):
-                        st.session_state['selected_engineer_id'] = engineer['id']
-                        st.switch_page("pages/5_技術者詳細.py")
 
         if display_count < len(all_ids):
             st.divider()

@@ -3,6 +3,8 @@
 import streamlit as st
 import backend as be
 import ui_components as ui
+from datetime import datetime
+
 
 # --- ページの基本設定 ---
 config = be.load_app_config()
@@ -124,55 +126,59 @@ else:
         
         st.header(f"検索結果: **{len(all_ids)}** 件中、**{len(jobs_to_display)}** 件を表示中")
 
-        for job in jobs_to_display: # ★変数名を job に変更
+
+
+        # ▼▼▼【ここからが移植・修正の核】▼▼▼
+        for job in jobs_to_display:
             with st.container(border=True):
-                col1, col2 = st.columns([6, 1])
-                
-                with col1:
-                    project_name = job.get('project_name') or f"案件 (ID: {job['id']})"
-                    if job.get('is_hidden') == 1:
-                        st.markdown(f"##### 🙈 `{project_name}`")
-                    else:
-                        st.markdown(f"##### {project_name}")
+                st.markdown('<div class="card-container">', unsafe_allow_html=True)
 
-                    assignee = job.get('assigned_username') or "未担当"
-                    st.caption(f"ID: {job['id']} | 担当: {assignee}")
-                    
-                    doc_parts = job.get('document', '').split('\n---\n', 1)
-                    main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
-                    st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
+                # --- 左側のコンテンツエリア ---
+                st.markdown('<div class="card-content">', unsafe_allow_html=True)
 
-                
-                    # チップ風のHTMLを生成するヘルパー関数
-                    def create_chip_html(icon, label):
-                        style = """
-                            display: inline-flex;
-                            align-items: center;
-                            background-color: #31333F; /* Streamlitのダークテーマに合わせた背景色 */
-                            color: #FAFAFA;
-                            padding: 4px 8px;
-                            border-radius: 20px; /* 角を丸くする */
-                            font-size: 0.85rem;
-                            margin-right: 5px;
-                            margin-bottom: 5px;
-                        """
-                        return f'<span style="{style}">{icon} {label}</span>'
+                project_name = job.get('project_name') or f"案件 (ID: {job['id']})"
+                if job.get('is_hidden') == 1:
+                    st.markdown(f"##### 🙈 `{project_name}`")
+                else:
+                    st.markdown(f"##### {project_name}")
 
-                    chips_html = ""
-                    if job.get('auto_match_active'):
-                        chips_html += create_chip_html("🤖", "自動マッチ")
-                    
-                    match_count = job.get('match_count', 0)
-                    if match_count > 0:
-                        chips_html += create_chip_html("🤝", f"{match_count} 件")
-                    
-                    if chips_html:
-                        st.markdown(f"<div style='margin-bottom: 8px;'>{chips_html}</div>", unsafe_allow_html=True)
-                
-                with col2:
-                    if st.button("詳細を見る", key=f"job_detail_{job['id']}", use_container_width=True): # ★キーを変更
-                        st.session_state['selected_job_id'] = job['id'] # ★ session_stateのキーを変更
-                        st.switch_page("pages/6_案件詳細.py") # ★ 案件詳細ページへ
+                assignee = job.get('assigned_username') or "未担当"
+                created_at_obj = job.get('created_at')
+                created_at_str = be.convert_to_jst_str(created_at_obj) if isinstance(created_at_obj, datetime) else "不明"
+                st.caption(f"ID: {job['id']} | 担当: {assignee} | 登録日: {created_at_str}")
+
+                doc_parts = job.get('document', '').split('\n---\n', 1)
+                main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
+                st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
+
+                def create_chip_html(icon, label):
+                    style = """
+                        display: inline-flex; align-items: center; background-color: #31333F;
+                        color: #FAFAFA; padding: 4px 10px; border-radius: 16px;
+                        font-size: 0.8rem; margin-right: 6px; margin-bottom: 6px; border: 1px solid #4A4A4A;
+                    """
+                    return f'<span style="{style}">{icon} {label}</span>'
+
+                chips_html = ""
+                if job.get('auto_match_active'): chips_html += create_chip_html("🤖", "自動マッチ")
+                if (match_count := job.get('match_count', 0)) > 0: chips_html += create_chip_html("🤝", f"{match_count} 件")
+                if chips_html: st.markdown(f"<div style='margin-top: auto;'>{chips_html}</div>", unsafe_allow_html=True)
+
+                st.markdown('</div>', unsafe_allow_html=True)
+
+                # --- 右側のアクションエリア ---
+                st.markdown('<div class="card-actions">', unsafe_allow_html=True)
+
+                if st.button("詳細を見る", key=f"job_detail_{job['id']}", use_container_width=True):
+                    st.session_state['selected_job_id'] = job['id']
+                    st.switch_page("pages/6_案件詳細.py")
+
+                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+        # ▲▲▲【移植・修正ここまで】▲▲▲
+
+
+
 
     if display_count < len(all_ids):
         st.divider()
