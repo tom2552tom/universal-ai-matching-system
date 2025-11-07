@@ -209,15 +209,27 @@ if job_data:
 
 
 
+    # ▼▼▼【ここからが修正箇所です】▼▼▼
+    doc_parts = job_data['document'].split('\n---\n', 1)
+    meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", job_data['document'])
 
-    if job_data['document']:
+
+    # メタ情報を枠で囲んで表示
+    if meta_info:
         with st.container(border=True):
-            doc_parts = job_data['document'].split('\n---\n', 1)
-            meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", job_data['document'])
-            if meta_info: st.caption(meta_info.replace("][", " | ").strip("[]"))
-            st.markdown(main_doc)
-    else:
-        st.info("この案件にはAIによる要約情報がありません。")
+            st.markdown("**抽出されたメタ情報**")
+            # 各メタ情報を整形して表示
+            # 例: "[国籍: 日本] [稼働可能日: 即日]" -> "国籍: 日本 | 稼働可能日: 即日"
+            formatted_meta = meta_info.replace("][", " | ").strip("[]")
+            st.info(formatted_meta)
+
+    # AIによる要約文を枠で囲んで表示
+    with st.container(border=True):
+        st.markdown("**AIによる要約文**")
+        st.write(main_doc)
+    # ▲▲▲【修正ここまで】▲▲▲
+
+    
     st.divider()
 
 

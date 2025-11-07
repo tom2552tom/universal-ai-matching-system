@@ -195,7 +195,7 @@ if engineer_data:
             # 各メタ情報を整形して表示
             # 例: "[国籍: 日本] [稼働可能日: 即日]" -> "国籍: 日本 | 稼働可能日: 即日"
             formatted_meta = meta_info.replace("][", " | ").strip("[]")
-            st.caption(formatted_meta)
+            st.info(formatted_meta)
 
     # AIによる要約文を枠で囲んで表示
     with st.container(border=True):
