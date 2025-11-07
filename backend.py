@@ -26,6 +26,12 @@ import pytz # ★★★ タイムゾーンを扱うために追加 ★★★
 
 import feedparser # RSSフィードをパースするためのライブラリ
 import random
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+
+
+
 
 
 # --- 1. 初期設定と定数 (変更なし) ---
@@ -2733,10 +2739,6 @@ def get_auto_match_request(item_id: int, item_type: str) -> dict | None:
         return None
     
 
-import smtplib
-from email.mime.text import MIMEText
-from email.header import Header
-import streamlit as st # st.secrets を使うためにインポートが必要
 
 # --- メール通知機能 ---
 def send_email_notification(recipient_email, subject, body):

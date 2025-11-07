@@ -110,28 +110,26 @@ st.header("最新マッチング結果一覧")
 # --- DBからフィルタリングされた結果を取得 ---
 conn = get_db_connection()
 
-# ▼▼▼【このクエリを修正】▼▼▼
+# ▼▼▼【SQLクエリの確認・修正】▼▼▼
+# COALESCE を使って、担当者がNULLの場合に「未担当」を返すようにする
 query = '''
     SELECT 
         r.id as res_id, r.job_id, j.document as job_doc, j.project_name, j.is_hidden as job_is_hidden,
         r.engineer_id, e.document as eng_doc, e.name as engineer_name, e.is_hidden as engineer_is_hidden,
         r.score, r.created_at, r.is_hidden as match_is_hidden, r.grade, r.status,
-        job_user.username as job_assignee, eng_user.username as engineer_assignee,
-        
-        -- フィードバックの有無を判定する仮想カラムを追加
+        COALESCE(job_user.username, '未担当') as job_assignee,
+        COALESCE(eng_user.username, '未担当') as engineer_assignee,
         CASE 
-            WHEN r.feedback_status IS NOT NULL AND r.feedback_status != ''
-            THEN true
+            WHEN r.feedback_status IS NOT NULL AND r.feedback_status != '' THEN true
             ELSE false
         END AS has_feedback
-
     FROM matching_results r
     JOIN jobs j ON r.job_id = j.id
     JOIN engineers e ON r.engineer_id = e.id
     LEFT JOIN users job_user ON j.assigned_user_id = job_user.id
     LEFT JOIN users eng_user ON e.assigned_user_id = eng_user.id
 '''
-# ▲▲▲【修正ここまで】▲▲▲
+# ▲▲▲【SQLクエリここまで】▲▲▲
 
 
 params = []
@@ -239,16 +237,18 @@ else:
                 
                 with col1:
                     project_name = res['project_name'] or f"案件(ID: {res['job_id']})"
-                    project_button_label = project_name
-                    if res['job_is_hidden']:
-                        project_button_label += " (案件 非表示)"
-                    if st.button(f"💼 {project_button_label}", key=f"job_link_{res['res_id']}", use_container_width=True, type="secondary"):
+                    project_button_label = f"💼 {project_name}{' (非表示)' if res['job_is_hidden'] else ''}"
+                    
+                    # st.button を使い、クリックされたら session_state にIDを保存してページを切り替える
+                    if st.button(project_button_label, key=f"job_link_{res['res_id']}", use_container_width=True, type="secondary"):
                         st.session_state['selected_job_id'] = res['job_id']
                         st.switch_page("pages/6_案件詳細.py")
-                    if res['job_assignee']:
-                        st.caption(f"**担当:** {res['job_assignee']}")
+                        
+                    st.caption(f"ID: {res['job_id']} | 担当: {res['job_assignee']}")
                     job_doc_summary = (res['job_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
                     st.caption(f"{job_doc_summary}...")
+                    
+
                     
                 with col2:
 
@@ -274,16 +274,18 @@ else:
 
                 with col3:
                     engineer_name = res['engineer_name'] or f"技術者(ID: {res['engineer_id']})"
-                    engineer_button_label = engineer_name
-                    if res['engineer_is_hidden']:
-                        engineer_button_label += " (技術者 非表示)"
-                    if st.button(f"👤 {engineer_button_label}", key=f"eng_link_{res['res_id']}", use_container_width=True, type="secondary"):
+                    engineer_button_label = f"👤 {engineer_name}{' (非表示)' if res['engineer_is_hidden'] else ''}"
+
+                    # こちらも同様に st.button に変更
+                    if st.button(engineer_button_label, key=f"eng_link_{res['res_id']}", use_container_width=True, type="secondary"):
                         st.session_state['selected_engineer_id'] = res['engineer_id']
                         st.switch_page("pages/5_技術者詳細.py")
-                    if res['engineer_assignee']:
-                        st.caption(f"**担当:** {res['engineer_assignee']}")
+
+                    st.caption(f"ID: {res['engineer_id']} | 担当: {res['engineer_assignee']}")
                     eng_doc_summary = (res['eng_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
                     st.caption(f"{eng_doc_summary}...")
+
+
 
 
         

@@ -11254,3 +11254,45 @@ Processing request for engineer 'TEST1' (ID:25465)
 
 2025-11-05 19:32:40.268344 |     - ⏭️ Skipped engineer(ID:36142) with rank D
 2025-11-05 19:32:43.734005 |     - ⏭️ Skipped engineer(ID:36143) with rank C
+2025-11-07 06:55:09.522094 | --- Script execution started ---
+2025-11-07 06:55:09.522422 | Importing libraries...
+2025-11-07 06:55:09.523068 | Libraries imported successfully.
+2025-11-07 06:55:09.523166 | __main__ block entered. Calling main().
+2025-11-07 06:55:09.523231 | --- Auto-matcher batch started ---
+2025-11-07 06:55:09.523344 | INFO: Google Generative AI API configured.
+2025-11-07 06:55:09.523400 | INFO: Configuration loaded successfully.
+2025-11-07 06:55:11.213725 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 06:55:11.778165 |   - Found 2 new jobs to check.
+2025-11-07 06:55:11.948032 |       -> ✅ Score: 4 (>= 4). Added to promising list.
+2025-11-07 06:55:12.110064 |       -> ✅ Score: 4 (>= 4). Added to promising list.
+2025-11-07 06:55:12.110414 |   - Found 2 promising candidates to evaluate with AI.
+2025-11-07 06:55:12.110847 |   - Step 2: Fetching full data for promising candidates...
+2025-11-07 06:55:15.988177 |     - ⏭️ Skipped job(ID:28718) with rank B
+2025-11-07 06:55:20.006489 |     - ⏭️ Skipped job(ID:28719) with rank B
+2025-11-07 06:55:20.369757 |   - Finished processing. Updated last processed ID for request 40.
+2025-11-07 06:55:21.414120 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 06:55:21.495334 |   - Found 2 new jobs to check.
+2025-11-07 06:55:21.827230 | No promising candidates found.
+2025-11-07 06:55:22.725482 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 06:55:22.725876 |   - No new engineers to process.
+2025-11-07 06:55:23.633913 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 06:55:23.634588 |   - No new engineers to process.
+2025-11-07 06:55:24.622951 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 06:55:24.707236 |   - Found 2 new jobs to check.
+2025-11-07 06:55:25.034196 | No promising candidates found.
+2025-11-07 06:55:26.246168 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 06:55:26.383445 |   - Found 2 new jobs to check.
+2025-11-07 06:55:26.714314 | No promising candidates found.
+2025-11-07 06:55:27.593341 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 06:55:28.445631 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 06:55:28.445841 |   - No new engineers to process.
+2025-11-07 06:55:29.344322 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 06:55:29.509174 | --- Auto-matcher batch finished ---
+
