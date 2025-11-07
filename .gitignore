@@ -15,3 +15,4 @@ run_auto_matcher.py
 *.log
 /logs
 *.log
+test_page_link.py
