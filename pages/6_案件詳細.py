@@ -85,19 +85,27 @@ try:
 
         if job_data:
             # マッチング済み技術者データの取得
+
             matched_engineers_query = """
                 SELECT 
-                    e.id as engineer_id, e.name, e.document, 
-                    r.score, r.id as match_id, r.grade
+                    e.id as engineer_id, 
+                    e.name, 
+                    e.document, 
+                    r.score, 
+                    r.id as match_id, 
+                    r.grade,
+                    COALESCE(u.username, '未割当') as assignee_name -- 担当者名を追加
                 FROM matching_results r
                 JOIN engineers e ON r.engineer_id = e.id
+                LEFT JOIN users u ON e.assigned_user_id = u.id -- usersテーブルをJOIN
                 WHERE r.job_id = %s 
                   AND e.is_hidden = 0
                   AND r.is_hidden = 0
-                ORDER BY r.score DESC
+                ORDER BY r.grade ASC, r.score DESC;
             """
             cursor.execute(matched_engineers_query, (selected_id,))
             matched_engineers = cursor.fetchall()
+            
 finally:
     if conn:
         conn.close()
@@ -144,10 +152,10 @@ if job_data:
     # --- 担当者情報セクション ---
     st.subheader("👤 担当者情報")
     all_users = be.get_all_users()
-    user_options = {"未割り当て": None, **{user['username']: user['id'] for user in all_users}}
+    user_options = {"未割当": None, **{user['username']: user['id'] for user in all_users}}
     current_user_id = job_data['assigned_user_id']
     id_to_username = {v: k for k, v in user_options.items()}
-    current_username = id_to_username.get(current_user_id, "未割り当て")
+    current_username = id_to_username.get(current_user_id, "未割当")
 
     col1, col2 = st.columns([1, 2])
     with col1: st.metric("現在の担当者", current_username)
@@ -349,12 +357,18 @@ if job_data:
         for eng in matched_engineers:
             with st.container(border=True):
                 col1, col2 = st.columns([4, 1])
+                # ▼▼▼【ここからが修正の核】▼▼▼
                 with col1:
                     engineer_name = eng['name'] or f"技術者 (ID: {eng['engineer_id']})"
                     st.markdown(f"##### {engineer_name}")
+                    
+                    # IDと担当者名をcaptionで表示
+                    st.caption(f"ID: {eng['engineer_id']} | 担当: {eng['assignee_name']}")
+                    
                     eng_doc_parts = eng['document'].split('\n---\n', 1)
                     eng_main_doc = eng_doc_parts[1] if len(eng_doc_parts) > 1 else eng['document']
                     st.caption(eng_main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
+
                 with col2:
                     st.markdown(get_evaluation_html(eng['grade'], font_size='2em'), unsafe_allow_html=True)
                     

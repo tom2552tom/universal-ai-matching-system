@@ -47,7 +47,7 @@ with st.expander("絞り込み・並び替え", expanded=True):
         search_keyword = st.text_input("キーワード", value=params["keyword"], placeholder="プロジェクト名、スキルなどで検索")
         
         all_users = be.get_all_users()
-        user_map = {"（未担当）": -1, **{user['username']: user['id'] for user in all_users}}
+        user_map = {"（未割当）": -1, **{user['username']: user['id'] for user in all_users}}
         id_to_username = {v: k for k, v in user_map.items()}
         default_users = [id_to_username[uid] for uid in params["user_ids"] if uid in id_to_username]
         selected_usernames = st.multiselect("担当者", options=list(user_map.keys()), default=default_users, placeholder="担当者を選択（指定なしは全員対象）")
@@ -110,6 +110,7 @@ if st.session_state.all_job_ids is None or st.session_state.get("execute_search"
         )
     st.session_state.all_job_ids = all_ids
 
+
 # --- 結果表示ロジック ---
 all_ids = st.session_state.all_job_ids
 if not all_ids:
@@ -118,37 +119,30 @@ else:
     display_count = st.session_state.job_display_count
     ids_to_display = all_ids[:display_count]
     
-    if not ids_to_display:
-        st.info("これ以上表示する案件がありません。")
-    else:
-        jobs_to_display = be.get_items_by_ids_sync('jobs', ids_to_display)
-
-        # --- ↓↓↓ この行を追加してデバッグ ---
-        #st.write(jobs_to_display) 
-        # --- ↑↑↑ -------------------------
+    if ids_to_display:
+        jobs_to_display = be.get_items_by_ids_sync('jobs', ids_to_display) # ★ item_type を 'jobs' に変更
         
         st.header(f"検索結果: **{len(all_ids)}** 件中、**{len(jobs_to_display)}** 件を表示中")
 
-        for job in jobs_to_display:
+        for job in jobs_to_display: # ★変数名を job に変更
             with st.container(border=True):
-                col1, col2, col3 = st.columns([4, 2, 1])
+                col1, col2 = st.columns([6, 1])
                 
                 with col1:
                     project_name = job.get('project_name') or f"案件 (ID: {job['id']})"
                     if job.get('is_hidden') == 1:
-                        st.markdown(f"##### 🙈 `{project_name}` (ID: {job['id']})")
+                        st.markdown(f"##### 🙈 `{project_name}`")
                     else:
-                        st.markdown(f"##### {project_name} (ID: {job['id']})")
-                    
-                    
+                        st.markdown(f"##### {project_name}")
 
-
+                    assignee = job.get('assigned_username') or "未担当"
+                    st.caption(f"ID: {job['id']} | 担当: {assignee}")
+                    
                     doc_parts = job.get('document', '').split('\n---\n', 1)
                     main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
-                    st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:100] + "...")
+                    st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
 
-                with col2:
-                    
+                
                     # チップ風のHTMLを生成するヘルパー関数
                     def create_chip_html(icon, label):
                         style = """
@@ -173,23 +167,17 @@ else:
                         chips_html += create_chip_html("🤝", f"{match_count} 件")
                     
                     if chips_html:
-                        st.markdown(chips_html, unsafe_allow_html=True)
-                    
-                    assignee = job.get('assigned_username') or "未担当"
-                    # 担当者情報の表示位置を調整
-                    st.markdown(f"<div style='margin-top: 8px;'><b>担当:</b> {assignee}</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div style='margin-bottom: 8px;'>{chips_html}</div>", unsafe_allow_html=True)
+                
+                with col2:
+                    if st.button("詳細を見る", key=f"job_detail_{job['id']}", use_container_width=True): # ★キーを変更
+                        st.session_state['selected_job_id'] = job['id'] # ★ session_stateのキーを変更
+                        st.switch_page("pages/6_案件詳細.py") # ★ 案件詳細ページへ
 
-                with col3:
-                    if st.button("詳細を見る", key=f"job_detail_{job['id']}", use_container_width=True):
-                        st.session_state['selected_job_id'] = job['id']
-                        st.switch_page("pages/6_案件詳細.py")
+    if display_count < len(all_ids):
+        st.divider()
+        if st.button(f"さらに {min(ITEMS_PER_PAGE, len(all_ids) - display_count)} 件読み込む", use_container_width=True):
+            st.session_state.job_display_count += ITEMS_PER_PAGE # ★キーを変更
+            st.rerun()
 
-        # --- 「Load More」ボタン ---
-        if display_count < len(all_ids):
-            st.divider()
-            if st.button(f"さらに {min(ITEMS_PER_PAGE, len(all_ids) - display_count)} 件読み込む", use_container_width=True):
-                st.session_state.job_display_count += ITEMS_PER_PAGE
-                st.rerun()
-
-# --- フッター ---
 ui.display_footer()

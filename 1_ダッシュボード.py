@@ -117,8 +117,8 @@ query = '''
         r.id as res_id, r.job_id, j.document as job_doc, j.project_name, j.is_hidden as job_is_hidden,
         r.engineer_id, e.document as eng_doc, e.name as engineer_name, e.is_hidden as engineer_is_hidden,
         r.score, r.created_at, r.is_hidden as match_is_hidden, r.grade, r.status,
-        COALESCE(job_user.username, '未担当') as job_assignee,
-        COALESCE(eng_user.username, '未担当') as engineer_assignee,
+        COALESCE(job_user.username, '未割当') as job_assignee,
+        COALESCE(eng_user.username, '未割当') as engineer_assignee,
         CASE 
             WHEN r.feedback_status IS NOT NULL AND r.feedback_status != '' THEN true
             ELSE false

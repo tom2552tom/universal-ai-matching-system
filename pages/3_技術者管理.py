@@ -114,22 +114,31 @@ else:
 
         for engineer in engineers_to_display:
             with st.container(border=True):
-                col1, col2, col3 = st.columns([4, 2, 1])
+                col1, col2 = st.columns([6, 1])
                 
+                # --- カラム1: 技術者名、ID、要約 ---
                 with col1:
                     engineer_name = engineer.get('name') or f"技術者 (ID: {engineer['id']})"
-                    if engineer.get('is_hidden') == 1:
-                        st.markdown(f"##### 🙈 `{engineer_name}` (ID: {engineer['id']})")
-                    else:
-                        st.markdown(f"##### {engineer_name} (ID: {engineer['id']})")
                     
+                    # is_hidden の状態に応じて、タイトルにアイコンを追加
+                    if engineer.get('is_hidden') == 1:
+                        st.markdown(f"##### 🙈 `{engineer_name}`")
+                    else:
+                        st.markdown(f"##### {engineer_name}")
+
+                    # 名前の下にIDを表示
+                    #st.caption(f"ID: {engineer['id']}")
+
+                    assignee = engineer.get('assigned_username') or "未割当"
+                    
+                    st.caption(f"ID: {engineer['id']} | 担当: {assignee}")
+
+                    
+                    # 要約文の表示
                     doc_parts = engineer.get('document', '').split('\n---\n', 1)
                     main_doc = doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]
-                    st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:100] + "...")
+                    st.caption(main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
 
-                
-                # ★★★【ここからが修正の核】★★★
-                with col2:
                     # チップ風のHTMLを生成するヘルパー関数
                     def create_chip_html(icon, label):
                         style = """
@@ -147,24 +156,19 @@ else:
                         return f'<span style="{style}">{icon} {label}</span>'
 
                     chips_html = ""
-                    # 自動マッチ依頼アイコン
                     if engineer.get('auto_match_active'):
                         chips_html += create_chip_html("🤖", "自動マッチ")
                     
-                    # マッチング件数
                     match_count = engineer.get('match_count', 0)
                     if match_count > 0:
                         chips_html += create_chip_html("🤝", f"{match_count} 件")
                     
                     if chips_html:
-                        st.markdown(chips_html, unsafe_allow_html=True)
+                        st.markdown(f"<div style='margin-bottom: 8px;'>{chips_html}</div>", unsafe_allow_html=True)
                     
-                    assignee = engineer.get('assigned_username') or "未担当"
-                    # 担当者情報の表示位置を調整
-                    st.markdown(f"<div style='margin-top: 8px;'><b>担当:</b> {assignee}</div>", unsafe_allow_html=True)
-                    # ★★★【修正ここまで】★★★
 
-                with col3:
+
+                with col2:
                     if st.button("詳細を見る", key=f"eng_detail_{engineer['id']}", use_container_width=True):
                         st.session_state['selected_engineer_id'] = engineer['id']
                         st.switch_page("pages/5_技術者詳細.py")

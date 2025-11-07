@@ -163,43 +163,56 @@ st.divider()
 st.header("🤖 AIによる案件・技術者の要約")
 col_job, col_eng = st.columns(2)
 
-def display_summary(title, document_text, assignee, item_id, item_type, page_link, session_key):
+
+# ▼▼▼【ここからが修正の核】▼▼▼
+
+# --- 表示用の共通関数を修正（ボタンのロジックを削除） ---
+def display_summary(title, document_text, assignee, item_id):
     doc_parts = document_text.split('\n---\n', 1)
     meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", document_text)
     
-    with st.container(border=True):
+    # コンテナで情報を囲む
+    with st.container(border=True, height=400): # 高さを揃える
         st.subheader(title)
-        if assignee: st.caption(f"**担当:** {assignee}")
-        if meta_info: st.caption(meta_info.replace("][", " | ").strip("[]"))
-        st.markdown(main_doc)
+        st.caption(f"ID: {item_id} | 担当: {assignee if assignee else '未割当'}")
         
-        if st.button("詳細を見る", key=f"nav_{item_type}_{item_id}", use_container_width=True):
-            st.session_state[session_key] = item_id
-            st.switch_page(page_link)
+        if meta_info:
+            st.success(meta_info.replace("][", " | ").strip("[]"))
+        
+        st.markdown(main_doc)
+        # ここにあった st.button(...) のロジックを削除
 
+# --- 案件情報の表示 ---
 with col_job:
     project_name = job_data['project_name'] or f"案件 (ID: {job_data['id']})"
+    # 1. 情報をコンテナ内に表示
     display_summary(
         title=f"💼 {project_name}",
         document_text=job_data['document'],
-        assignee=job_data['assignee_name'],
-        item_id=job_data['id'],
-        item_type='job',
-        page_link="pages/6_案件詳細.py",
-        session_key='selected_job_id'
+        assignee=job_data.get('assignee_name'),
+        item_id=job_data['id']
     )
+    # 2. コンテナの外にボタンを配置
+    if st.button("案件の詳細を見る", key=f"nav_job_{job_data['id']}", use_container_width=True):
+        st.session_state['selected_job_id'] = job_data['id']
+        st.switch_page("pages/6_案件詳細.py")
 
+# --- 技術者情報の表示 ---
 with col_eng:
     engineer_name = engineer_data['name'] or f"技術者 (ID: {engineer_data['id']})"
+    # 1. 情報をコンテナ内に表示
     display_summary(
         title=f"👤 {engineer_name}",
         document_text=engineer_data['document'],
-        assignee=engineer_data['assignee_name'],
-        item_id=engineer_data['id'],
-        item_type='engineer',
-        page_link="pages/5_技術者詳細.py",
-        session_key='selected_engineer_id'
+        assignee=engineer_data.get('assignee_name'),
+        item_id=engineer_data['id']
     )
+    # 2. コンテナの外にボタンを配置
+    if st.button("技術者の詳細を見る", key=f"nav_engineer_{engineer_data['id']}", use_container_width=True):
+        st.session_state['selected_engineer_id'] = engineer_data['id']
+        st.switch_page("pages/5_技術者詳細.py")
+
+# ▲▲▲【修正ここまで】▲▲▲
 st.divider()
 
 

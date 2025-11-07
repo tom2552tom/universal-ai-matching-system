@@ -11296,3 +11296,326 @@ Processing request for job '某損保会社の作業支援(インフラ支援兼
 2025-11-07 06:55:29.344322 | Request for engineer ID 25465: Source item not found. Skipping.
 2025-11-07 06:55:29.509174 | --- Auto-matcher batch finished ---
 
+2025-11-07 07:00:10.527619 | --- Script execution started ---
+2025-11-07 07:00:10.528204 | Importing libraries...
+2025-11-07 07:00:10.528919 | Libraries imported successfully.
+2025-11-07 07:00:10.529476 | __main__ block entered. Calling main().
+2025-11-07 07:00:10.529871 | --- Auto-matcher batch started ---
+2025-11-07 07:00:10.530201 | INFO: Google Generative AI API configured.
+2025-11-07 07:00:10.530480 | INFO: Configuration loaded successfully.
+2025-11-07 07:00:12.207695 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 07:00:12.384731 |   - Found 2 new jobs to check.
+2025-11-07 07:00:12.555855 |       -> ✅ Score: 4 (>= 4). Added to promising list.
+2025-11-07 07:00:12.733616 |   - Found 1 promising candidates to evaluate with AI.
+2025-11-07 07:00:12.734433 |   - Step 2: Fetching full data for promising candidates...
+2025-11-07 07:00:15.710609 |     - ⏭️ Skipped job(ID:28720) with rank B
+2025-11-07 07:00:15.964506 |   - Finished processing. Updated last processed ID for request 40.
+2025-11-07 07:00:16.996461 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 07:00:17.075631 |   - Found 2 new jobs to check.
+2025-11-07 07:00:17.439211 | No promising candidates found.
+2025-11-07 07:00:18.347731 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 07:00:18.348420 |   - No new engineers to process.
+2025-11-07 07:00:19.197602 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 07:00:19.197988 |   - No new engineers to process.
+2025-11-07 07:00:20.209902 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 07:00:20.373028 |   - Found 2 new jobs to check.
+2025-11-07 07:00:20.715978 | No promising candidates found.
+2025-11-07 07:00:21.857140 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 07:00:21.944797 |   - Found 2 new jobs to check.
+2025-11-07 07:00:22.349092 | No promising candidates found.
+2025-11-07 07:00:23.254994 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 07:00:24.203032 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 07:00:24.203709 |   - No new engineers to process.
+2025-11-07 07:00:25.575129 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 07:00:25.745427 | --- Auto-matcher batch finished ---
+
+2025-11-07 07:05:09.688448 | --- Script execution started ---
+2025-11-07 07:05:09.689268 | Importing libraries...
+2025-11-07 07:05:09.689690 | Libraries imported successfully.
+2025-11-07 07:05:09.690033 | __main__ block entered. Calling main().
+2025-11-07 07:05:09.690506 | --- Auto-matcher batch started ---
+2025-11-07 07:05:09.691234 | INFO: Google Generative AI API configured.
+2025-11-07 07:05:09.691658 | INFO: Configuration loaded successfully.
+2025-11-07 07:05:11.316418 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 07:05:11.317041 |   - No new engineers to process.
+2025-11-07 07:05:12.148378 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 07:05:13.019885 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 07:05:13.020511 |   - No new jobs to process.
+2025-11-07 07:05:13.966926 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 07:05:13.967311 |   - No new jobs to process.
+2025-11-07 07:05:14.818477 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 07:05:14.818913 |   - No new engineers to process.
+2025-11-07 07:05:15.688382 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 07:05:15.688941 |   - No new engineers to process.
+2025-11-07 07:05:16.757145 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 07:05:16.757673 |   - No new jobs to process.
+2025-11-07 07:05:18.213658 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 07:05:18.213961 |   - No new jobs to process.
+2025-11-07 07:05:19.045380 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 07:05:19.210186 | --- Auto-matcher batch finished ---
+
+2025-11-07 07:10:08.388550 | --- Script execution started ---
+2025-11-07 07:10:08.388843 | Importing libraries...
+2025-11-07 07:10:08.389043 | Libraries imported successfully.
+2025-11-07 07:10:08.389157 | __main__ block entered. Calling main().
+2025-11-07 07:10:08.389268 | --- Auto-matcher batch started ---
+2025-11-07 07:10:08.389415 | INFO: Google Generative AI API configured.
+2025-11-07 07:10:08.389515 | INFO: Configuration loaded successfully.
+2025-11-07 07:10:11.028261 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 07:10:11.029216 |   - No new engineers to process.
+2025-11-07 07:10:12.175344 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 07:10:14.167203 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 07:10:14.252707 |   - Found 2 new jobs to check.
+2025-11-07 07:10:15.058302 | No promising candidates found.
+2025-11-07 07:10:16.189032 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 07:10:16.371909 |   - Found 2 new jobs to check.
+2025-11-07 07:10:16.788296 | No promising candidates found.
+2025-11-07 07:10:17.679829 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 07:10:17.680764 |   - No new engineers to process.
+2025-11-07 07:10:18.682165 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 07:10:18.683118 |   - No new engineers to process.
+2025-11-07 07:10:20.357824 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 07:10:20.462038 |   - Found 3 new jobs to check.
+2025-11-07 07:10:21.001247 | No promising candidates found.
+2025-11-07 07:10:22.325714 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 07:10:22.419386 |   - Found 3 new jobs to check.
+2025-11-07 07:10:23.147362 | No promising candidates found.
+2025-11-07 07:10:25.243340 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 07:10:25.534112 | --- Auto-matcher batch finished ---
+
+2025-11-07 07:15:08.988957 | --- Script execution started ---
+2025-11-07 07:15:08.989235 | Importing libraries...
+2025-11-07 07:15:08.989366 | Libraries imported successfully.
+2025-11-07 07:15:08.989440 | __main__ block entered. Calling main().
+2025-11-07 07:15:08.989501 | --- Auto-matcher batch started ---
+2025-11-07 07:15:08.989586 | INFO: Google Generative AI API configured.
+2025-11-07 07:15:08.989651 | INFO: Configuration loaded successfully.
+2025-11-07 07:15:10.781706 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 07:15:10.864804 |   - Found 1 new engineers to check.
+2025-11-07 07:15:11.028081 | No promising candidates found.
+2025-11-07 07:15:11.937151 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 07:15:12.837222 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 07:15:12.915862 |   - Found 2 new jobs to check.
+2025-11-07 07:15:13.227361 | No promising candidates found.
+2025-11-07 07:15:14.186812 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 07:15:14.347158 |   - Found 2 new jobs to check.
+2025-11-07 07:15:14.690917 | No promising candidates found.
+2025-11-07 07:15:15.558834 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 07:15:15.639115 |   - Found 1 new engineers to check.
+2025-11-07 07:15:15.808106 | No promising candidates found.
+2025-11-07 07:15:16.698640 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 07:15:16.777546 |   - Found 1 new engineers to check.
+2025-11-07 07:15:16.943882 | No promising candidates found.
+2025-11-07 07:15:17.951009 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 07:15:18.029568 |   - Found 2 new jobs to check.
+2025-11-07 07:15:18.413082 | No promising candidates found.
+2025-11-07 07:15:19.533096 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 07:15:19.616247 |   - Found 2 new jobs to check.
+2025-11-07 07:15:19.953832 | No promising candidates found.
+2025-11-07 07:15:20.892712 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 07:15:21.058340 | --- Auto-matcher batch finished ---
+
+2025-11-07 07:20:08.833742 | --- Script execution started ---
+2025-11-07 07:20:08.834434 | Importing libraries...
+2025-11-07 07:20:08.834766 | Libraries imported successfully.
+2025-11-07 07:20:08.834996 | __main__ block entered. Calling main().
+2025-11-07 07:20:08.835129 | --- Auto-matcher batch started ---
+2025-11-07 07:20:08.835360 | INFO: Google Generative AI API configured.
+2025-11-07 07:20:08.835459 | INFO: Configuration loaded successfully.
+2025-11-07 07:20:10.536059 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 07:20:10.536977 |   - No new engineers to process.
+2025-11-07 07:20:11.392489 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 07:20:12.340158 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 07:20:12.430844 |   - Found 2 new jobs to check.
+2025-11-07 07:20:12.757598 | No promising candidates found.
+2025-11-07 07:20:13.739977 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 07:20:13.820678 |   - Found 2 new jobs to check.
+2025-11-07 07:20:14.133823 | No promising candidates found.
+2025-11-07 07:20:14.966985 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 07:20:14.967923 |   - No new engineers to process.
+2025-11-07 07:20:15.873517 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 07:20:15.874407 |   - No new engineers to process.
+2025-11-07 07:20:16.866297 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 07:20:16.951688 |   - Found 2 new jobs to check.
+2025-11-07 07:20:17.336731 | No promising candidates found.
+2025-11-07 07:20:18.570032 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 07:20:18.655162 |   - Found 2 new jobs to check.
+2025-11-07 07:20:18.980467 | No promising candidates found.
+2025-11-07 07:20:19.813804 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 07:20:19.979052 | --- Auto-matcher batch finished ---
+
+2025-11-07 07:25:09.722677 | --- Script execution started ---
+2025-11-07 07:25:09.723615 | Importing libraries...
+2025-11-07 07:25:09.724245 | Libraries imported successfully.
+2025-11-07 07:25:09.724737 | __main__ block entered. Calling main().
+2025-11-07 07:25:09.725140 | --- Auto-matcher batch started ---
+2025-11-07 07:25:09.725949 | INFO: Google Generative AI API configured.
+2025-11-07 07:25:09.726470 | INFO: Configuration loaded successfully.
+2025-11-07 07:25:11.438680 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 07:25:11.439158 |   - No new engineers to process.
+2025-11-07 07:25:12.557882 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 07:25:13.413171 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 07:25:13.414158 |   - No new jobs to process.
+2025-11-07 07:25:14.427123 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 07:25:14.428055 |   - No new jobs to process.
+2025-11-07 07:25:15.252025 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 07:25:15.252860 |   - No new engineers to process.
+2025-11-07 07:25:16.067144 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 07:25:16.068098 |   - No new engineers to process.
+2025-11-07 07:25:17.029747 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 07:25:17.030737 |   - No new jobs to process.
+2025-11-07 07:25:18.155103 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 07:25:18.155964 |   - No new jobs to process.
+2025-11-07 07:25:19.000088 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 07:25:19.167106 | --- Auto-matcher batch finished ---
+
+2025-11-07 07:30:09.282239 | --- Script execution started ---
+2025-11-07 07:30:09.282995 | Importing libraries...
+2025-11-07 07:30:09.283278 | Libraries imported successfully.
+2025-11-07 07:30:09.283566 | __main__ block entered. Calling main().
+2025-11-07 07:30:09.283711 | --- Auto-matcher batch started ---
+2025-11-07 07:30:09.283860 | INFO: Google Generative AI API configured.
+2025-11-07 07:30:09.283957 | INFO: Configuration loaded successfully.
+2025-11-07 07:30:10.948551 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 07:30:10.950179 |   - No new engineers to process.
+2025-11-07 07:30:11.880854 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 07:30:12.734397 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 07:30:12.814251 |   - Found 2 new jobs to check.
+2025-11-07 07:30:13.139777 | No promising candidates found.
+2025-11-07 07:30:14.165994 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 07:30:14.253583 |   - Found 2 new jobs to check.
+2025-11-07 07:30:14.629341 | No promising candidates found.
+2025-11-07 07:30:15.522532 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 07:30:15.523254 |   - No new engineers to process.
+2025-11-07 07:30:16.907181 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 07:30:16.907681 |   - No new engineers to process.
+2025-11-07 07:30:18.017134 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 07:30:18.100201 |   - Found 2 new jobs to check.
+2025-11-07 07:30:18.520612 | No promising candidates found.
+2025-11-07 07:30:19.680694 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 07:30:19.765531 |   - Found 2 new jobs to check.
+2025-11-07 07:30:20.089975 | No promising candidates found.
+2025-11-07 07:30:21.177119 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 07:30:21.452427 | --- Auto-matcher batch finished ---
+
+2025-11-07 07:35:08.854572 | --- Script execution started ---
+2025-11-07 07:35:08.855080 | Importing libraries...
+2025-11-07 07:35:08.855554 | Libraries imported successfully.
+2025-11-07 07:35:08.855947 | __main__ block entered. Calling main().
+2025-11-07 07:35:08.856296 | --- Auto-matcher batch started ---
+2025-11-07 07:35:08.856674 | INFO: Google Generative AI API configured.
+2025-11-07 07:35:08.857008 | INFO: Configuration loaded successfully.
+2025-11-07 07:35:10.886159 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 07:35:10.969599 |   - Found 1 new jobs to check.
+2025-11-07 07:35:11.135734 | No promising candidates found.
+2025-11-07 07:35:12.528203 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 07:35:12.608046 |   - Found 1 new jobs to check.
+2025-11-07 07:35:12.778974 | No promising candidates found.
+2025-11-07 07:35:13.663585 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 07:35:14.523357 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 07:35:14.524202 |   - No new engineers to process.
+2025-11-07 07:35:15.448931 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 07:35:16.351008 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 07:35:16.434178 |   - Found 1 new jobs to check.
+2025-11-07 07:35:16.597766 | No promising candidates found.
+2025-11-07 07:35:17.573889 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 07:35:17.655018 |   - Found 1 new jobs to check.
+2025-11-07 07:35:17.818997 | No promising candidates found.
+2025-11-07 07:35:18.742970 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 07:35:18.743996 |   - No new engineers to process.
+2025-11-07 07:35:19.624610 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 07:35:19.625699 |   - No new engineers to process.
+2025-11-07 07:35:19.792420 | --- Auto-matcher batch finished ---
+
+2025-11-07 07:40:08.549366 | --- Script execution started ---
+2025-11-07 07:40:08.549770 | Importing libraries...
+2025-11-07 07:40:08.550818 | Libraries imported successfully.
+2025-11-07 07:40:08.551335 | __main__ block entered. Calling main().
+2025-11-07 07:40:08.551650 | --- Auto-matcher batch started ---
+2025-11-07 07:40:08.551938 | INFO: Google Generative AI API configured.
+2025-11-07 07:40:08.552158 | INFO: Configuration loaded successfully.
+2025-11-07 07:40:10.252399 | 
+Processing request for engineer '古渡さん' (ID:35766)
+2025-11-07 07:40:10.334311 |   - Found 1 new jobs to check.
+2025-11-07 07:40:10.496693 | No promising candidates found.
+2025-11-07 07:40:11.597753 | 
+Processing request for engineer 'S.M' (ID:119)
+2025-11-07 07:40:11.679808 |   - Found 1 new jobs to check.
+2025-11-07 07:40:11.849416 | No promising candidates found.
+2025-11-07 07:40:12.951937 | Request for job ID 22365: Source item not found. Skipping.
+2025-11-07 07:40:13.876831 | 
+Processing request for job '某損保会社の作業支援(インフラ支援兼PMO補佐)' (ID:25735)
+2025-11-07 07:40:13.877275 |   - No new engineers to process.
+2025-11-07 07:40:14.730897 | Request for engineer ID 25465: Source item not found. Skipping.
+2025-11-07 07:40:15.589850 | 
+Processing request for engineer 'T.A' (ID:37477)
+2025-11-07 07:40:15.674327 |   - Found 3 new jobs to check.
+2025-11-07 07:40:16.162057 | No promising candidates found.
+2025-11-07 07:40:17.156251 | 
+Processing request for engineer 'T.A' (ID:33892)
+2025-11-07 07:40:17.240295 |   - Found 3 new jobs to check.
+2025-11-07 07:40:17.773792 | No promising candidates found.
+2025-11-07 07:40:18.641449 | 
+Processing request for job 'ブロックチェーンサービス移行支援' (ID:26784)
+2025-11-07 07:40:18.642242 |   - No new engineers to process.
+2025-11-07 07:40:19.562660 | 
+Processing request for job '年金基盤システムのオープンシステムへの更改（サブリーダー枠）' (ID:20466)
+2025-11-07 07:40:19.563257 |   - No new engineers to process.
+2025-11-07 07:40:19.723989 | --- Auto-matcher batch finished ---
+

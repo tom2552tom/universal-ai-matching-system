@@ -77,14 +77,20 @@ try:
         if engineer_data:
             matched_jobs_query = """
                 SELECT 
-                    j.id as job_id, j.project_name, j.document, 
-                    r.score, r.id as match_id, r.grade
+                    j.id as job_id, 
+                    j.project_name, 
+                    j.document, 
+                    r.score, 
+                    r.id as match_id, 
+                    r.grade,
+                    COALESCE(u.username, '未割当') as assignee_name -- 案件担当者名を追加
                 FROM matching_results r
                 JOIN jobs j ON r.job_id = j.id
+                LEFT JOIN users u ON j.assigned_user_id = u.id -- usersテーブルをJOIN
                 WHERE r.engineer_id = %s 
                   AND j.is_hidden = 0
                   AND r.is_hidden = 0
-                ORDER BY r.score DESC
+                ORDER BY r.grade ASC, r.score DESC;
             """
             cursor.execute(matched_jobs_query, (selected_id,))
             matched_jobs = cursor.fetchall()
@@ -344,12 +350,20 @@ if engineer_data:
         for job in matched_jobs:
             with st.container(border=True):
                 col1, col2 = st.columns([4, 1])
+
+                # ▼▼▼【ここからが修正の核】▼▼▼
                 with col1:
                     project_name = job['project_name'] or f"案件 (ID: {job['job_id']})"
                     st.markdown(f"##### {project_name}")
+                    
+                    # IDと担当者名をcaptionで表示
+                    st.caption(f"ID: {job['job_id']} | 担当: {job['assignee_name']}")
+                    
                     job_doc_parts = job['document'].split('\n---\n', 1)
                     job_main_doc = job_doc_parts[1] if len(job_doc_parts) > 1 else job['document']
                     st.caption(job_main_doc.replace('\n', ' ').replace('\r', '')[:200] + "...")
+                # ▲▲▲【修正ここまで】▲▲▲
+
                 with col2:
                     st.markdown(get_evaluation_html(job['grade'], font_size='2em'), unsafe_allow_html=True)
                     if st.button("詳細を見る", key=f"matched_job_detail_{job['match_id']}", use_container_width=True):
