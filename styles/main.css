@@ -1,4 +1,6 @@
-
+h2 {
+    font-size: 2.00rem;
+}
 .text-container {
     border: 1px solid var(--text-container-border, #333); 
     padding: 15px; 
