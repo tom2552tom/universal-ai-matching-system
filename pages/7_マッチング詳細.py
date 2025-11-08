@@ -6,7 +6,7 @@ import html
 import time # timeモジュールを追加
 from backend import get_matching_result_details, save_match_feedback, get_all_users, hide_match, update_match_status, save_proposal_text, generate_proposal_reply_with_llm, save_internal_memo, delete_match # ← delete_match を追加
 import ui_components as ui
-
+from datetime import datetime # ★★★ この行を追加 ★★★
 
 
 # プロジェクトルートをパスに追加
@@ -167,14 +167,19 @@ col_job, col_eng = st.columns(2)
 # ▼▼▼【ここからが修正の核】▼▼▼
 
 # --- 表示用の共通関数を修正（ボタンのロジックを削除） ---
-def display_summary(title, document_text, assignee, item_id):
+def display_summary(title, document_text, assignee, item_id, jst_time):
     doc_parts = document_text.split('\n---\n', 1)
     meta_info, main_doc = (doc_parts[0], doc_parts[1]) if len(doc_parts) > 1 else ("", document_text)
     
     # コンテナで情報を囲む
     with st.container(border=True, height=400): # 高さを揃える
         st.subheader(title)
-        st.caption(f"ID: {item_id} | 担当: {assignee if assignee else '未割当'}")
+
+
+        st.caption(f"ID: {item_id} | 担当: {assignee} | 登録日: {jst_time}")
+        
+        
+        #st.caption(f"ID: {item_id} | 担当: {assignee if assignee else '未割当'}")
         
         if meta_info:
             st.info(meta_info.replace("][", " | ").strip("[]"))
@@ -185,12 +190,18 @@ def display_summary(title, document_text, assignee, item_id):
 # --- 案件情報の表示 ---
 with col_job:
     project_name = job_data['project_name'] or f"案件 (ID: {job_data['id']})"
+
+    created_at_jst = job_data.get('created_at')
+    created_at_str = be.convert_to_jst_str(created_at_jst) if isinstance(created_at_jst, datetime) else "不明"
+
+
     # 1. 情報をコンテナ内に表示
     display_summary(
         title=f"💼 {project_name}",
         document_text=job_data['document'],
         assignee=job_data.get('assignee_name'),
-        item_id=job_data['id']
+        item_id=job_data['id'],
+        jst_time=created_at_str
     )
     # 2. コンテナの外にボタンを配置
     if st.button("案件の詳細を見る", key=f"nav_job_{job_data['id']}", use_container_width=True):
@@ -200,12 +211,18 @@ with col_job:
 # --- 技術者情報の表示 ---
 with col_eng:
     engineer_name = engineer_data['name'] or f"技術者 (ID: {engineer_data['id']})"
+
+    created_at_jst = engineer_data.get('created_at')
+    created_at_str = be.convert_to_jst_str(created_at_jst) if isinstance(created_at_jst, datetime) else "不明"
+
+
     # 1. 情報をコンテナ内に表示
     display_summary(
         title=f"👤 {engineer_name}",
         document_text=engineer_data['document'],
         assignee=engineer_data.get('assignee_name'),
-        item_id=engineer_data['id']
+        item_id=engineer_data['id'],
+        jst_time=created_at_str
     )
     # 2. コンテナの外にボタンを配置
     if st.button("技術者の詳細を見る", key=f"nav_engineer_{engineer_data['id']}", use_container_width=True):

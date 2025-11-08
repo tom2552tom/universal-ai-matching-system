@@ -3035,7 +3035,7 @@ def get_live_dashboard_data():
                     WHERE req.is_active = TRUE)
                 ) AS combined_requests
                 ORDER BY created_at DESC
-                LIMIT 10; -- 表示件数はお好みで調整
+                ; -- 表示件数はお好みで調整
             """)
               
             data["active_auto_requests"] = [dict(row) for row in cur.fetchall()]

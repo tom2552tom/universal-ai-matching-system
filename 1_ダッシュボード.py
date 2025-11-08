@@ -244,13 +244,19 @@ else:
                 with col1:
                     project_name = res['project_name'] or f"案件(ID: {res['job_id']})"
                     project_button_label = f"💼 {project_name}{' (非表示)' if res['job_is_hidden'] else ''}"
-                    
+
+                    #created_at_jst = res.get('created_at')
+                    #created_at_str = convert_to_jst_str(created_at_jst) if isinstance(created_at_jst, datetime) else "不明"
+
+
                     # st.button を使い、クリックされたら session_state にIDを保存してページを切り替える
                     if st.button(project_button_label, key=f"job_link_{res['res_id']}", use_container_width=True, type="secondary"):
                         st.session_state['selected_job_id'] = res['job_id']
                         st.switch_page("pages/6_案件詳細.py")
                         
                     st.caption(f"ID: {res['job_id']} | 担当: {res['job_assignee']}")
+                    #st.caption(f"ID: {res['job_id']} | 担当: {res['job_assignee']} | 登録日: {created_at_str}")
+
                     job_doc_summary = (res['job_doc'].split('\n---\n', 1)[-1]).replace('\n', ' ').replace('\r', '')[:150]
                     st.caption(f"{job_doc_summary}...")
                     
@@ -258,21 +264,9 @@ else:
                     
                 with col2:
 
-                     # ▼▼▼【この部分を修正】▼▼▼
-
-                    # フィードバックアイコンを準備
                     feedback_icon = "💬" if res.get('has_feedback') else ""
-                    
-                    # 評価(Grade)のHTMLを取得
                     grade_html = get_evaluation_html(res['grade'])
-                    
-                    # HTMLを結合して表示
                     st.markdown(f"{grade_html}<div style='text-align:center; font-size:1.2em;'>{feedback_icon}</div>", unsafe_allow_html=True)
-                    
-                    # ▲▲▲【修正ここまで】▲▲▲
-
-                    #st.markdown(get_evaluation_html(res['grade']), unsafe_allow_html=True)
-
                     
                     if st.button("詳細を見る", key=f"dashboard_detail_btn_{res['res_id']}", use_container_width=True):
                         st.session_state['selected_match_id'] = res['res_id']
