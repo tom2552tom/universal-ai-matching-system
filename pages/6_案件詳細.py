@@ -178,32 +178,33 @@ if job_data:
     # DBから取得したキーワードのリスト
     keywords = job_data.get('keywords')
     
+    if keywords and isinstance(keywords, list) and len(keywords) > 0:
+
+        def create_chip_html(icon, label):
+                style = """
+                    display: inline-flex;
+                    align-items: center;
+                    background-color: #31333F;
+                    color: #FAFAFA;
+                    padding: 4px 10px;
+                    border-radius: 16px;
+                    font-size: 0.8rem;
+                    margin-right: 6px;
+                    margin-bottom: 6px;
+                    border: 1px solid #4A4A4A;
+                """
+                return f'<span style="{style}">{icon} {label}</span>'
 
 
-    if keywords and isinstance(keywords, list):
-        # 1行に表示するチップの数
-        CHIPS_PER_ROW = 5
-        
-        # キーワードのリストを、指定した数ずつの小さなリストに分割する
-        # 例: 7個のキーワード、CHIPS_PER_ROW=5 -> [[kw1, ..., kw5], [kw6, kw7]]
-        rows_of_keywords = [keywords[i:i + CHIPS_PER_ROW] for i in range(0, len(keywords), CHIPS_PER_ROW)]
-        
-        # 行ごとにループ
-        for row_keywords in rows_of_keywords:
-            # その行のキーワードの数に合わせてカラムを作成
-            cols = st.columns(len(row_keywords))
-            
-            # 各カラムに、無効化したボタンとしてキーワードを配置
-            for i, kw in enumerate(row_keywords):
-                with cols[i]:
-                    st.button(
-                        label=kw, 
-                        key=f"kw_{selected_id}_{kw}", # キーは一意にする
-                        disabled=True, 
-                        use_container_width=True
-                    )
-        # ▲▲▲【修正ここまで】▲▲▲
-        
+        # 2. 全てのキーワードをチップHTMLに変換し、1つの文字列に連結
+        all_chips_html = ""
+        for kw in keywords:
+            all_chips_html += create_chip_html("", kw) # アイコンは任意で変更
+
+        # 3. 1つのdivコンテナで、チップHTML全体を横並びで表示
+        #    margin-top: auto は不要なので削除
+        st.markdown(f"<div style='line-height: 2.0;'>{all_chips_html}</div>", unsafe_allow_html=True)
+
     else:
         st.info("キーワードが設定されていません。「AI再評価」を実行すると生成されます。")
 
