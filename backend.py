@@ -1419,8 +1419,8 @@ def re_evaluate_and_match_single_engineer(engineer_id, target_rank='B', target_c
                         if grade in valid_ranks:
                             try:
                                 cursor.execute(
-                                    'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                                    (job['id'], engineer_id, score, now_str, grade, positive_points, concern_points)
+                                    'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points,status,is_hidden) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                                    (job['id'], engineer_id, score, now_str, grade, positive_points, concern_points,'新規',0)
                                 )
                                 st.success(f"    -> マッチング評価: **{grade}** ... ✅ ヒット！DBに保存しました。")
                                 found_count += 1
@@ -1796,8 +1796,8 @@ def re_evaluate_and_match_single_job(job_id, target_rank='B', target_count=5):
                         if grade in valid_ranks:
                             try:
                                 cursor.execute(
-                                    'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                                    (job_id, engineer['id'], score, now_str, grade, positive_points, concern_points)
+                                    'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points,status,is_hidden) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                                    (job_id, engineer['id'], score, now_str, grade, positive_points, concern_points,'新規',0)
                                 )
                                 st.success(f"    -> マッチング評価: **{grade}** ... ✅ ヒット！DBに保存しました。")
                                 found_count += 1
