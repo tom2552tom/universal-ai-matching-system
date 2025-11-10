@@ -558,10 +558,24 @@ def run_matching_for_item(item_data, item_type, conn, now_str):
 
                 if grade in ['S', 'A', 'B']:
                     try:
-                        cursor.execute(
-                            'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (job_id, engineer_id) DO NOTHING',
-                            (job_id, engineer_id, score, now_str, grade, positive_points, concern_points)
-                        )
+
+                        sql = """
+                            INSERT INTO matching_results 
+                                (job_id, engineer_id, score, created_at, grade, positive_points, concern_points, is_hidden, status) 
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) 
+                            ON CONFLICT (job_id, engineer_id) DO NOTHING
+                        """
+                        # デフォルト値 0 (False) と '新規' をパラメータに追加
+                        params = (job_id, engineer_id, score, now_str, grade, positive_points, concern_points, 0, '新規')
+                        
+                        cursor.execute(sql, params)
+                        # ▲▲▲【修正ここまで】▲▲▲
+
+                        
+                        #cursor.execute(
+                        #    'INSERT INTO matching_results (job_id, engineer_id, score, created_at, grade, positive_points, concern_points) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (job_id, engineer_id) DO NOTHING',
+                        #    (job_id, engineer_id, score, now_str, grade, positive_points, concern_points)
+                        #)
                         st.write(f"  - 候補: 『{candidate_info['name']}』 -> マッチング評価: **{grade}** (スコア: {score:.2f}) ... ✅ DBに保存")
                     except Exception as e:
                         st.write(f"  - DB保存中にエラー: {e}")
