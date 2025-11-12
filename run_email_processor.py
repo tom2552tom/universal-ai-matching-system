@@ -282,7 +282,7 @@ def split_text_with_llm(text_content: str) -> (dict | None, list):
 
     try:
         # 分類は高速なモデルでも十分な場合が多い
-        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
         logs.append("  > 📄 AIがメールのカテゴリを分類中...")
         
         # API呼び出し
