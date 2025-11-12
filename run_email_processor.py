@@ -237,55 +237,96 @@ def _build_meta_info_string(item_type, item_data):
     meta_parts = [f"[{display_name}: {item_data.get(key, '不明')}]" for display_name, key in meta_fields]
     return " ".join(meta_parts) + "\n---\n"
 
+
+
+# run_email_processor.py の中で、既存の split_text_with_llm 関数を以下に置き換えてください。
+
 # ▼▼▼【ここが今回の修正の核となる関数】▼▼▼
 def split_text_with_llm(text_content: str) -> (dict | None, list):
+    """
+    【改良版】
+    LLMを使ってメールを「分類」し、処理対象の場合のみ「情報抽出」を行う。
+    面談調整や請求などの不要なメールをこの段階で除外する。
+    """
     logs = []
+    
+    # --- Step 1: メールのカテゴリ分類 ---
+    # 本文が長すぎるとAPIコストと時間がかかるため、分類には冒頭部分のみを使用する
+    text_for_classification = text_content[:2500]
+
+    # AIにメールのカテゴリを判断させるためのプロンプト
     classification_prompt = f"""
-        あなたはテキスト分類の専門家です。以下のテキストが「案件情報」「技術者情報」「その他」のどれに最も当てはまるか判断し、指定された単語一つだけで回答してください。
-        # 判断基準
-        - 「スキルシート」「職務経歴書」「氏名」「年齢」といった単語が含まれていれば「技術者情報」の可能性が高い。
-        - 「募集」「必須スキル」「歓迎スキル」「求める人物像」といった単語が含まれていれば「案件情報」の可能性が高い。
-        # 回答形式
-        - `案件情報`
-        - `技術者情報`
-        - `その他`
+        あなたは、ビジネスメールを分類する専門家です。
+        以下のメール本文が、どのカテゴリに最も当てはまるか判断し、指定されたカテゴリ名一つだけで回答してください。
+
+        # カテゴリ定義
+        - `PROJECT_INFO`: 新しいITプロジェクトの要件、内容、募集に関する情報が主体。
+        - `ENGINEER_INFO`: IT技術者のスキルシート、職務経歴書、自己紹介が主体。
+        - `SCHEDULING`: 面接や面談の日程調整、Web会議のURL連絡など、スケジュール調整が主体。
+        - `BILLING`: 請求書、支払い、契約金額に関する連絡が主体。
+        - `OTHER`: 上記のいずれにも当てはまらない挨拶、単純な返信、その他の業務連絡。
+
+        # 判断のヒント
+        - 「スキルシート」「履歴書」「経歴」という単語があれば `ENGINEER_INFO` の可能性が高い。
+        - 「募集」「必須スキル」「案件概要」という単語があれば `PROJECT_INFO` の可能性が高い。
+        - 「面談」「日程」「ご都合いかがでしょうか」という単語があれば `SCHEDULING` の可能性が高い。
+        - 「請求書」「お支払い」「ご入金」という単語があれば `BILLING` の可能性が高い。
+
         # 分析対象テキスト
         ---
-        {text_content[:2000]}
+        {text_for_classification}
         ---
+
+        # 回答（カテゴリ名一つだけを記述）:
     """
+
     try:
-        model = genai.GenerativeModel('models/gemini-2.5-flash-lite')
-        logs.append("  > 📄 文書タイプを分類中...")
-
-        #request_options = {"timeout": 10}
-
+        # 分類は高速なモデルでも十分な場合が多い
+        model = genai.GenerativeModel('models/gemini-1.5-flash')
+        logs.append("  > 📄 AIがメールのカテゴリを分類中...")
+        
+        # API呼び出し
         response = model.generate_content(classification_prompt)
-        doc_type = response.text.strip()
-        logs.append(f"  > ✅ AIによる分類結果: {doc_type}")
+        category = response.text.strip()
+        logs.append(f"  > ✅ AIによる分類結果: {category}")
+
     except Exception as e:
-        logs.append(f"  > ❌ 文書の分類中にエラーが発生しました: {e}")
+        logs.append(f"  > ❌ メールの分類中にAIエラーが発生しました: {e}")
         return None, logs
 
-    if "技術者情報" in doc_type:
-        extraction_prompt = get_extraction_prompt('engineer', text_content)
-    elif "案件情報" in doc_type:
-        extraction_prompt = get_extraction_prompt('job', text_content)
-    else:
-        logs.append("  > ⚠️ このテキストは案件情報または技術者情報として分類されませんでした。")
+    # --- Step 2: 分類結果に基づく処理の分岐 ---
+    
+    # 処理対象のカテゴリでなければ、ここで処理を終了
+    if category not in ["PROJECT_INFO", "ENGINEER_INFO"]:
+        logs.append(f"  > ℹ️ このメールはカテゴリ '{category}' と判断されたため、処理をスキップします。")
         return None, logs
 
+    # 処理対象の場合、抽出用のプロンプトを決定
+    if category == "PROJECT_INFO":
+        doc_type = 'job'
+    else: # category == "ENGINEER_INFO"
+        doc_type = 'engineer'
+
+    extraction_prompt = get_extraction_prompt(doc_type, text_content)
+    
+    if not extraction_prompt:
+        # このパスは通常通らないはずだが、念のため
+        logs.append(f"  > ❌ 抽出用プロンプトの生成に失敗しました。DocType: {doc_type}")
+        return None, logs
+
+    # --- Step 3: 情報抽出 ---
     generation_config = {"response_mime_type": "application/json"}
     safety_settings = {'HARM_CATEGORY_HARASSMENT': 'BLOCK_NONE', 'HARM_CATEGORY_HATE_SPEECH': 'BLOCK_NONE', 'HARM_CATEGORY_SEXUALLY_EXPLICIT': 'BLOCK_NONE', 'HARM_CATEGORY_DANGEROUS_CONTENT': 'BLOCK_NONE'}
     
     try:
-        logs.append("  > 🤖 AIが情報を構造化中...")
-
-        #request_options = {"timeout": 20}
+        # 抽出はより高性能なモデルを使うことが望ましい場合がある
+        # model = genai.GenerativeModel('models/gemini-1.5-pro') # 必要に応じてモデルを変更
+        logs.append(f"  > 🤖 AIがカテゴリ '{category}' の情報を構造化中...")
 
         response = model.generate_content(extraction_prompt, generation_config=generation_config, safety_settings=safety_settings)
         raw_text = response.text
         
+        # --- JSONの堅牢なパース処理（既存のコードを流用） ---
         parsed_json = None
         start_index = raw_text.find('{')
         if start_index == -1:
@@ -293,11 +334,16 @@ def split_text_with_llm(text_content: str) -> (dict | None, list):
             return None, logs
 
         brace_counter, end_index = 0, -1
+        # ネストされたJSONに対応するため、括弧のカウンターを正しく実装
+        in_string = False
         for i in range(start_index, len(raw_text)):
             char = raw_text[i]
-            if char == '{': brace_counter += 1
-            elif char == '}': brace_counter -= 1
-            if brace_counter == 0:
+            if char == '"' and (i == 0 or raw_text[i-1] != '\\'):
+                in_string = not in_string
+            if not in_string:
+                if char == '{': brace_counter += 1
+                elif char == '}': brace_counter -= 1
+            if brace_counter == 0 and start_index != -1:
                 end_index = i
                 break
         
@@ -311,21 +357,33 @@ def split_text_with_llm(text_content: str) -> (dict | None, list):
             logs.append("  > ✅ JSONのパースに成功しました。")
         except json.JSONDecodeError as e:
             logs.append(f"  > ⚠️ JSONパース失敗。修復試行... (エラー: {e})")
-            repaired_text = re.sub(r',\s*([\}\]])', r'\1', re.sub(r'(?<!\\)\n', r'\\n', json_str))
+            # 改行や末尾カンマを修正する試み
+            repaired_text = re.sub(r',\s*([\}\]])', r'\1', json_str.replace('\n', '\\n'))
             try:
                 parsed_json = json.loads(repaired_text)
                 logs.append("  > ✅ JSONの修復と再パースに成功しました。")
             except json.JSONDecodeError as final_e:
-                logs.append(f"  > ❌ JSON修復後もパース失敗: {final_e}")
+                logs.append(f"  > ❌ JSON修復後もパース失敗: {final_e}\n    > Raw JSON: {json_str[:500]}")
                 return None, logs
 
-        if "技術者情報" in doc_type: parsed_json["jobs"] = []
-        elif "案件情報" in doc_type: parsed_json["engineers"] = []
+        # 抽出結果のキーを統一的に扱う
+        if doc_type == 'job':
+            if "jobs" not in parsed_json: parsed_json["jobs"] = []
+            parsed_json["engineers"] = []
+        else: # doc_type == 'engineer'
+            if "engineers" not in parsed_json: parsed_json["engineers"] = []
+            parsed_json["jobs"] = []
+            
         return parsed_json, logs
 
     except Exception as e:
         logs.append(f"  > ❌ LLMによる構造化処理中に予期せぬエラーが発生しました: {e}")
+        import traceback
+        logs.append(traceback.format_exc())
         return None, logs
+
+# ▲▲▲【置き換えここまで】▲▲▲
+
 
 
 
