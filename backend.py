@@ -2608,35 +2608,41 @@ def add_or_update_auto_match_request(item_id, item_type, target_rank, email, use
             current_max_engineer_id = (res := cur.fetchone()) and res['max'] or 0
 
             # --- ステップ2: 依頼をDBに登録/更新 (UPSERT) ---
-            # ★★★【ここからが修正の核】★★★
-            sql = """
+            # RETURNING句を削除し、単純なUPSERTに
+            sql_upsert = """
                 INSERT INTO auto_matching_requests (
                     item_id, item_type, target_rank, notification_email, created_by_user_id, 
-                    is_active, last_processed_job_id, last_processed_engineer_id
+                    is_active, last_processed_job_id, last_processed_engineer_id, created_at
                 )
-                VALUES (%s, %s, %s, %s, %s, TRUE, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, TRUE, %s, %s, NOW())
                 ON CONFLICT (item_id, item_type) 
                 DO UPDATE SET 
                     target_rank = EXCLUDED.target_rank,
                     notification_email = EXCLUDED.notification_email,
                     is_active = TRUE,
                     created_by_user_id = EXCLUDED.created_by_user_id,
-                    -- 既存のレコードを更新する際に、もし last_processed_id が NULL ならば、
-                    -- 現在の最新IDで更新する。既に値が入っていれば変更しない。
                     last_processed_job_id = COALESCE(auto_matching_requests.last_processed_job_id, EXCLUDED.last_processed_job_id),
-                    last_processed_engineer_id = COALESCE(auto_matching_requests.last_processed_engineer_id, EXCLUDED.last_processed_engineer_id)
-                RETURNING last_processed_job_id, last_processed_engineer_id;
+                    last_processed_engineer_id = COALESCE(auto_matching_requests.last_processed_engineer_id, EXCLUDED.last_processed_engineer_id);
             """
-            cur.execute(sql, (
+            cur.execute(sql_upsert, (
                 item_id, item_type, target_rank, email, user_id, 
                 current_max_job_id, current_max_engineer_id
             ))
+
+            # --- ステップ3: 書き込んだレコードを別途SELECTで取得 ---
+            sql_select = """
+                SELECT last_processed_job_id, last_processed_engineer_id 
+                FROM auto_matching_requests
+                WHERE item_id = %s AND item_type = %s;
+            """
+            cur.execute(sql_select, (item_id, item_type))
             
-            # 実際にDBに書き込まれた値を取得
+            # ここで fetchone() を実行する
             result = cur.fetchone()
-            actual_last_job_id = result['last_processed_job_id'] if result else 'N/A'
-            actual_last_eng_id = result['last_processed_engineer_id'] if result else 'N/A'
-            # ★★★【修正ここまで】★★★
+            
+            actual_last_job_id = result['last_processed_job_id'] if result else 'N/A (Fetch Failed)'
+            actual_last_eng_id = result['last_processed_engineer_id'] if result else 'N/A (Fetch Failed)'
+            
             
         conn.commit()
         # 実際にDBに書き込まれた値でログを出力
@@ -3009,50 +3015,62 @@ def get_live_dashboard_data():
             # 提案中の総件数
             cur.execute("SELECT COUNT(*) FROM matching_results WHERE status IN ('提案準備中', '提案中')")
             data["proposal_count_total"] = cur.fetchone()['count']
+    
+
+
+
+    
+            # --- アクティブな自動マッチング依頼の取得 (★ここからが修正の核★) ---
             
-            # アクティブな自動マッチング依頼
+            # 1. アクティブな依頼の総数を取得
             cur.execute("SELECT COUNT(*) FROM auto_matching_requests WHERE is_active = TRUE")
-            data["active_auto_request_count"] = cur.fetchone()['count']
+            data["active_auto_request_count"] = (res := cur.fetchone()) and res['count'] or 0
+
+            # 2. 案件と技術者それぞれのマッチング件数を事前に集計
+            cur.execute("""
+                SELECT job_id, COUNT(*) as match_count 
+                FROM matching_results WHERE is_hidden = 0 GROUP BY job_id
+            """)
+            job_match_counts = {row['job_id']: row['match_count'] for row in cur.fetchall()}
 
             cur.execute("""
-                SELECT * FROM (
-                    (SELECT 
-                        req.id, req.item_id, req.item_type, req.target_rank,
-                        j.project_name as item_name,
-                        j.document,
-                        u.username as assigned_username, -- ★ 担当者名を追加
-                        COALESCE(mc.match_count, 0) as match_count,
-                        req.created_at
-                    FROM auto_matching_requests req
-                    JOIN jobs j ON req.item_id = j.id AND req.item_type = 'job'
-                    LEFT JOIN users u ON j.assigned_user_id = u.id -- ★ usersテーブルをJOIN
-                    LEFT JOIN (
-                        SELECT job_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY job_id
-                    ) mc ON j.id = mc.job_id
-                    WHERE req.is_active = TRUE)
-                    
-                    UNION ALL
-                    
-                    (SELECT 
-                        req.id, req.item_id, req.item_type, req.target_rank,
-                        e.name as item_name,
-                        e.document,
-                        u.username as assigned_username, -- ★ 担当者名を追加
-                        COALESCE(mc.match_count, 0) as match_count,
-                        req.created_at
-                    FROM auto_matching_requests req
-                    JOIN engineers e ON req.item_id = e.id AND req.item_type = 'engineer'
-                    LEFT JOIN users u ON e.assigned_user_id = u.id -- ★ usersテーブルをJOIN
-                    LEFT JOIN (
-                        SELECT engineer_id, COUNT(*) as match_count FROM matching_results WHERE is_hidden = 0 GROUP BY engineer_id
-                    ) mc ON e.id = mc.engineer_id
-                    WHERE req.is_active = TRUE)
-                ) AS combined_requests
-                ORDER BY created_at DESC
-                ; -- 表示件数はお好みで調整
+                SELECT engineer_id, COUNT(*) as match_count 
+                FROM matching_results WHERE is_hidden = 0 GROUP BY engineer_id
             """)
-              
-            data["active_auto_requests"] = [dict(row) for row in cur.fetchall()]
+            engineer_match_counts = {row['engineer_id']: row['match_count'] for row in cur.fetchall()}
+
+            # 3. 複雑なJOINを使わず、必要な情報を個別に取得してPythonで結合
+            cur.execute("""
+                SELECT 
+                    req.id, req.item_id, req.item_type, req.target_rank, req.created_at,
+                    COALESCE(j.project_name, e.name) as item_name,
+                    COALESCE(u_job.username, u_eng.username) as assigned_username,
+                    COALESCE(j.document, e.document) as document
+                FROM auto_matching_requests req
+                LEFT JOIN jobs j ON req.item_id = j.id AND req.item_type = 'job'
+                LEFT JOIN engineers e ON req.item_id = e.id AND req.item_type = 'engineer'
+                LEFT JOIN users u_job ON j.assigned_user_id = u_job.id
+                LEFT JOIN users u_eng ON e.assigned_user_id = u_eng.id
+                WHERE req.is_active = TRUE
+                ORDER BY req.created_at DESC
+            """)
+            
+            final_active_requests = []
+            for row in cur.fetchall():
+                req_dict = dict(row)
+                
+                # 事前に集計した辞書からマッチング件数を取得
+                if req_dict['item_type'] == 'job':
+                    req_dict['match_count'] = job_match_counts.get(req_dict['item_id'], 0)
+                elif req_dict['item_type'] == 'engineer':
+                    req_dict['match_count'] = engineer_match_counts.get(req_dict['item_id'], 0)
+                else:
+                    req_dict['match_count'] = 0
+                
+                final_active_requests.append(req_dict)
+
+            data["active_auto_requests"] = final_active_requests
+            
 
             
             # 10. リアルタイム活動ログ（「JSTでの今日」に限定）
