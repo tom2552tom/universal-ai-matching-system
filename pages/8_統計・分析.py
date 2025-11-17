@@ -146,6 +146,10 @@ st.markdown("""
     div[data-testid="stMetricLabel"] > div {
         font-size: 0.8rem !important; /* お好みのサイズに調整してください */
     }
+    /* ページ上部の余白を削減 */
+    .block-container {
+        padding-top: 2rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
