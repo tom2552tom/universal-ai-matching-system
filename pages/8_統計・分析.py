@@ -408,8 +408,6 @@ for col, (label, value) in zip(kpi_cols, kpi_map.items()):
 
 st.divider()
 
-
-
 #with st.expander("⚙️ リアルタイム活動ログ（クリックで展開）", expanded=False):
 st.header("⚙️ リアルタイム活動ログ") 
 live_log_feed = dashboard_data.get('live_log_feed', [])
