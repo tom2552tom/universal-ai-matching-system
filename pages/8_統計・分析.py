@@ -209,9 +209,13 @@ def load_lottie_url(url: str):
 
 # --- データ取得 ---
 #@st.cache_data(ttl=5)
-def get_dashboard_data_cached():
-    return be.get_live_dashboard_data()
-dashboard_data = get_dashboard_data_cached()
+#def get_dashboard_data_cached():
+#    return be.get_live_dashboard_data()
+#dashboard_data = get_dashboard_data_cached()
+
+
+
+dashboard_data = be.get_live_dashboard_data()
 
 
 
