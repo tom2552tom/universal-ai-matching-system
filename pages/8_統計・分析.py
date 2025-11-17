@@ -1,5 +1,4 @@
 # pages/8_統計・分析.py (最終レイアウト版)
-
 import streamlit as st
 import backend as be
 import time
@@ -12,7 +11,7 @@ from streamlit_lottie import st_lottie
 import json # ★ jsonをインポート
 import html # ★ HTMLエスケープのために追加
 import random # ★★★ ランダム選択のために追加 ★★★
-
+import pytz
 
 
 
@@ -353,7 +352,7 @@ def generate_dynamic_ai_advice(dashboard_data_json_str):
 
 # ★★★【ここまでが追加する関数の定義】★★★
 
-import pytz
+
 # ==================================
 # === ヘッダーエリア ===
 # ==================================
