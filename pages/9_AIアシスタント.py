@@ -11,7 +11,6 @@ st.set_page_config(page_title="AIオンデマンド・マッチング", layout="
 ui.apply_global_styles()
 if not ui.check_password():
     st.stop() # 認証が通らない場合、ここで処理を停止
-    
 st.title("🤖 AIオンデマンド・マッチング")
 st.markdown("---")
 
