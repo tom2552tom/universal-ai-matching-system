@@ -622,10 +622,17 @@ def fetch_and_process_emails_batch():
                         for log_line in logs: print(log_line)
                         if success:
                             total_processed_count += 1
-                            mail.store(email_id, '+FLAGS', '\\Seen')
+                            # 処理成功したメールを削除
+                            mail.store(email_id, '+FLAGS', '\\Deleted')
+                            print(f"  > ✅ メールID {email_id.decode()} を削除マークしました。")
             
             print(f"\n--- チェック完了 ---")
             print(f"▶︎ 処理済みメール: {total_processed_count}件 / チェックしたメール: {checked_count}件")
+            
+            # 削除マークされたメールを物理的に削除
+            if total_processed_count > 0:
+                mail.expunge()
+                print(f"  > ✅ {total_processed_count}件のメールを物理的に削除しました。")
 
     except Exception as e:
         print(f"❌ メール処理全体で予期せぬエラーが発生しました: {e}")
