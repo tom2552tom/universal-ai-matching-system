@@ -72,12 +72,19 @@ def main(is_dry_run: bool):
             # --- 1. 古い「案件(jobs)」のクリーンアップ ---
             log_message("Processing 'jobs' table...")
             
-            # 案件テーブル用のSQL (typo: enginees -> engineers)
+            # 案件テーブル用のSQL
+            # 自動マッチング中の案件も保護するように修正
             jobs_sql_select = """
                 SELECT id FROM jobs
                 WHERE created_at <= NOW() - INTERVAL '120 hours'
                 AND NOT EXISTS (
                     SELECT 1 FROM matching_results mr WHERE mr.job_id = jobs.id
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM auto_match_requests amr 
+                    WHERE amr.item_type = 'job' 
+                    AND amr.item_id = jobs.id 
+                    AND amr.is_active = true
                 );
             """
             jobs_sql_delete = """
@@ -99,12 +106,19 @@ def main(is_dry_run: bool):
             # --- 2. 古い「技術者(engineers)」のクリーンアップ ---
             log_message("Processing 'engineers' table...")
             
-            # 技術者テーブル用のSQL (typo: enginees.id -> engineers.id)
+            # 技術者テーブル用のSQL
+            # 自動マッチング中の技術者も保護するように修正
             engineers_sql_select = """
                 SELECT id FROM engineers
                 WHERE created_at <= NOW() - INTERVAL '120 hours'
                 AND NOT EXISTS (
                     SELECT 1 FROM matching_results mr WHERE mr.engineer_id = engineers.id
+                )
+                AND NOT EXISTS (
+                    SELECT 1 FROM auto_match_requests amr 
+                    WHERE amr.item_type = 'engineer' 
+                    AND amr.item_id = engineers.id 
+                    AND amr.is_active = true
                 );
             """
             engineers_sql_delete = """
