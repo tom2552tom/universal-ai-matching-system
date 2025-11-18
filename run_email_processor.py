@@ -633,6 +633,28 @@ def fetch_and_process_emails_batch():
             if total_processed_count > 0:
                 mail.expunge()
                 print(f"  > ✅ {total_processed_count}件のメールを物理的に削除しました。")
+        
+        # 既読メール全体を削除する処理
+        print(f"\n--- 既読メールの削除処理を開始 ---")
+        try:
+            _, seen_messages = mail.search(None, 'SEEN')
+            seen_email_ids = seen_messages[0].split()
+            
+            if not seen_email_ids:
+                print("ℹ️ 削除対象の既読メールはありません。")
+            else:
+                seen_count = len(seen_email_ids)
+                print(f"ℹ️ 既読メール {seen_count}件を削除マークします...")
+                
+                # 全ての既読メールに削除フラグを設定
+                for email_id in seen_email_ids:
+                    mail.store(email_id, '+FLAGS', '\\Deleted')
+                
+                # 物理的に削除
+                mail.expunge()
+                print(f"  > ✅ {seen_count}件の既読メールを削除しました。")
+        except Exception as e:
+            print(f"⚠️ 既読メールの削除中にエラーが発生しました: {e}")
 
     except Exception as e:
         print(f"❌ メール処理全体で予期せぬエラーが発生しました: {e}")
