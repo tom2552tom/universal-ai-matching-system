@@ -570,7 +570,8 @@ else:
         match_count = req['match_count']
         
         # AI要約のプレビューを生成
-        doc_parts = req.get('document', '').split('\n---\n', 1)
+        document = req.get('document') or ''
+        doc_parts = document.split('\n---\n', 1)
         main_doc_preview = (doc_parts[1] if len(doc_parts) > 1 else doc_parts[0]).replace('\n', ' ').strip()
         main_doc_preview = main_doc_preview[:100] + "..." if len(main_doc_preview) > 100 else main_doc_preview
 
