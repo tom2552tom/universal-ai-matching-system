@@ -588,8 +588,9 @@ else:
                     st.session_state[session_key] = item_id
                     st.switch_page(page_path)
                 
-                # IDと担当者名を caption で表示
-                st.caption(f"ID: {item_id} | 担当: {assigned_username}")
+                # リクエストID、対象ID、担当者名を caption で表示
+                req_id = req.get('id', 'N/A')
+                st.caption(f"リクエストID: {req_id} | 対象ID: {item_id} | 担当: {assigned_username}")
                 # ▲▲▲【修正ここまで】▲▲▲
                 
                 # AI要約のプレビュー (変更なし)
