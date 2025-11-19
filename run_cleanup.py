@@ -76,7 +76,8 @@ def main(is_dry_run: bool):
             cur.execute("""
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables 
-                    WHERE table_name = 'auto_match_requests'
+                    WHERE table_schema = 'public'
+                    AND table_name = 'auto_match_requests'
                 );
             """)
             auto_match_table_exists = cur.fetchone()[0]
@@ -95,7 +96,7 @@ def main(is_dry_run: bool):
                         SELECT 1 FROM auto_match_requests amr 
                         WHERE amr.item_type = 'job' 
                         AND amr.item_id = jobs.id 
-                        AND amr.is_active = true
+                        AND amr.is_active IS true
                     );
                 """
             else:
@@ -138,7 +139,7 @@ def main(is_dry_run: bool):
                         SELECT 1 FROM auto_match_requests amr 
                         WHERE amr.item_type = 'engineer' 
                         AND amr.item_id = engineers.id 
-                        AND amr.is_active = true
+                        AND amr.is_active IS true
                     );
                 """
             else:
