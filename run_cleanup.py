@@ -72,21 +72,40 @@ def main(is_dry_run: bool):
             # --- 1. 古い「案件(jobs)」のクリーンアップ ---
             log_message("Processing 'jobs' table...")
             
-            # 案件テーブル用のSQL
-            # 自動マッチング中の案件も保護するように修正
-            jobs_sql_select = """
-                SELECT id FROM jobs
-                WHERE created_at <= NOW() - INTERVAL '120 hours'
-                AND NOT EXISTS (
-                    SELECT 1 FROM matching_results mr WHERE mr.job_id = jobs.id
-                )
-                AND NOT EXISTS (
-                    SELECT 1 FROM auto_match_requests amr 
-                    WHERE amr.item_type = 'job' 
-                    AND amr.item_id = jobs.id 
-                    AND amr.is_active = true
+            # まず、auto_match_requestsテーブルが存在するか確認
+            cur.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'auto_match_requests'
                 );
-            """
+            """)
+            auto_match_table_exists = cur.fetchone()[0]
+            log_message(f"  > auto_match_requests table exists: {auto_match_table_exists}")
+            
+            # 案件テーブル用のSQL
+            # 自動マッチング中の案件も保護するように修正（テーブルが存在する場合のみ）
+            if auto_match_table_exists:
+                jobs_sql_select = """
+                    SELECT id FROM jobs
+                    WHERE created_at <= NOW() - INTERVAL '120 hours'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM matching_results mr WHERE mr.job_id = jobs.id
+                    )
+                    AND NOT EXISTS (
+                        SELECT 1 FROM auto_match_requests amr 
+                        WHERE amr.item_type = 'job' 
+                        AND amr.item_id = jobs.id 
+                        AND amr.is_active = true
+                    );
+                """
+            else:
+                jobs_sql_select = """
+                    SELECT id FROM jobs
+                    WHERE created_at <= NOW() - INTERVAL '120 hours'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM matching_results mr WHERE mr.job_id = jobs.id
+                    );
+                """
             jobs_sql_delete = """
                 DELETE FROM jobs
                 WHERE id = ANY(%s);
@@ -107,20 +126,29 @@ def main(is_dry_run: bool):
             log_message("Processing 'engineers' table...")
             
             # 技術者テーブル用のSQL
-            # 自動マッチング中の技術者も保護するように修正
-            engineers_sql_select = """
-                SELECT id FROM engineers
-                WHERE created_at <= NOW() - INTERVAL '120 hours'
-                AND NOT EXISTS (
-                    SELECT 1 FROM matching_results mr WHERE mr.engineer_id = engineers.id
-                )
-                AND NOT EXISTS (
-                    SELECT 1 FROM auto_match_requests amr 
-                    WHERE amr.item_type = 'engineer' 
-                    AND amr.item_id = engineers.id 
-                    AND amr.is_active = true
-                );
-            """
+            # 自動マッチング中の技術者も保護するように修正（テーブルが存在する場合のみ）
+            if auto_match_table_exists:
+                engineers_sql_select = """
+                    SELECT id FROM engineers
+                    WHERE created_at <= NOW() - INTERVAL '120 hours'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM matching_results mr WHERE mr.engineer_id = engineers.id
+                    )
+                    AND NOT EXISTS (
+                        SELECT 1 FROM auto_match_requests amr 
+                        WHERE amr.item_type = 'engineer' 
+                        AND amr.item_id = engineers.id 
+                        AND amr.is_active = true
+                    );
+                """
+            else:
+                engineers_sql_select = """
+                    SELECT id FROM engineers
+                    WHERE created_at <= NOW() - INTERVAL '120 hours'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM matching_results mr WHERE mr.engineer_id = engineers.id
+                    );
+                """
             engineers_sql_delete = """
                 DELETE FROM engineers
                 WHERE id = ANY(%s);
