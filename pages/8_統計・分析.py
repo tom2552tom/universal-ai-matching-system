@@ -543,8 +543,8 @@ active_requests = dashboard_data.get('active_auto_requests', [])
 if not active_requests:
     st.info("現在、アクティブな自動マッチング依頼はありません。")
 else:
-    # リスト表示部分は変更なし
-    st.caption(f"最新 {len(active_requests)} 件を表示しています。")
+    # ID順（登録順）で表示
+    st.caption(f"{len(active_requests)} 件を登録順に表示しています。")
     
     # ★★★【ここからが修正の核】★★★
     for req in active_requests:
