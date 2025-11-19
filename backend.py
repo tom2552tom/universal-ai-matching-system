@@ -3040,6 +3040,7 @@ def get_live_dashboard_data():
             engineer_match_counts = {row['engineer_id']: row['match_count'] for row in cur.fetchall()}
 
             # 3. 複雑なJOINを使わず、必要な情報を個別に取得してPythonで結合
+            # ID順（登録順）で処理するように修正
             cur.execute("""
                 SELECT 
                     req.id, req.item_id, req.item_type, req.target_rank, req.created_at,
@@ -3052,7 +3053,7 @@ def get_live_dashboard_data():
                 LEFT JOIN users u_job ON j.assigned_user_id = u_job.id
                 LEFT JOIN users u_eng ON e.assigned_user_id = u_eng.id
                 WHERE req.is_active = TRUE
-                ORDER BY req.created_at DESC
+                ORDER BY req.id ASC
             """)
             
             final_active_requests = []
