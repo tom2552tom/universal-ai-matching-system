@@ -95,18 +95,18 @@ def check_password():
     認証成功ならTrue、失敗ならFalseを返す。
     """
     
+    # 既に認証済みの場合は即座にTrueを返す
+    if st.session_state.get("authentication_status", False):
+        return True
+    
     # クッキーマネージャーを取得
     cookie_manager = get_cookie_manager()
-    
-    # クッキー読み込み完了フラグの初期化
-    if "cookie_check_done" not in st.session_state:
-        st.session_state["cookie_check_done"] = False
     
     # クッキーから認証情報を取得
     auth_cookie = cookie_manager.get(cookie="auth_token")
     
     # --- クッキーによる自動認証 ---
-    if auth_cookie and not st.session_state["cookie_check_done"]:
+    if auth_cookie:
         # クッキーが存在する場合、検証を行う
         try:
             # secrets.toml からユーザー情報を読み込む
@@ -119,25 +119,13 @@ def check_password():
                     # 認証成功
                     st.session_state["authentication_status"] = True
                     st.session_state["username"] = username
-                    st.session_state["cookie_check_done"] = True
                     return True
-            
-            # クッキーは存在したが無効だった場合
-            st.session_state["cookie_check_done"] = True
         except (KeyError, AttributeError):
-            st.session_state["cookie_check_done"] = True
-    elif not auth_cookie:
-        # クッキーが存在しない場合も確認完了とする
-        st.session_state["cookie_check_done"] = True
+            pass
     
     # --- 認証状態の確認 ---
-    # クッキー認証が失敗した場合、セッションステートを確認
+    # クッキー認証が失敗した場合、ログインフォームを表示
     if st.session_state.get("authentication_status", False) != True:
-        
-        # クッキーチェックが完了していない場合はローディング表示
-        if not st.session_state.get("cookie_check_done", False):
-            # 空のプレースホルダーを表示（ログインフォームを表示しない）
-            return False
         
         # --- ログインフォーム ---
         # フォームを中央に配置するためのカラム
