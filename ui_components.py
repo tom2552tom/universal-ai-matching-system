@@ -1,7 +1,10 @@
 import streamlit as st
 import toml
 import os
-import hmac 
+import hmac
+import extra_streamlit_components as stx
+from datetime import datetime, timedelta
+import hashlib 
 
 @st.cache_data
 def load_app_config():
@@ -79,14 +82,45 @@ def apply_global_styles():
         st.error(f"エラー: スタイルシートが見つかりません。パス: {css_file_path}")
 
 
+def get_cookie_manager():
+    """
+    クッキーマネージャーのインスタンスを取得（キャッシュ付き）
+    """
+    return stx.CookieManager()
+
 def check_password():
     """
+    クッキーベースの認証を実装。
     ログインフォームを表示し、認証状態を返す。
     認証成功ならTrue、失敗ならFalseを返す。
     """
     
+    # クッキーマネージャーを取得
+    cookie_manager = get_cookie_manager()
+    
+    # クッキーから認証情報を取得
+    auth_cookie = cookie_manager.get(cookie="auth_token")
+    
+    # --- クッキーによる自動認証 ---
+    if auth_cookie:
+        # クッキーが存在する場合、検証を行う
+        try:
+            # secrets.toml からユーザー情報を読み込む
+            users = st.secrets["credentials"]["usernames"]
+            
+            # クッキーの値が有効なユーザーのハッシュと一致するか確認
+            for username, password in users.items():
+                expected_token = hashlib.sha256(f"{username}:{password}".encode()).hexdigest()
+                if auth_cookie == expected_token:
+                    # 認証成功
+                    st.session_state["authentication_status"] = True
+                    st.session_state["username"] = username
+                    return True
+        except (KeyError, AttributeError):
+            pass
+    
     # --- 認証状態の確認 ---
-    # st.session_state に authentication_status がなく、False でもない場合（つまり未ログイン）
+    # クッキー認証が失敗した場合、セッションステートを確認
     if st.session_state.get("authentication_status", False) != True:
         
         # --- ログインフォーム ---
@@ -115,6 +149,18 @@ def check_password():
                     if hmac.compare_digest(password, users[username]):
                         # 認証成功
                         st.session_state["authentication_status"] = True
+                        st.session_state["username"] = username
+                        
+                        # クッキーに認証トークンを保存（7日間有効）
+                        auth_token = hashlib.sha256(f"{username}:{password}".encode()).hexdigest()
+                        expiry_date = datetime.now() + timedelta(days=7)
+                        cookie_manager.set(
+                            cookie="auth_token",
+                            val=auth_token,
+                            expires_at=expiry_date
+                        )
+                        
+                        st.success("ログインに成功しました。リダイレクト中...")
                         st.rerun() # ページを再実行してメインコンテンツを表示
                     else:
                         st.error("パスワードが間違っています。")
@@ -126,4 +172,21 @@ def check_password():
     else:
         # 認証済みであれば True を返す
         return True
+
+def logout():
+    """
+    ログアウト処理。セッションとクッキーをクリアする。
+    """
+    cookie_manager = get_cookie_manager()
+    
+    # クッキーを削除
+    cookie_manager.delete(cookie="auth_token")
+    
+    # セッションステートをクリア
+    st.session_state["authentication_status"] = False
+    if "username" in st.session_state:
+        del st.session_state["username"]
+    
+    st.success("ログアウトしました。")
+    st.rerun()
 
