@@ -88,7 +88,7 @@ def main(is_dry_run: bool):
             if auto_match_table_exists:
                 jobs_sql_select = """
                     SELECT id FROM jobs
-                    WHERE created_at <= NOW() - INTERVAL '120 hours'
+                    WHERE created_at <= NOW() - INTERVAL '72 hours'
                     AND NOT EXISTS (
                         SELECT 1 FROM matching_results mr WHERE mr.job_id = jobs.id
                     )
@@ -102,7 +102,7 @@ def main(is_dry_run: bool):
             else:
                 jobs_sql_select = """
                     SELECT id FROM jobs
-                    WHERE created_at <= NOW() - INTERVAL '120 hours'
+                    WHERE created_at <= NOW() - INTERVAL '72 hours'
                     AND NOT EXISTS (
                         SELECT 1 FROM matching_results mr WHERE mr.job_id = jobs.id
                     );
@@ -131,7 +131,7 @@ def main(is_dry_run: bool):
             if auto_match_table_exists:
                 engineers_sql_select = """
                     SELECT id FROM engineers
-                    WHERE created_at <= NOW() - INTERVAL '120 hours'
+                    WHERE created_at <= NOW() - INTERVAL '72 hours'
                     AND NOT EXISTS (
                         SELECT 1 FROM matching_results mr WHERE mr.engineer_id = engineers.id
                     )
@@ -145,7 +145,7 @@ def main(is_dry_run: bool):
             else:
                 engineers_sql_select = """
                     SELECT id FROM engineers
-                    WHERE created_at <= NOW() - INTERVAL '120 hours'
+                    WHERE created_at <= NOW() - INTERVAL '72 hours'
                     AND NOT EXISTS (
                         SELECT 1 FROM matching_results mr WHERE mr.engineer_id = engineers.id
                     );
