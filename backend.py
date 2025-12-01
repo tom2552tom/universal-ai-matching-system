@@ -3057,6 +3057,8 @@ def get_live_dashboard_data():
             """)
             
             final_active_requests = []
+            deactivated_requests = []  # 50件超えで無効化されたリクエストを記録
+            
             for row in cur.fetchall():
                 req_dict = dict(row)
                 
@@ -3068,7 +3070,25 @@ def get_live_dashboard_data():
                 else:
                     req_dict['match_count'] = 0
                 
-                final_active_requests.append(req_dict)
+                # マッチング件数が50を超えている場合は自動的に無効化
+                if req_dict['match_count'] >= 50:
+                    cur.execute(
+                        "UPDATE auto_matching_requests SET is_active = FALSE WHERE id = %s",
+                        (req_dict['id'],)
+                    )
+                    deactivated_requests.append({
+                        'id': req_dict['id'],
+                        'item_name': req_dict['item_name'],
+                        'match_count': req_dict['match_count']
+                    })
+                    print(f"🔴 自動マッチング無効化: Request ID {req_dict['id']} ({req_dict['item_name']}) - マッチング件数 {req_dict['match_count']}件が上限(50件)に到達")
+                else:
+                    final_active_requests.append(req_dict)
+
+            # 無効化があればコミット
+            if deactivated_requests:
+                conn.commit()
+                print(f"✅ {len(deactivated_requests)}件の自動マッチングを50件上限により無効化しました")
 
             data["active_auto_requests"] = final_active_requests
             
